@@ -1040,7 +1040,6 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
   }
 
   def vector_filter[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(new VectorFilterFresh(x, pred))
-  // def vector_mfilter[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectWrite(x)(new VectorMFilterFresh(x,pred))
   def vector_mfilter[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectWrite(x)(VectorMFilter(x,pred))
   def vector_find[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(new VectorFindFresh(x, pred))//IndexVector(reflectPure(VectorFind(x, pred)))
   def vector_count[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(new VectorCountFresh(x, pred))
@@ -1178,7 +1177,9 @@ trait ScalaGenVectorOps extends BaseGenVectorOps with ScalaGenFat {
     case VectorTrim(x) => emitValDef(sym, quote(x) + ".trim")
     case VectorClear(x) => emitValDef(sym, quote(x) + ".clear()")
     case VectorClone(x) => emitValDef(sym, quote(x) + ".cloneL")
-//    case VectorMFilter(x,pred) => emitValDef(sym, quote(x) + ".mfilter(" + quote(pred) + ")")
+    // TODO: following is just a special case
+    // case VectorMFilter(x,pred) => emitValDef(sym, quote(x) + ".mfilter(" + quote(pred) + ")")
+    case VectorMFilter(x,pred) => emitValDef(sym, quote(x) + ".mfilter( _.valid )")
 //    case v@VectorObjectNew(length, isRow) => emitValDef(sym, "new " + remap(v.mV) + "(" + quote(length) + "," + quote(isRow) + ")")
     case v@VectorNew(length, isRow) => emitValDef(sym, "new " + remap(v.mV) + "(" + quote(length) + "," + quote(isRow) + ")")
     case VectorObjectRange(start, end, stride, isRow) => emitValDef(sym, "new " + remap(manifest[RangeVectorImpl]) + "(" + quote(start) + "," + quote(end) + "," + quote(stride) + "," + quote(isRow) + ")")

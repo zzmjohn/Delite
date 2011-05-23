@@ -9,7 +9,7 @@ import ppl.delite.runtime.Config
  * Author: Kevin J. Brown
  * Date: Dec 2, 2010
  * Time: 9:41:08 PM
- * 
+ *
  * Pervasive Parallelism Laboratory (PPL)
  * Stanford University
  */

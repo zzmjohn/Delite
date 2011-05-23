@@ -23,9 +23,9 @@ object ProfileTimer
     if (printMessage) println("[PROFILE]: Timing " + component + " #" + (times(component).size - 1) + " stopped")
   }
 
-  def totalTime(component: String) {
+  def totalTime(component: String, appendMessage: String = null) {
     val total = times(component).toList.reduceLeft[Double](_+_)
-    println("[PROFILE]: " + component + ": " + total + "s")
+    println("[PROFILE]: " + component + ": " + total + "s" + appendMessage)
   }
 
   def clearAll() {

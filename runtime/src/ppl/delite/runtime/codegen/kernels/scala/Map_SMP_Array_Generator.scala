@@ -1,9 +1,8 @@
 package ppl.delite.runtime.codegen.kernels.scala
 
 import ppl.delite.runtime.graph.ops.OP_Map
-import ppl.delite.runtime.codegen.{ExecutableGenerator, ScalaCompile}
 import ppl.delite.runtime.graph.DeliteTaskGraph
-import ppl.delite.runtime.Config
+import ppl.delite.runtime.codegen.{Profiler, ExecutableGenerator, ScalaCompile}
 
 /**
  * Author: Kevin J. Brown
@@ -65,10 +64,6 @@ object Map_SMP_Array_Generator {
     out.append(op.outputType)
     out.append(" = {\n")
 
-    if(Config.profileEnabled){
-      out.append("generated.scala.ProfileTimer.start(\"" + kernelName(master, chunkIdx) + "\", false)\n")
-    }
-
     out.append("val in = map.closure.in\n")
     out.append("val out = map.out\n")
     out.append("val size = in.size\n")
@@ -82,15 +77,13 @@ object Map_SMP_Array_Generator {
     out.append('/')
     out.append(numChunks)
     out.append('\n')
+
+    Profiler.insertOPProfilingHead(out, kernelName(master, chunkIdx))
     out.append("while (idx < end) {\n")
     out.append("out.dcUpdate(idx, map.closure.map(in.dcApply(idx)))\n")
     out.append("idx += 1\n")
     out.append("}\n")
-
-    if(Config.profileEnabled){
-      out.append("generated.scala.ProfileTimer.stop(\"" + kernelName(master, chunkIdx) + "\", false)\n")
-      out.append("generated.scala.ProfileTimer.totalTime(\"" + kernelName(master, chunkIdx) + "\")\n")
-    }
+    Profiler.insertOPProfilingTail(out, kernelName(master, chunkIdx))
 
     if (chunkIdx == 0) out.append("out\n")
     out.append("}\n")

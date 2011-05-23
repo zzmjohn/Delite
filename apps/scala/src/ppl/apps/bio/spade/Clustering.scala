@@ -13,42 +13,6 @@ trait Clustering {
     val data    = Vector[Double](obs*dim, true)
     val centers = Vector[Double](obs*dim, true)
     println("obs = " + obs + ", dim = " + dim + ", k = " + k)
-/*
-    val ac = ACluster(3)
-    val pr = APair(ac, 5)
-    val pq = PQ(4)
-    println("pr = APair(" + pr._1 + ", " + pr._2 + ")")
-
-    val members = Vector[Int](1, true)
-    ac.init_RM(data, centers, members, 6)
-    println("ACluster.dim = " + ac.dim)
-    println("ACluster.index = " + ac.index)
-    println("ACluster.valid = " + ac.valid)
-    ac.valid_=(false)
-    println("ACluster.valid = " + ac.valid)
-    println("ACluster.merged = " + ac.merged)
-    println("ACluster.offset = " + ac.offset)
-    println("ACluster.num_members = " + ac.num_members)
-    println("ACluster.members(0) = " + ac.members(0))
-
-    println("PQ.MMD = " + pq.MMD)
-    println("PQ.empty = " + pq.empty)
-    pq.push(ac, 20)
-    pq.push(pr)
-    println("PQ.empty = " + pq.empty)
-    pq.pop
-    println("PQ.MMD = " + pq.MMD)
-
-    println("normalize")
-    pq.normalize
-    println("merge_in_pq")
-    val ac1 = ACluster(3)
-    val members1 = Vector[Int](1, true)
-    ac1.init_RM(data, centers, members1, 7)
-    ac1.merge_in_pq(pq)
-    println("PQ.empty = " + pq.empty)
-    println("ACluster.num_members = " + ac1.num_members)
-*/
 
     var idx = 0
     var i = 0
@@ -77,7 +41,7 @@ trait Clustering {
     var round = 0
     while(flag){
       //ac_valid = ac_valid.partition(_.valid)._1
-      //ac_valid mfilter {a:Rep[ACluster]=> a.valid}
+      ac_valid mfilter {a:Rep[ACluster]=> a.valid}
 
       println("round = " + round + ", num_valid = " + ac_valid.length)
 /*

@@ -11,19 +11,6 @@ trait Spade extends OptiMLApplication with Downsampling with Upsampling with Clu
     exit(-1)
   }
 
-  def next(numbers: Rep[Vector[Double]], i: Int):Rep[Vector[Double]] =
-    if(i == 5) numbers
-    else {
-      val new_numbers = numbers.partition(_ > 0.5)._1
-      var j = 0
-      while(j < new_numbers.length){
-        new_numbers(j) = new_numbers(j) - 0.1
-        j += 1
-      }
-      new_numbers.pprint
-      next(new_numbers, i+1)
-    }
-
   def main() = {
     if (args.length < 2) print_usage
 
@@ -49,13 +36,11 @@ trait Spade extends OptiMLApplication with Downsampling with Upsampling with Clu
     toc(assgn)
     for(i <- 0 to 9)
       print(assgn(i)+"\t")
-    println()
+    println
     */
-
     /*
     val numbers = Vector.rand(10).mutable
     numbers.pprint
-
     var i = 0
     while(i < 5){
       numbers = numbers.partition(_ > 0.5)._1
@@ -82,14 +67,27 @@ trait Spade extends OptiMLApplication with Downsampling with Upsampling with Clu
       i += 1
     }
     */
-    // next(numbers, 0)
     /*
-    val a = Vector[Int](10, true)
-    val b = a map (_ + 20)
-    b.pprint
+    def next(numbers: Rep[Vector[Double]], i: Int):Rep[Vector[Double]] =
+    if(i == 5) numbers
+    else {
+      val new_numbers = numbers.partition(_ > 0.5)._1
+      var j = 0
+      while(j < new_numbers.length){
+        new_numbers(j) = new_numbers(j) - 0.1
+        j += 1
+      }
+      new_numbers.pprint
+      next(new_numbers, i+1)
+    }
+    next(numbers, 0)
     */
-    /********* upsampling *********/
 
+    val a = Vector[Int](100, true)
+    a foreach print
+    
+    /********* upsampling *********/
+    /*
     val tbl = readMatrix(args(0) + "/tbl_small.txt")
     val cluster_data = readMatrix(args(0) + "/cluster_data_small.txt")
     val cluster_assign = readMatrix(args(0) + "/cluster_assign_small.txt").mapRows{row:Rep[Vector[Double]]=> row(0).asInstanceOfL[Int]}
@@ -101,7 +99,7 @@ trait Spade extends OptiMLApplication with Downsampling with Upsampling with Clu
     for(i <- 0 to 9)
       print(assign(i)+"\t")
     println
-    
+    */
   }
 
 }

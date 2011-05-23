@@ -1,9 +1,8 @@
 package ppl.delite.runtime.codegen.kernels.scala
 
 import ppl.delite.runtime.graph.ops.OP_MapReduce
-import ppl.delite.runtime.codegen.{ExecutableGenerator, ScalaCompile}
 import ppl.delite.runtime.graph.DeliteTaskGraph
-import ppl.delite.runtime.Config
+import ppl.delite.runtime.codegen.{Profiler, ExecutableGenerator, ScalaCompile}
 
 /**
  * Author: Kevin J. Brown
@@ -70,10 +69,6 @@ object MapReduce_SMP_Array_Generator {
     out.append(op.outputType)
     out.append(" = {\n")
 
-    if(Config.profileEnabled){
-      out.append("generated.scala.ProfileTimer.start(\"" + kernelName(master, chunkIdx) + "\", false)\n")
-    }
-
     //tree reduction
     //first every chunk performs its primary (map-)reduction
     out.append("val in = mapReduce.closure.in\n")
@@ -88,6 +83,8 @@ object MapReduce_SMP_Array_Generator {
     out.append('/')
     out.append(numChunks)
     out.append('\n')
+
+    Profiler.insertOPProfilingHead(out, kernelName(master, chunkIdx))
     out.append("var acc = mapReduce.closure.map(in.dcApply(idx))\n")
     out.append("idx += 1\n")
     out.append("while (idx < end) {\n")
@@ -117,10 +114,7 @@ object MapReduce_SMP_Array_Generator {
       out.append("(acc)\n")
     }
 
-    if(Config.profileEnabled){
-      out.append("generated.scala.ProfileTimer.stop(\"" + kernelName(master, chunkIdx) + "\", false)\n")
-      out.append("generated.scala.ProfileTimer.totalTime(\"" + kernelName(master, chunkIdx) + "\")\n")
-    }
+    Profiler.insertOPProfilingTail(out, kernelName(master, chunkIdx))
 
     out.append('}')
     out.append('\n')
