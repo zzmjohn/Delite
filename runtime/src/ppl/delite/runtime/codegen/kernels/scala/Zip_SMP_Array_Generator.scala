@@ -3,6 +3,7 @@ package ppl.delite.runtime.codegen.kernels.scala
 import ppl.delite.runtime.graph.ops.OP_Zip
 import ppl.delite.runtime.codegen.{ExecutableGenerator, ScalaCompile}
 import ppl.delite.runtime.graph.DeliteTaskGraph
+import ppl.delite.runtime.Config
 
 /**
  * Author: Kevin J. Brown
@@ -64,6 +65,10 @@ object Zip_SMP_Array_Generator {
     out.append(op.outputType)
     out.append(" = {\n")
 
+    if(Config.profileEnabled){
+      out.append("generated.scala.ProfileTimer.start(\"" + kernelName(master, chunkIdx) + "\", false)\n")
+    }
+
     out.append("val inA = zip.closure.inA\n")
     out.append("val inB = zip.closure.inB\n")
     out.append("val out = zip.out\n")
@@ -83,6 +88,12 @@ object Zip_SMP_Array_Generator {
     out.append("idx += 1\n")
     out.append("}\n")
     if (chunkIdx == 0) out.append("out\n")
+
+    if(Config.profileEnabled){
+      out.append("generated.scala.ProfileTimer.stop(\"" + kernelName(master, chunkIdx) + "\", false)\n")
+      out.append("generated.scala.ProfileTimer.totalTime(\"" + kernelName(master, chunkIdx) + "\")\n")
+    }
+
     out.append("}\n")
   }
 

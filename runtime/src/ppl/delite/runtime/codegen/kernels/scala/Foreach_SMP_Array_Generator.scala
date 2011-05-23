@@ -3,6 +3,7 @@ package ppl.delite.runtime.codegen.kernels.scala
 import ppl.delite.runtime.graph.ops.OP_Foreach
 import ppl.delite.runtime.codegen.{ExecutableGenerator, ScalaCompile}
 import ppl.delite.runtime.graph.DeliteTaskGraph
+import ppl.delite.runtime.Config
 
 /**
  * Author: Kevin J. Brown
@@ -63,6 +64,10 @@ object Foreach_SMP_Array_Generator {
     out.append(op.getInputs.head._1.outputType)
     out.append(") {\n")
 
+    if(Config.profileEnabled){
+      out.append("generated.scala.ProfileTimer.start(\"" + kernelName(master, chunkIdx) + "\", false)\n")
+    }
+
     out.append("val in = foreach.closure.in\n")
     out.append("val size = in.size\n")
     out.append("var idx = size*") //var idx = size*chunkIdx/numChunks
@@ -89,7 +94,14 @@ object Foreach_SMP_Array_Generator {
     out.append("foreach.lockMap.get(e).unlock\n")
 
     out.append("idx += 1\n")
-    out.append("}\n}\n")
+    out.append("}\n")
+
+    if(Config.profileEnabled){
+      out.append("generated.scala.ProfileTimer.stop(\"" + kernelName(master, chunkIdx) + "\", false)\n")
+      out.append("generated.scala.ProfileTimer.totalTime(\"" + kernelName(master, chunkIdx) + "\")\n")
+    }
+
+    out.append("}\n")
   }
 
   private def kernelName(master: OP_Foreach, idx: Int) = {

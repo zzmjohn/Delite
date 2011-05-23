@@ -3,6 +3,7 @@ package ppl.delite.runtime.codegen.kernels.scala
 import ppl.delite.runtime.graph.ops.OP_MultiLoop
 import ppl.delite.runtime.codegen.{ExecutableGenerator, ScalaCompile}
 import ppl.delite.runtime.graph.DeliteTaskGraph
+import ppl.delite.runtime.Config
 
 /**
  * Author: Kevin J. Brown
@@ -64,6 +65,10 @@ object MultiLoop_SMP_Array_Generator {
     out.append(op.outputType)
     out.append(" = {\n")
 
+    if(Config.profileEnabled){
+      out.append("generated.scala.ProfileTimer.start(\"" + kernelName(master, chunkIdx) + "\", false)\n")
+    }
+
     //tree reduction
     //first every chunk performs its primary (map-)reduction
     out.append("val size = head.closure.size\n")
@@ -110,6 +115,12 @@ object MultiLoop_SMP_Array_Generator {
         out.append("(acc)\n")
       }
     }
+
+    if(Config.profileEnabled){
+      out.append("generated.scala.ProfileTimer.stop(\"" + kernelName(master, chunkIdx) + "\", false)\n")
+      out.append("generated.scala.ProfileTimer.totalTime(\"" + kernelName(master, chunkIdx) + "\")\n")
+    }
+
     out.append("}\n")
   }
 

@@ -3,6 +3,7 @@ package ppl.delite.runtime.codegen.kernels.scala
 import ppl.delite.runtime.graph.ops.OP_ZipReduce
 import ppl.delite.runtime.codegen.{ExecutableGenerator, ScalaCompile}
 import ppl.delite.runtime.graph.DeliteTaskGraph
+import ppl.delite.runtime.Config
 
 /**
  * Creates a chunk for OP_ZipReduce and generates an executable kernel for that chunk
@@ -60,6 +61,10 @@ object ZipReduce_SMP_Array_Generator {
     out.append(op.outputType)
     out.append(" = {\n")
 
+    if(Config.profileEnabled){
+      out.append("generated.scala.ProfileTimer.start(\"" + kernelName(master, chunkIdx) + "\", false)\n")
+    }
+
     //tree reduction
     //first every chunk performs its primary (zip-)reduction
     out.append("val inA = zipReduce.closure.inA\n")
@@ -103,6 +108,12 @@ object ZipReduce_SMP_Array_Generator {
       out.append(chunkIdx)
       out.append("(acc)\n")
     }
+
+    if(Config.profileEnabled){
+      out.append("generated.scala.ProfileTimer.stop(\"" + kernelName(master, chunkIdx) + "\", false)\n")
+      out.append("generated.scala.ProfileTimer.totalTime(\"" + kernelName(master, chunkIdx) + "\")\n")
+    }
+
     out.append('}')
     out.append('\n')
   }

@@ -136,7 +136,7 @@ import scala.virtualization.lms.common.{EffectExp, Variables}\n\n"
     l = l + "\n"
     l = l + "  def " + lclazz + "_obj_new(" + expify(fields, types) + ") = reflectEffect(" + clazz + "ObjectNew(" + listify(fields) + "))\n"
     for f in fields:
-        l = l + "  def " + lclazz + "_" + f + "(__x: Rep[" + clazz + "]) = " + clazz + f.capitalize() +"(__x)\n"
+        l = l + "  def " + lclazz + "_" + f + "(__x: Exp[" + clazz + "]) = " + clazz + f.capitalize() +"(__x)\n"
     l = l + "}\n\n"
 
 

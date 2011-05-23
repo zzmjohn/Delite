@@ -95,6 +95,23 @@ class VectorImpl[@specialized T: ClassManifest](__length: Int, __isRow: Boolean)
     _data.toList 
   }
 
+  def mfilter(block:T => Boolean) {
+    var i = 0
+    var j = _length - 1
+    while(i <= j){
+      while(i < j && block(_data(i))) i += 1
+      while(i < j && !block(_data(j))) j -= 1
+      if(i < j) {
+        val tmp = _data(i)
+        _data(i) = _data(j)
+        _data(j) = tmp
+        i += 1
+        j -= 1
+      }
+    }
+    _length = i
+  }
+
   protected def insertSpace(pos: Int, len: Int) {
     ensureExtra(len)
     System.arraycopy(_data, pos, _data, pos + len, _length - pos)

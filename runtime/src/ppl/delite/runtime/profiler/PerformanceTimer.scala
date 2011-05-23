@@ -44,6 +44,7 @@ object PerformanceTimer
     println(timeStr getOrElse "[METRICS]: No data for component " + component)
   }
 
+  
   /**
    * dump stats to values provided by config parameters
    */

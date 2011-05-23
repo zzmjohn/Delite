@@ -6,17 +6,18 @@ import scala.virtualization.lms.common._
 import ppl.delite.framework.DSLType
 import ppl.dsl.optiml.datastruct.scala._
 
-
 /**
  * This file should be auto-generated!
  */
 
 trait ApplicationOps extends BinarizedGradientPyramidOps with RectOps with BiGGDetectionOps with BinarizedGradientTemplateOps
-  with DenoiseVertexDataOps with DenoiseEdgeDataOps
+  with DenoiseVertexDataOps with DenoiseEdgeDataOps with APairOps with PQOps with AClusterOps
 trait ApplicationOpsExp extends BinarizedGradientPyramidOpsExp with RectOpsExp with BiGGDetectionOpsExp with BinarizedGradientTemplateOpsExp
-  with DenoiseVertexDataOpsExp with DenoiseEdgeDataOpsExp
+  with DenoiseVertexDataOpsExp with DenoiseEdgeDataOpsExp with APairOpsExp with PQOpsExp with AClusterOpsExp {
+  this: OptiMLExp =>
+}
 trait ScalaGenApplicationOps extends ScalaGenBinarizedGradientPyramidOps with ScalaGenRectOps with ScalaGenBiGGDetectionOps with ScalaGenBinarizedGradientTemplateOps
-  with ScalaGenDenoiseVertexDataOps with ScalaGenDenoiseEdgeDataOps
+  with ScalaGenDenoiseVertexDataOps with ScalaGenDenoiseEdgeDataOps with ScalaGenAPairOps with ScalaGenPQOps with ScalaGenAClusterOps
 
 trait DenoiseVertexDataOps extends DSLType with Variables {
   object DenoiseVertexData {
@@ -433,4 +434,257 @@ trait ScalaGenRectOps extends ScalaGenBase {
     case _ => super.emitNode(sym, rhs)
   }
 }
+
+trait APairOps extends DSLType with Variables with OverloadHack {
+
+  object APair {
+    def apply(_1: Rep[ACluster], _2: Rep[Double]) = apair_obj_new(_1, _2)
+  }
+
+  implicit def repAPairToAPairOps(x: Rep[APair]) = new apairOpsCls(x)
+  implicit def apairToAPairOps(x: Var[APair]) = new apairOpsCls(readVar(x))
+
+  class apairOpsCls(__x: Rep[APair]) {
+    def _1 = apair__1(__x)
+    def _2 = apair__2(__x)
+  }
+
+  //object defs
+  def apair_obj_new(_1: Rep[ACluster], _2: Rep[Double]): Rep[APair]
+
+  //class defs
+  def apair__1(__x: Rep[APair]): Rep[ACluster]
+  def apair__2(__x: Rep[APair]): Rep[Double]
+}
+
+trait APairOpsExp extends APairOps with EffectExp {
+  case class APairObjectNew(_1: Exp[ACluster], _2: Exp[Double]) extends Def[APair]
+  case class APair_1(__x: Exp[APair]) extends Def[ACluster]
+  case class APair_2(__x: Exp[APair]) extends Def[Double]
+
+  def apair_obj_new(_1: Exp[ACluster], _2: Exp[Double]) = reflectEffect(APairObjectNew(_1, _2))
+  def apair__1(__x: Rep[APair]) = APair_1(__x)
+  def apair__2(__x: Rep[APair]) = APair_2(__x)
+}
+
+trait ScalaGenAPairOps extends ScalaGenBase {
+  val IR: ApplicationOpsExp
+  import IR._
+
+  override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = rhs match {
+  // these are the ops that call through to the underlying real data structure
+    case APairObjectNew(_1, _2) => emitValDef(sym, "new " + remap(manifest[APair]) + "(" + quote(_1)  + "," + quote(_2)  + ")")
+    case APair_1(x) =>  emitValDef(sym, quote(x) + "._1")
+    case APair_2(x) =>  emitValDef(sym, quote(x) + "._2")
+    case _ => super.emitNode(sym, rhs)
+  }
+}
+
+trait PQOps extends DSLType with Variables with OverloadHack {
+
+  object PQ {
+    def apply(fold: Rep[Int]) = pq_obj_new(fold)
+  }
+
+  implicit def repPQToPQOps(x: Rep[PQ]) = new pqOpsCls(x)
+  implicit def pqToPQOps(x: Var[PQ]) = new pqOpsCls(readVar(x))
+
+  class pqOpsCls(__x: Rep[PQ]) {
+    def fold = pq_fold(__x)
+    def Q = pq_Q(__x)
+    def MMD = pq_MMD(__x)
+    def empty = pq_empty(__x)
+    def normalize = pq_normalize(__x)
+    def push(__c: Rep[ACluster], __d: Rep[Double]) = pq_push(__x, __c, __d)
+    def push(__p: Rep[APair]) = pq_push(__x, __p)
+    def top = pq_top(__x)
+    def pop = pq_pop(__x)
+  }
+
+  //object defs
+  def pq_obj_new(fold: Rep[Int]): Rep[PQ]
+
+  //class defs
+  def pq_fold(__x: Rep[PQ]): Rep[Int]
+  def pq_Q(__x: Rep[PQ]): Rep[java.util.PriorityQueue[APair]]
+  def pq_MMD(__x: Rep[PQ]): Rep[Double]
+  def pq_empty(__x: Rep[PQ]): Rep[Boolean]
+  def pq_normalize(__x: Rep[PQ]): Rep[Unit]
+  def pq_push(__x: Rep[PQ], __c: Rep[ACluster], __d: Rep[Double]): Rep[Unit]
+  def pq_push(__x: Rep[PQ], __p: Rep[APair]): Rep[Unit]
+  def pq_top(__x: Rep[PQ]): Rep[ACluster]
+  def pq_pop(__x: Rep[PQ]): Rep[Unit]
+}
+
+trait PQOpsExp extends PQOps with EffectExp {
+  case class PQObjectNew(fold: Exp[Int]) extends Def[PQ]
+  case class PQFold(__x: Exp[PQ]) extends Def[Int]
+  case class PQQ(__x: Exp[PQ]) extends Def[java.util.PriorityQueue[APair]]
+  case class PQMMD(__x: Exp[PQ]) extends Def[Double]
+  case class PQEmpty(__x: Exp[PQ]) extends Def[Boolean]
+  case class PQNormalize(__x: Exp[PQ]) extends Def[Unit]
+  case class PQPush1(__x: Exp[PQ], __p: Exp[APair]) extends Def[Unit]
+  case class PQPush2(__x: Exp[PQ], __c: Exp[ACluster], __d: Exp[Double]) extends Def[Unit]
+  case class PQTop(__x: Exp[PQ]) extends Def[ACluster]
+  case class PQPop(__x: Exp[PQ]) extends Def[Unit]
+
+  def pq_obj_new(fold: Exp[Int]) = reflectMutable(PQObjectNew(fold))
+  def pq_fold(__x: Exp[PQ]) = PQFold(__x)
+  def pq_Q(__x: Exp[PQ]) = PQQ(__x)
+  def pq_MMD(__x: Exp[PQ]) = PQMMD(__x)
+  def pq_empty(__x: Exp[PQ]) = PQEmpty(__x)
+  def pq_normalize(__x: Exp[PQ]) = reflectWrite(__x)(PQNormalize(__x))
+  def pq_push(__x: Exp[PQ], __c: Exp[ACluster], __d: Exp[Double]) = reflectWrite(__x)(PQPush2(__x, __c, __d))
+  def pq_push(__x: Exp[PQ], __p: Exp[APair]) = reflectWrite(__x)(PQPush1(__x, __p))
+  def pq_top(__x: Exp[PQ]) = PQTop(__x)
+  def pq_pop(__x: Exp[PQ]) = reflectWrite(__x)(PQPop(__x))
+}
+
+trait ScalaGenPQOps extends ScalaGenBase {
+  val IR: ApplicationOpsExp
+  import IR._
+
+  override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = rhs match {
+  // these are the ops that call through to the underlying real data structure
+    case PQObjectNew(fold) => emitValDef(sym, "new " + remap(manifest[PQ]) + "(" + quote(fold)  + ")")
+    case PQFold(x) =>  emitValDef(sym, quote(x) + ".fold")
+    case PQQ(x) => emitVarDef(sym, "new java.util.PriorityQueue[APair]")
+    case PQMMD(x) => emitVarDef(sym, "scala.Double.MaxValue")
+    case PQEmpty(x) => emitValDef(sym, quote(x) + ".empty")
+    case PQNormalize(x) => emitValDef(sym, quote(x) + ".normalize")
+    case PQPush1(x,p) => emitValDef(sym, quote(x) + ".push(" + quote(p) + ")")
+    case PQPush2(x,c,d) => emitValDef(sym, quote(x) + ".push(" + quote(c) + "," + quote(d) + ")")
+    case PQTop(x) => emitValDef(sym, quote(x) + ".top()")
+    case PQPop(x) => emitValDef(sym, quote(x) + ".pop()")
+    case _ => super.emitNode(sym, rhs)
+  }
+}
+
+trait AClusterOps extends DSLType with Variables with OverloadHack {
+
+  object ACluster {
+    def apply(dim: Rep[Int]) = acluster_obj_new(dim)
+  }
+
+  implicit def repAClusterToAClusterOps(x: Rep[ACluster]) = new aclusterOpsCls(x)
+  implicit def aclusterToAClusterOps(x: Var[ACluster]) = new aclusterOpsCls(readVar(x))
+
+  class aclusterOpsCls(__x: Rep[ACluster]) {
+    def dim = acluster_dim(__x)
+    // def centers
+    def index = acluster_index(__x)
+    def offset = acluster_offset(__x)
+    def valid = acluster_valid(__x)
+    def valid_=(v:Rep[Boolean]) = acluster_valid_set(__x,v)
+    def merged = acluster_merged(__x)
+    def merged_=(m:Rep[Boolean]) = acluster_merged_set(__x,m)
+    def members = acluster_members(__x)
+    def num_members = acluster_num_members(__x)
+    // def data
+    def init_RM(d:Rep[Vector[Double]], c:Rep[Vector[Double]], m:Rep[Vector[Int]], i:Rep[Int]) = acluster_init_RM(__x,d,c,m,i)
+    def reset_RM = acluster_reset_RM(__x)
+    def getCandidates(from: Rep[ACluster]) = acluster_getCandidates(__x,from)
+    def merge_in_pq(pq: Rep[PQ]) = acluster_merge_in_pq(__x,pq)
+  }
+
+  //object defs
+  def acluster_obj_new(dim: Rep[Int]): Rep[ACluster]
+
+  //class defs
+  def acluster_dim(__x: Rep[ACluster]): Rep[Int]
+  def acluster_index(__x: Rep[ACluster]): Rep[Int]
+  def acluster_offset(__x: Rep[ACluster]): Rep[Int]
+  def acluster_valid(__x: Rep[ACluster]): Rep[Boolean]
+  def acluster_valid_set(__x: Rep[ACluster], v: Rep[Boolean]): Rep[Unit]
+  def acluster_merged(__x: Rep[ACluster]): Rep[Boolean]
+  def acluster_merged_set(__x: Rep[ACluster], m: Rep[Boolean]): Rep[Unit]
+  def acluster_members(__x: Rep[ACluster]): Rep[Vector[Int]]
+  def acluster_num_members(__x: Rep[ACluster]): Rep[Int]
+  def acluster_init_RM(__x:Rep[ACluster], d:Rep[Vector[Double]], c:Rep[Vector[Double]], m:Rep[Vector[Int]], i:Rep[Int]): Rep[Unit]
+  def acluster_reset_RM(__x: Rep[ACluster]): Rep[Unit]
+  def acluster_getCandidates(__x: Rep[ACluster], from: Rep[ACluster]): Rep[APair]
+  def acluster_mergeCandidates(__x: Rep[ACluster], candidates:Rep[Vector[APair]], fold:Rep[Int]): Rep[Unit]
+  def acluster_merge_in_pq(__x: Rep[ACluster], pq:Rep[PQ]): Rep[Unit]
+}
+
+trait AClusterOpsExp extends AClusterOps with EffectExp {
+
+  this: OptiMLExp =>
+
+  case class AClusterObjectNew(dim: Exp[Int]) extends Def[ACluster]
+  case class AClusterDim(__x: Exp[ACluster]) extends Def[Int]
+  case class AClusterIndex(__x: Exp[ACluster]) extends Def[Int]
+  case class AClusterOffset(__x: Exp[ACluster]) extends Def[Int]
+  case class AClusterValid(__x: Exp[ACluster]) extends Def[Boolean]
+  case class AClusterValidSet(__x: Exp[ACluster], v: Exp[Boolean]) extends Def[Unit]
+  case class AClusterMergedSet(__x: Exp[ACluster], m: Exp[Boolean]) extends Def[Unit]
+  case class AClusterMerged(__x: Exp[ACluster]) extends Def[Boolean]
+  case class AClusterMembers(__x: Exp[ACluster]) extends Def[Vector[Int]]
+  case class AClusterNumMembers(__x: Exp[ACluster]) extends Def[Int]
+  case class AClusterInitRM(x:Exp[ACluster], d:Exp[Vector[Double]], c:Exp[Vector[Double]], m:Exp[Vector[Int]], i:Exp[Int]) extends Def[Unit]
+  case class AClusterResetRM(__x: Exp[ACluster]) extends Def[Unit]
+  case class AClusterGetCandidates(__x: Exp[ACluster], from: Exp[ACluster]) extends Def[APair]
+  case class AClusterMergeCandidates(__x: Exp[ACluster], candidates:Exp[Vector[APair]], fold:Exp[Int]) extends Def[Unit]
+  case class AClusterMergeInPQ(__x: Exp[ACluster], pq: Exp[PQ]) extends Def[Unit]
+  
+  def acluster_obj_new(dim: Exp[Int]) = reflectMutable(AClusterObjectNew(dim))
+  def acluster_dim(__x: Exp[ACluster]) = AClusterDim(__x)
+  def acluster_index(__x: Exp[ACluster]): Exp[Int] = AClusterIndex(__x)
+  def acluster_offset(__x: Exp[ACluster]): Exp[Int] = AClusterOffset(__x)
+  def acluster_valid(__x: Exp[ACluster]): Exp[Boolean] = AClusterValid(__x)
+  def acluster_valid_set(__x: Exp[ACluster], valid: Exp[Boolean]) = __x match {
+    case Def(Reflect(VectorApply(v,n),_,_)) => reflectWrite(v)(AClusterValidSet(__x, valid))
+    case _ => reflectWrite(__x)(AClusterValidSet(__x, valid))
+  }
+  def acluster_merged(__x: Exp[ACluster]): Exp[Boolean] = AClusterMerged(__x)
+  def acluster_merged_set(__x: Exp[ACluster], m: Exp[Boolean]) = __x match{
+    case Def(Reflect(VectorApply(v,n),_,_)) => reflectWrite(v)(AClusterMergedSet(__x, m))
+    case _ => reflectWrite(__x)(AClusterMergedSet(__x, m))
+  }
+  def acluster_members(__x: Exp[ACluster]): Exp[Vector[Int]] = AClusterMembers(__x)
+  def acluster_num_members(__x: Exp[ACluster]): Exp[Int] = AClusterNumMembers(__x)
+  def acluster_init_RM(__x:Exp[ACluster], d:Exp[Vector[Double]], c:Exp[Vector[Double]], m:Exp[Vector[Int]], i:Exp[Int]) = __x match{
+    case Def(Reflect(VectorApply(v,n),_,_)) => reflectWrite(v)(AClusterInitRM(__x,d,c,m,i))
+    case _ => reflectWrite(__x)(AClusterInitRM(__x,d,c,m,i))
+  }
+  def acluster_reset_RM(__x: Exp[ACluster]): Exp[Unit] = __x match{
+    case Def(Reflect(VectorApply(v,n),_,_)) => reflectWrite(v)(AClusterResetRM(__x))
+    case _ => reflectWrite(__x)(AClusterResetRM(__x))
+  }
+  def acluster_getCandidates(__x: Exp[ACluster], from: Exp[ACluster]) = AClusterGetCandidates(__x, from)
+  def acluster_mergeCandidates(__x: Exp[ACluster], candidates:Exp[Vector[APair]], fold:Exp[Int]) = __x match{
+    case Def(Reflect(VectorApply(v,n),_,_)) => reflectWrite(v)(AClusterMergeCandidates(__x, candidates, fold))
+    case _ => reflectWrite(__x)(AClusterMergeCandidates(__x, candidates, fold))
+  }
+  def acluster_merge_in_pq(__x: Exp[ACluster], pq:Exp[PQ]) = __x match{
+    case Def(Reflect(VectorApply(v,n),_,_)) => reflectWrite(v)(AClusterMergeInPQ(__x,pq))
+    case _ => reflectWrite(__x)(AClusterMergeInPQ(__x,pq))
+  }
+}
+
+trait ScalaGenAClusterOps extends ScalaGenBase {
+  val IR: ApplicationOpsExp
+  import IR._
+
+  override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = rhs match {
+  // these are the ops that call through to the underlying real data structure
+    case AClusterObjectNew(dim) => emitValDef(sym, "new " + remap(manifest[ACluster]) + "(" + quote(dim)  + ")")
+    case AClusterDim(x) =>  emitValDef(sym, quote(x) + ".dim")
+    case AClusterIndex(x) =>  emitValDef(sym, quote(x) + ".index")
+    case AClusterOffset(x) =>  emitValDef(sym, quote(x) + ".offset")
+    case AClusterValid(x) =>  emitValDef(sym, quote(x) + ".valid")
+    case AClusterValidSet(x,v) => emitValDef(sym, quote(x) + ".valid = " + quote(v))
+    case AClusterMerged(x) =>  emitValDef(sym, quote(x) + ".merged")
+    case AClusterMergedSet(x,v) => emitValDef(sym, quote(x) + ".merged = " + quote(v))
+    case AClusterMembers(x) =>  emitValDef(sym, quote(x) + ".members")
+    case AClusterNumMembers(x) =>  emitValDef(sym, quote(x) + ".num_members")
+    case AClusterInitRM(x,d,c,m,i) =>  emitValDef(sym, quote(x) + ".init_RM(" + quote(d) + "," + quote(c) + "," + quote(m) + "," + quote(i) + ")")
+    case AClusterResetRM(x) => emitValDef(sym, quote(x) + ".reset_RM")
+    case AClusterGetCandidates(x,f) => emitValDef(sym, quote(x) + ".getCandidates(" + quote(f) + ")")
+    case AClusterMergeCandidates(x,c,f) => emitValDef(sym, quote(x) + ".mergeCandidates(" + quote(c) + "," + quote(f) + ")")
+    case AClusterMergeInPQ(x,pq) => emitValDef(sym, quote(x) + ".merge_in_pq(" + quote(pq) + ")")
+    case _ => super.emitNode(sym, rhs)
+  }
+}
+
 

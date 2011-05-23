@@ -142,6 +142,7 @@ trait VectorOps extends DSLType with Variables {
     def mzip[B:Manifest](y: Rep[Vector[B]])(f: (Rep[A],Rep[B]) => Rep[A]) = vector_mzipwith(x,y,f)
     def reduce(f: (Rep[A],Rep[A]) => Rep[A]) = vector_reduce(x,f)
     def filter(pred: Rep[A] => Rep[Boolean]) = vector_filter(x,pred)
+    def mfilter(pred: Rep[A] => Rep[Boolean]) = vector_mfilter(x,pred)
     def find(pred: Rep[A] => Rep[Boolean]) = vector_find(x,pred)
     def count(pred: Rep[A] => Rep[Boolean]) = vector_count(x, pred)
     def flatMap[B:Manifest](f: Rep[A] => Rep[Vector[B]]) = vector_flatmap(x,f)
@@ -248,6 +249,7 @@ trait VectorOps extends DSLType with Variables {
   def vector_mzipwith[A:Manifest,B:Manifest](x: Rep[Vector[A]], y: Rep[Vector[B]], f: (Rep[A],Rep[B]) => Rep[A]): Rep[Vector[A]]
   def vector_reduce[A:Manifest](x: Rep[Vector[A]], f: (Rep[A],Rep[A]) => Rep[A]): Rep[A]
   def vector_filter[A:Manifest](x: Rep[Vector[A]], pred: Rep[A] => Rep[Boolean]): Rep[Vector[A]]
+  def vector_mfilter[A:Manifest](x: Rep[Vector[A]], pred: Rep[A] => Rep[Boolean]): Rep[Unit]
   def vector_find[A:Manifest](x: Rep[Vector[A]], pred: Rep[A] => Rep[Boolean]): Rep[IndexVector]
   def vector_count[A:Manifest](x: Rep[Vector[A]], pred: Rep[A] => Rep[Boolean]): Rep[Int]
   def vector_flatmap[A:Manifest,B:Manifest](x: Rep[Vector[A]], f: Rep[A] => Rep[Vector[B]]): Rep[Vector[B]]
@@ -317,7 +319,6 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
   // fast parallel sort with delite ops
   case class VectorSort[A:Manifest:Ordering](x: Exp[Vector[A]]) extends Def[Vector[A]]
   case class VectorToList[A:Manifest](x: Exp[Vector[A]]) extends Def[List[A]]
-
 
   /////////////////////////////////////////////////
   // implemented via kernel embedding (sequential)
@@ -852,6 +853,8 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
     )
   }
 
+  case class VectorMFilter[A:Manifest](in: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) extends Def[Unit]
+
   abstract case class VectorFind[A:Manifest](in: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) extends DeliteOpLoop[IndexVector] {
     def mev = manifest[A]
   }
@@ -1037,6 +1040,8 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
   }
 
   def vector_filter[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(new VectorFilterFresh(x, pred))
+  // def vector_mfilter[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectWrite(x)(new VectorMFilterFresh(x,pred))
+  def vector_mfilter[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectWrite(x)(VectorMFilter(x,pred))
   def vector_find[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(new VectorFindFresh(x, pred))//IndexVector(reflectPure(VectorFind(x, pred)))
   def vector_count[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(new VectorCountFresh(x, pred))
 
@@ -1173,7 +1178,8 @@ trait ScalaGenVectorOps extends BaseGenVectorOps with ScalaGenFat {
     case VectorTrim(x) => emitValDef(sym, quote(x) + ".trim")
     case VectorClear(x) => emitValDef(sym, quote(x) + ".clear()")
     case VectorClone(x) => emitValDef(sym, quote(x) + ".cloneL")
-//      case v@VectorObjectNew(length, isRow) => emitValDef(sym, "new " + remap(v.mV) + "(" + quote(length) + "," + quote(isRow) + ")")
+//    case VectorMFilter(x,pred) => emitValDef(sym, quote(x) + ".mfilter(" + quote(pred) + ")")
+//    case v@VectorObjectNew(length, isRow) => emitValDef(sym, "new " + remap(v.mV) + "(" + quote(length) + "," + quote(isRow) + ")")
     case v@VectorNew(length, isRow) => emitValDef(sym, "new " + remap(v.mV) + "(" + quote(length) + "," + quote(isRow) + ")")
     case VectorObjectRange(start, end, stride, isRow) => emitValDef(sym, "new " + remap(manifest[RangeVectorImpl]) + "(" + quote(start) + "," + quote(end) + "," + quote(stride) + "," + quote(isRow) + ")")
     case VectorZeroDouble(length, isRow) => emitValDef(sym, "new generated.scala.ZeroVectorDoubleImpl(" + quote(length) + ", " + quote(isRow) + ")")

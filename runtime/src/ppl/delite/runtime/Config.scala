@@ -11,7 +11,7 @@ package ppl.delite.runtime
 
 object Config {
 
-  val numThreads: Int = System.getProperty("delite.threads", "1").toInt
+  val numThreads: Int = {val t = System.getProperty("delite.threads", "1").toInt; println("delite.threads = " + t); t}
 
   val numGPUs: Int = System.getProperty("delite.gpus", "0").toInt
 
@@ -44,6 +44,7 @@ object Config {
    val statsOutputFilename: String = System.getProperty("stats.output.filename")
    if(dumpStats && statsOutputFilename == null) throw new RuntimeException("stats.dump option enabled but did not provide a statsOutputFilename")
   
+  val profileEnabled: Boolean = System.getProperty("delite.profile.enabled", "false") == "true"
 
 }
 
