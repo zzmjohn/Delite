@@ -14,19 +14,21 @@ import ppl.delite.runtime.Config
 object Profiler{
   def emitProfileTimerHeader(out: StringBuilder, kernelName: String) {
     if(Config.profileEnabled){
+      val showStamp = if(Config.profileShowStamp) "true" else "false"
       out.append("val task_size = end - idx\n")
-      out.append("generated.scala.ProfileTimer.start(\"" + kernelName + "\", false)\n")
+      out.append("generated.scala.ProfileTimer.start(\"" + kernelName + "\", " + showStamp + ")\n")
     }
   }
 
   def emitProfileTimerTailer(out: StringBuilder, kernelName: String) {
     if(Config.profileEnabled){
-      out.append("generated.scala.ProfileTimer.stop(\"" + kernelName + "\", false)\n")
+      val showStamp = if(Config.profileShowStamp) "true" else "false"
+      out.append("generated.scala.ProfileTimer.stop(\"" + kernelName + "\", " + showStamp + ")\n")
       if(Config.profileImmediatePrint){
         out.append("val appendMsg = \", size = \" + task_size\n")
         out.append("generated.scala.ProfileTimer.printTime(\"" + kernelName + "\", appendMsg)\n")
       }
-    }    
+    }
   }
 
 }

@@ -13,7 +13,7 @@ object ProfileTimer
     if (!times.contains(component)) {
       times += component -> new ArrayBuffer[Double]()
     }
-    if (printMessage) println("[PROFILE]: Timing " + component + " #" + times(component).size + " started")
+    if (printMessage) println("[PROFILE]: " + component + " #" + times(component).size + " started")
     currentTimer += component -> System.currentTimeMillis
   }
 
@@ -26,7 +26,7 @@ object ProfileTimer
       printf(" %.6f", times(component)(i))
     println()
     */
-    if (printMessage) println("[PROFILE]: Timing " + component + " #" + (times(component).size - 1) + " stopped")
+    if (printMessage) println("[PROFILE]: " + component + " #" + (times(component).size - 1) + " stopped")
   }
 
   def totalTime(component: String, appendMessage: String = null) {
