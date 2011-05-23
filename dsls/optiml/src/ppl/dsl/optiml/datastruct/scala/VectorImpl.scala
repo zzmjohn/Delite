@@ -46,6 +46,13 @@ class VectorImpl[@specialized T: ClassManifest](__length: Int, __isRow: Boolean)
     new VectorImpl[T](d, isRow)
   }
 
+  def msort(implicit o: Ordering[T]) {
+    val d = new Array[T](_length)
+    System.arraycopy(_data, 0, d, 0, _length)
+    scala.util.Sorting.quickSort(d)
+    _data = d
+  }
+  
   def insert(pos: Int, x: T) {
     insertSpace(pos, 1)
     _data(pos) = x

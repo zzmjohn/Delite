@@ -20,12 +20,18 @@ object ProfileTimer
   def stop(component: String, printMessage: Boolean = true) {
     val x = (System.currentTimeMillis - currentTimer(component)) / 1000D
     times(component) += x
+    /*
+    print(component)
+    for(i <- 0 until times(component).length)
+      printf(" %.6f", times(component)(i))
+    println()
+    */
     if (printMessage) println("[PROFILE]: Timing " + component + " #" + (times(component).size - 1) + " stopped")
   }
 
   def totalTime(component: String, appendMessage: String = null) {
     val total = times(component).toList.reduceLeft[Double](_+_)
-    println("[PROFILE]: " + component + ": " + total + "s" + appendMessage)
+    println("[PROFILE]: " + component + ": " + total.formatted("%.6f") + "s" + appendMessage)
   }
 
   def clearAll() {
@@ -34,15 +40,21 @@ object ProfileTimer
     }
   }
 
-  def print(component: String) {
-    val timeStr = times.get(component) map { "[PROFILE]: Latest time for component " + component + ": " +  _.last.formatted("%.6f") + "s" }
+  def printTime(component: String, appendMessage: String = null) {
+    val timeStr = times.get(component) map { "[PROFILE]: " + component + ": " +  _.last.formatted("%.6f") + "s" + appendMessage}
     println(timeStr getOrElse "[PROFILE]: No data for component " + component)
   }
 
   def printAll() {
     for((k,v) <- times){
+      /*
+      print(component)
+      for(i <- 0 until v.length)
+        printf("%.6f ", v(i))
+      println()
+      */
       val total = v.toList.reduceLeft[Double](_+_)
-      println("[PROFILE]: " + k + ": " + total + "s")
+      println("[PROFILE-SUMMARY]: " + k + ": " + total.formatted("%.6f") + "s")
     }
   }
 

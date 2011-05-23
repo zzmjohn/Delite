@@ -125,6 +125,7 @@ trait VectorOps extends DSLType with Variables {
 
     // ordering operations
     def sort(implicit o: Ordering[A]) = vector_sort(x)
+    def msort(implicit o: Ordering[A]) = vector_msort(x)
     def min(implicit o: Ordering[A]) = vector_min(x)
     def minIndex(implicit o: Ordering[A]) = vector_minindex(x)
     def max(implicit o: Ordering[A]) = vector_max(x)
@@ -235,6 +236,7 @@ trait VectorOps extends DSLType with Variables {
   def vector_exp[A:Manifest:Arith](x: Rep[Vector[A]]): Rep[Vector[A]]
 
   def vector_sort[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[Vector[A]]
+  def vector_msort[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[Unit]
   def vector_min[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[A]
   def vector_minindex[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[Int]
   def vector_max[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[A]
@@ -318,6 +320,7 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
   // TODO: right now we just use the underlying data structure sort, but we should implement our own
   // fast parallel sort with delite ops
   case class VectorSort[A:Manifest:Ordering](x: Exp[Vector[A]]) extends Def[Vector[A]]
+  case class VectorMSort[A:Manifest:Ordering](x: Exp[Vector[A]]) extends Def[Unit]
   case class VectorToList[A:Manifest](x: Exp[Vector[A]]) extends Def[List[A]]
 
   /////////////////////////////////////////////////
@@ -1001,6 +1004,7 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
   def vector_exp[A:Manifest:Arith](x: Exp[Vector[A]]) = reflectPure(new VectorExpFresh(x))
 
   def vector_sort[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorSort(x))
+  def vector_msort[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectWrite(x)(VectorMSort(x))
   def vector_min[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorMin(x))
   def vector_minindex[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorMinIndex(x))
   def vector_max[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorMax(x))
@@ -1169,6 +1173,7 @@ trait ScalaGenVectorOps extends BaseGenVectorOps with ScalaGenFat {
     case VectorIsRow(x)     => emitValDef(sym, quote(x) + ".isRow")
     case VectorMutableTrans(x) => emitValDef(sym, quote(x) + ".mtrans")
     case VectorSort(x) => emitValDef(sym, quote(x) + ".sort")
+    case VectorMSort(x) => emitValDef(sym, quote(x) + ".msort")
     case VectorToList(x) => emitValDef(sym, quote(x) + ".toList")
     case VectorCopyFrom(x,pos,y) => emitValDef(sym, quote(x) + ".copyFrom(" + quote(pos) + ", " + quote(y) + ")")
     case VectorInsert(x,pos,y) => emitValDef(sym, quote(x) + ".insert(" + quote(pos) + ", " + quote(y) + ")")

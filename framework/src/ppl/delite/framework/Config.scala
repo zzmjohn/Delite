@@ -5,7 +5,7 @@ object Config {
   var degFilename = System.getProperty("delite.deg.filename", "out.deg")
   var opfusionEnabled = {
     val f = System.getProperty("delite.opfusion.enabled", "false")
-    val g = true //(f != "false")
+    val g = false //true //(f != "false")
     println("delite.opfusion.enabled.f = " + f)
     println("delite.opfusion.enabled.g = " + g)
     g

@@ -46,5 +46,7 @@ object Config {
   
   val profileEnabled: Boolean = System.getProperty("delite.profile.enabled", "false") == "true"
 
+  val profileImmediatePrint: Boolean = System.getProperty("delite.profile.immediateprint", "true") == "true"
+
 }
 

@@ -1,4 +1,3 @@
-
 package ppl.apps.bio.spade
 
 import ppl.dsl.optiml.OptiMLApplication
@@ -65,6 +64,7 @@ trait Clustering {
         if(round!=0){
           // TODO: sort is non-mutable
           //ac_valid = ac_valid.sort
+          ac_valid.msort
           // TODO: following is the concise way, but cannot pass the mutable check
           //ac_valid.foreach{ _.reset_RM }
           for(i <- (0::ac_valid.length-1))
@@ -101,7 +101,10 @@ trait Clustering {
                   // note: val d = absdist(into_center, from_cluster.members(i))
                   var offset0 = offset_center
                   var offset1 = from_cluster.members(i)
-                  var d:Double = 0
+                  // note: following expression doesn't work
+                  //       var d: Double = 0
+                  //       d += abs(tmp)
+                  var d = 0.0
                   while(offset0 < offset_end){
                     val tmp = centers(offset0) - data(offset1)
                     d += abs(tmp)

@@ -29,7 +29,7 @@ trait Spade extends OptiMLApplication with Downsampling with Upsampling with Clu
     */
 
     /********* clustering *********/
-
+    
     val data = readMatrix(args(0) + "/data.txt")
     tic()
     val assgn = cluster(data, 200)
@@ -37,7 +37,14 @@ trait Spade extends OptiMLApplication with Downsampling with Upsampling with Clu
     for(i <- 0 to 9)
       print(assgn(i)+"\t")
     println()
-    
+
+    /*
+    val a = Vector[Double](10,true)
+    val b = Vector[Double](10,true)
+    val c = a(0) - b(0)
+    val d = arith_abs(c)
+    println(d)
+    */
     /*
     val numbers = Vector.rand(10).mutable
     numbers.pprint
@@ -82,7 +89,7 @@ trait Spade extends OptiMLApplication with Downsampling with Upsampling with Clu
     }
     next(numbers, 0)
     */
-
+    
     /********* upsampling *********/
     /*
     val tbl = readMatrix(args(0) + "/tbl_small.txt")

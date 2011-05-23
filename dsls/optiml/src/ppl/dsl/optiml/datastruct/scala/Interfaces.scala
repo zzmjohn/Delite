@@ -115,6 +115,7 @@ trait Vector[@specialized(Boolean, Int, Long, Float, Double) T] extends ppl.deli
 
   def mtrans: Vector[T]
   def sort(implicit o: Ordering[T]): Vector[T] // because we use the underlying data field to sort
+  def msort(implicit o: Ordering[T])
   def copyFrom(pos: Int, xs: Vector[T])
   def insert(pos: Int, x: T)
   def insertAll(pos: Int, xs: Vector[T])
@@ -142,6 +143,7 @@ trait NilVector[T] extends Vector[T] {
 
   def mtrans = throw new UnsupportedOperationException()
   def sort(implicit o: Ordering[T]) = throw new UnsupportedOperationException()
+  def msort(implicit o: Ordering[T]) = throw new UnsupportedOperationException()
   def insert(pos: Int, x: T) = throw new UnsupportedOperationException()
   def insertAll(pos: Int, xs: Vector[T]) = throw new UnsupportedOperationException()
   def copyFrom(pos: Int, xs: Vector[T]) = throw new UnsupportedOperationException()
@@ -184,6 +186,7 @@ trait IndexVectorWC extends IndexVector {
 
   def mtrans = throw new UnsupportedOperationException()
   def sort(implicit o: Ordering[Int]) = throw new UnsupportedOperationException()
+  def msort(implicit o: Ordering[Int]) = throw new UnsupportedOperationException()
   def insert(pos: Int, x: Int) = throw new UnsupportedOperationException()
   def insertAll(pos: Int, xs: Vector[Int]) = throw new UnsupportedOperationException()
   def copyFrom(pos: Int, xs: Vector[Int]) = throw new UnsupportedOperationException()

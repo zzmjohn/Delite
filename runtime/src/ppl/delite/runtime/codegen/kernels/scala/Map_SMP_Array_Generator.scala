@@ -78,12 +78,12 @@ object Map_SMP_Array_Generator {
     out.append(numChunks)
     out.append('\n')
 
-    Profiler.insertOPProfilingHead(out, kernelName(master, chunkIdx))
+    Profiler.emitProfileTimerHeader(out, kernelName(master, chunkIdx))
     out.append("while (idx < end) {\n")
     out.append("out.dcUpdate(idx, map.closure.map(in.dcApply(idx)))\n")
     out.append("idx += 1\n")
     out.append("}\n")
-    Profiler.insertOPProfilingTail(out, kernelName(master, chunkIdx))
+    Profiler.emitProfileTimerTailer(out, kernelName(master, chunkIdx))
 
     if (chunkIdx == 0) out.append("out\n")
     out.append("}\n")

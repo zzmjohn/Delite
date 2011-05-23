@@ -76,7 +76,7 @@ object Foreach_SMP_Array_Generator {
     out.append(numChunks)
     out.append('\n')
 
-    Profiler.insertOPProfilingHead(out, kernelName(master, chunkIdx))
+    Profiler.emitProfileTimerHeader(out, kernelName(master, chunkIdx))
     out.append("while (idx < end) {\n")
 
     out.append("val sync = foreach.closure.sync(idx)\n")//_.sortBy(System.identityHashCode(_))\n")
@@ -92,7 +92,7 @@ object Foreach_SMP_Array_Generator {
 
     out.append("idx += 1\n")
     out.append("}\n")
-    Profiler.insertOPProfilingTail(out, kernelName(master, chunkIdx))
+    Profiler.emitProfileTimerTailer(out, kernelName(master, chunkIdx))
 
     out.append("}\n")
   }

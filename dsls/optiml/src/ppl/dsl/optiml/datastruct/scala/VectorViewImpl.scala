@@ -34,6 +34,7 @@ class VectorViewImpl[T:Manifest](x: Array[T], val start: Int, val stride: Int, v
   // TODO: these semantics are ambiguous/ill-defined. e.g., copy on insert but write-through on update.
   // need to decide on a clean semantics and stick with it.
   def sort(implicit o: Ordering[T]) = cloneL.sort
+  def msort(implicit o: Ordering[T]) = throw new UnsupportedOperationException
   def insert(pos:Int, x: T) = cloneL.insert(pos,x)
   def insertAll(pos: Int, xs: Vector[T]) = cloneL.insertAll(pos,xs)
   def copyFrom(pos: Int, xs: Vector[T]) = cloneL.copyFrom(pos, xs)

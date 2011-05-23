@@ -84,7 +84,7 @@ object MapReduce_SMP_Array_Generator {
     out.append(numChunks)
     out.append('\n')
 
-    Profiler.insertOPProfilingHead(out, kernelName(master, chunkIdx))
+    Profiler.emitProfileTimerHeader(out, kernelName(master, chunkIdx))
     out.append("var acc = mapReduce.closure.map(in.dcApply(idx))\n")
     out.append("idx += 1\n")
     out.append("while (idx < end) {\n")
@@ -106,7 +106,7 @@ object MapReduce_SMP_Array_Generator {
       out.append('\n')
     }
 
-    Profiler.insertOPProfilingTail(out, kernelName(master, chunkIdx))
+    Profiler.emitProfileTimerTailer(out, kernelName(master, chunkIdx))
 
     if (chunkIdx == 0) { //chunk 0 returns result
       out.append("acc\n")

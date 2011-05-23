@@ -28,6 +28,7 @@ abstract class ZeroVectorImpl[T:Manifest](val length: Int, __isRow: Boolean) ext
 
   def cloneL = new VectorImpl[T](length, isRow)
   def sort(implicit o: Ordering[T]) = this
+  def msort(implicit o: Ordering[T]) {}
   def insert(pos:Int, x: T) = cloneL.insert(pos,x)
   def insertAll(pos: Int, xs: Vector[T]) = cloneL.insertAll(pos,xs)
   def copyFrom(pos: Int, xs: Vector[T]) = cloneL.copyFrom(pos, xs)

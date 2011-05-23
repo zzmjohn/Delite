@@ -35,6 +35,8 @@ class RangeVectorImpl(val start: Int, val end: Int, val stride: Int, __isRow: Bo
 
   def sort(implicit o: Ordering[Int]) = this
 
+  def msort(implicit o: Ordering[Int]) {}
+
   // TODO: could make this a lazy initialization and allow updates,
   //       but update would be slow due to the check
   def update(index: Int, x: Int) {
