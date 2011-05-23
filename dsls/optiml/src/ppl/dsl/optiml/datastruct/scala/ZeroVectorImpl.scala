@@ -35,6 +35,7 @@ abstract class ZeroVectorImpl[T:Manifest](val length: Int, __isRow: Boolean) ext
   def trim = cloneL.trim
   def clear() = cloneL.clear()
   def toList = data.toList
+  def mfilter(block:T => Boolean) = throw new UnsupportedOperationException()
 }
 
 class ZeroVectorIntImpl(__length: Int, __isRow: Boolean) extends ZeroVectorImpl[Int](__length, __isRow) {

@@ -36,7 +36,7 @@ trait Clustering {
       i += 1
     }
 
-    var ac_valid = c_ap
+    val ac_valid = c_ap
     var flag = true
     var round = 0
     while(flag){
@@ -44,22 +44,18 @@ trait Clustering {
       ac_valid mfilter {a:Rep[ACluster]=> a.valid}
 
       println("round = " + round + ", num_valid = " + ac_valid.length)
-/*
+
       if(round==5){
-        /*
-        val ac_valid_val = ac_valid
-        for(i <- (0::ac_valid_val.length-1)){
-          if(ac_valid_val(i).num_members==1)
-            ac_valid_val(i).valid_=(false)
-        }
-        ac_valid = ac_valid_val.partition(_.valid)._1
-        */
+        // TODO: following is the concise way, but cannot pass the mutable check
         //ac_valid = ac_valid map {e=> if(e.num_members==1) e.valid_=(false); e}
+        for(i <- (0::ac_valid.length-1)){
+          if(ac_valid(i).num_members==1)
+            ac_valid(i).valid_=(false)
+        }
         //ac_valid = ac_valid.partition(_.valid)._1
-        //ac_valid mfilter {_.valid}
+        ac_valid mfilter {_.valid}
       }
-*/
-/*
+
       val num_valid = ac_valid.length
       // TODO: anyway to write the line below more elegant?
       if(num_valid.asInstanceOfL[Double] < 1.5*k.asInstanceOfL[Double]){
@@ -69,12 +65,10 @@ trait Clustering {
         if(round!=0){
           // TODO: sort is non-mutable
           //ac_valid = ac_valid.sort
+          // TODO: following is the concise way, but cannot pass the mutable check
           //ac_valid.foreach{ _.reset_RM }
-          var i = 0
-          while(i < ac_valid.length){
+          for(i <- (0::ac_valid.length-1))
             ac_valid(i).reset_RM
-            i += 1
-          }
         }
         val limit = max(1, num_valid/5000).asInstanceOfL[Int]
 
@@ -91,6 +85,7 @@ trait Clustering {
         var into = 0
         while(into < num_valid){
           if(!ac_valid(into).merged){
+            println("into = " + into)
             ac_valid(into).merged_=(true)
             val pq = PQ(limit)
             val offset_center = ac_valid(into).offset
@@ -127,13 +122,13 @@ trait Clustering {
         round += 1
 
       }
-*/
+
     }
 
     // Assignment and clean up
     val assgn = Vector[Int](obs, true)
     //val ac_valid = ac_valid.partition(_.valid)._1
-    //ac_valid mfilter {a:Rep[ACluster]=> a.valid}
+    ac_valid mfilter {a:Rep[ACluster]=> a.valid}
     var cur_Id = 0
     while(cur_Id < ac_valid.length){
       var b = 0

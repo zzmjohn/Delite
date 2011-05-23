@@ -111,6 +111,7 @@ trait Vector[@specialized(Boolean, Int, Long, Float, Double) T] extends ppl.deli
   def update(index: Int, x: T)
   def data: Array[T]
   def toList: List[T]
+  def mfilter(block:T => Boolean)
 
   def mtrans: Vector[T]
   def sort(implicit o: Ordering[T]): Vector[T] // because we use the underlying data field to sort
@@ -137,6 +138,7 @@ trait NilVector[T] extends Vector[T] {
   def update(index: Int, x: T) = throw new UnsupportedOperationException()
   def data = throw new UnsupportedOperationException()
   def toList = throw new UnsupportedOperationException()
+  def mfilter(block:T => Boolean) = throw new UnsupportedOperationException()
 
   def mtrans = throw new UnsupportedOperationException()
   def sort(implicit o: Ordering[T]) = throw new UnsupportedOperationException()
@@ -178,6 +180,7 @@ trait IndexVectorWC extends IndexVector {
   def update(index: Int, x: Int) = throw new UnsupportedOperationException()
   def data = throw new UnsupportedOperationException()
   def toList = throw new UnsupportedOperationException()
+  def mfilter(block:Int => Boolean) = throw new UnsupportedOperationException()
 
   def mtrans = throw new UnsupportedOperationException()
   def sort(implicit o: Ordering[Int]) = throw new UnsupportedOperationException()

@@ -99,8 +99,8 @@ class VectorImpl[@specialized T: ClassManifest](__length: Int, __isRow: Boolean)
     var i = 0
     var j = _length - 1
     while(i <= j){
-      while(i < j && block(_data(i))) i += 1
-      while(i < j && !block(_data(j))) j -= 1
+      while(i <= j && block(_data(i))) i += 1
+      while(i <= j && !block(_data(j))) j -= 1
       if(i < j) {
         val tmp = _data(i)
         _data(i) = _data(j)

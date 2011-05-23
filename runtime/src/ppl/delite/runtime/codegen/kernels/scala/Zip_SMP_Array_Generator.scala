@@ -84,8 +84,8 @@ object Zip_SMP_Array_Generator {
     out.append("out.dcUpdate(idx, zip.closure.zip(inA.dcApply(idx), inB.dcApply(idx)))\n")
     out.append("idx += 1\n")
     out.append("}\n")
-    if (chunkIdx == 0) out.append("out\n")
     Profiler.insertOPProfilingTail(out, kernelName(master, chunkIdx))
+    if (chunkIdx == 0) out.append("out\n")
 
     out.append("}\n")
   }

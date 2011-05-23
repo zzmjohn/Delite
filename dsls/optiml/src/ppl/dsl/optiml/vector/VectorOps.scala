@@ -1177,7 +1177,7 @@ trait ScalaGenVectorOps extends BaseGenVectorOps with ScalaGenFat {
     case VectorTrim(x) => emitValDef(sym, quote(x) + ".trim")
     case VectorClear(x) => emitValDef(sym, quote(x) + ".clear()")
     case VectorClone(x) => emitValDef(sym, quote(x) + ".cloneL")
-    // TODO: following is just a special case
+    //TODO: following is just a special case, fix it!
     // case VectorMFilter(x,pred) => emitValDef(sym, quote(x) + ".mfilter(" + quote(pred) + ")")
     case VectorMFilter(x,pred) => emitValDef(sym, quote(x) + ".mfilter( _.valid )")
 //    case v@VectorObjectNew(length, isRow) => emitValDef(sym, "new " + remap(v.mV) + "(" + quote(length) + "," + quote(isRow) + ")")

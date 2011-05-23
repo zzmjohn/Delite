@@ -68,4 +68,9 @@ class RangeVectorImpl(val start: Int, val end: Int, val stride: Int, __isRow: Bo
   def toList = {
     throw new UnsupportedOperationException("toList is not implemented on RangeVectorImpl yet")
   }
+
+  def mfilter(block:Int => Boolean) {
+    throw new IllegalArgumentException("RangeVector cannot be updated")
+  }
+
 }

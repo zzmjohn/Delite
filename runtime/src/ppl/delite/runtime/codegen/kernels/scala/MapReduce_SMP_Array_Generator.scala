@@ -105,6 +105,9 @@ object MapReduce_SMP_Array_Generator {
       out.append(')')
       out.append('\n')
     }
+
+    Profiler.insertOPProfilingTail(out, kernelName(master, chunkIdx))
+
     if (chunkIdx == 0) { //chunk 0 returns result
       out.append("acc\n")
     }
@@ -113,8 +116,6 @@ object MapReduce_SMP_Array_Generator {
       out.append(chunkIdx)
       out.append("(acc)\n")
     }
-
-    Profiler.insertOPProfilingTail(out, kernelName(master, chunkIdx))
 
     out.append('}')
     out.append('\n')

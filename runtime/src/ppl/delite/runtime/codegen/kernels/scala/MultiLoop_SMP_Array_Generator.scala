@@ -90,6 +90,8 @@ object MultiLoop_SMP_Array_Generator {
     out.append("idx += 1\n")
     out.append("}\n")
 
+    Profiler.insertOPProfilingTail(out, kernelName(master, chunkIdx))
+
     if (!op.needsCombine) {
       if (chunkIdx == 0) out.append("acc\n")
     } else {
@@ -113,8 +115,6 @@ object MultiLoop_SMP_Array_Generator {
         out.append("(acc)\n")
       }
     }
-
-    Profiler.insertOPProfilingTail(out, kernelName(master, chunkIdx))
 
     out.append("}\n")
   }

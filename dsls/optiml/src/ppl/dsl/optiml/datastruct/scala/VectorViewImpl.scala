@@ -27,6 +27,8 @@ class VectorViewImpl[T:Manifest](x: Array[T], val start: Int, val stride: Int, v
     _data.toList
   }
 
+  def mfilter(block:T => Boolean) = throw new UnsupportedOperationException
+
   def cloneL = { val v = new VectorImpl[T](0, isRow); v.insertAll(0, this); v }
 
   // TODO: these semantics are ambiguous/ill-defined. e.g., copy on insert but write-through on update.

@@ -217,7 +217,6 @@ class ACluster(val dim: Int) extends Ordered[ACluster] {
   def merge_in_pq(pq: PQ) {
     pq.normalize
     while(!pq.empty){
-      print("+")
       val rhs = pq.top
       if(!rhs.merged)
         this.merge_in(rhs)
