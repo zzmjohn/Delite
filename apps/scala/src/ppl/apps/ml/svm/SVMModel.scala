@@ -49,6 +49,7 @@ trait SVMModel { this: OptiMLApplication =>
     alphas.mt // col vector
 
     val numSamples = X.numRows
+
     var passes = 0
     var iter = 0
 
@@ -105,7 +106,11 @@ trait SVMModel { this: OptiMLApplication =>
               else if (alphas(j) < L) alphas(j) = L
 
               // check alphas(j) convergence
+<<<<<<< HEAD
               if (Math.abs(alphas(j) - old_aj) >  .00001){
+=======
+              if (Math.abs(alphas(j) - old_aj) >  0.00001){
+>>>>>>> 8c8ab7439026cf363b85e13a62885e7d5631527b
                 // find a_i to maximize objective function
 
                 val old_ai = alphasOld(i)
@@ -141,6 +146,8 @@ trait SVMModel { this: OptiMLApplication =>
         passes = 0;
       }
     } // while
+
+	println("ITER " + iter)
 
     // SMO finished
     println("num iterations: " + iter)

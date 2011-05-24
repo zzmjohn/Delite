@@ -83,6 +83,7 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile {
   }
 
 
+
   final def execute(args: Array[String]) {
     println("Delite Application Being Executed:[" + this.getClass.getSimpleName + "]")
 
