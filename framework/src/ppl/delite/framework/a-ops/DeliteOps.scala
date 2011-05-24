@@ -7,10 +7,10 @@ import scala.virtualization.lms.internal.{GenericCodegen, GenericFatCodegen, Gen
 import ppl.delite.framework.{DeliteCollection,Config}
 
 //trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with LoopsFatExp {
-trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with LoopsFatExp 
+trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with LoopsFatExp
     with VariantsOpsExp with DeliteCollectionOpsExp
     with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp  {
-  
+
   /**
    * The base type of the DeliteOp hierarchy.
    */
@@ -27,8 +27,8 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
   abstract class DeliteOpLoop[A] extends AbstractLoop[A] with DeliteOp[A]
 
 //  case class DeliteOpFatLoop(val size: Exp[Int], val v: Sym[Int], val body: List[Def[Any]]) extends AbstractFatLoop with DeliteFatOp
-  
-  
+
+
   // for use in loops:
 
   case class DeliteCollectElem[A, CA <: DeliteCollection[A]]( // TODO: cannot have IndexVector as result. use CA instead of C[X] ?
@@ -36,9 +36,9 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     func: Exp[A],
     cond: List[Exp[Boolean]] = Nil
     // TODO: note that the alloc block right now directly references the size
-    // which is not part of DeliteCollectElem instance. we might want to fix that 
+    // which is not part of DeliteCollectElem instance. we might want to fix that
   ) extends Def[CA]
-  
+
   case class DeliteReduceElem[A](
     func: Exp[A],
     cond: List[Exp[Boolean]] = Nil,
@@ -46,21 +46,21 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     rV: (Sym[A], Sym[A]),
     rFunc: Exp[A]
   ) extends Def[A]
-  
-  
+
+
   class DeliteOpLoopMirrored[A](f: Transformer, o: DeliteOpLoop[A]) extends DeliteOpLoop[A] {   // TODO!
     val size = f(o.size)
     val v = f(o.v).asInstanceOf[Sym[Int]]
     val body = mirrorLoopBody(o.body, f)
   }
-  
+
   def loopBodyNeedsCombine[A](e: Def[A]) = e match {
     case e:DeliteReduceElem[_] => true
     case e:DeliteCollectElem[_,_] => e.cond.nonEmpty
     case _ => false
   }
-  
-  
+
+
 /*
   abstract class DeliteOpMapNew[A,C[X] <: DeliteCollection[X]]() extends DeliteOp[C[A]] {
     val size: Exp[Int]
@@ -344,13 +344,13 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
 
   def mirrorLoopBody[A](d: Def[A], f: Transformer): Def[A] = {
     d match {
-      case e: DeliteCollectElem[a,ca] => 
+      case e: DeliteCollectElem[a,ca] =>
         DeliteCollectElem[a,ca]( // need to be a case class for equality (do we rely on equality?)
           alloc = f(e.alloc),
           func = f(e.func),
           cond = f(e.cond)
         ).asInstanceOf[Def[A]]
-      case e: DeliteReduceElem[a] => 
+      case e: DeliteReduceElem[a] =>
         DeliteReduceElem[a](
           func = f(e.func),
           cond = f(e.cond),
@@ -360,18 +360,18 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
         ).asInstanceOf[Def[A]]
     }
   }
-  
 
-/*  
+
+/*
   // heavy type casting ahead!
   override def mirror[A:Manifest](e: Def[A], f: Transformer): Exp[A] = e match {
-    case e: DeliteCollectElem[a,b] => 
+    case e: DeliteCollectElem[a,b] =>
 //    toFatPieceAtom(DeliteCollectElem[a,DeliteCollection]( // need to be a case class for equality!
     toAtom(DeliteCollectElem[a,DeliteCollection]( // need to be a case class for equality!
       alloc = f(e.alloc).asInstanceOf[Exp[DeliteCollection[a]]],
       func = f(e.func)
     ).asInstanceOf[Def[A]])
-    case e: DeliteReduceElem[a] => 
+    case e: DeliteReduceElem[a] =>
     toAtom(DeliteReduceElem[a](
       func = f(e.func),
       rV = (f(e.rV._1).asInstanceOf[Sym[a]], f(e.rV._2).asInstanceOf[Sym[a]]), // should transform bound vars as well ??
@@ -389,7 +389,7 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt {
 /*
   // overridden only to attach DeliteFatOp trait to result ...
   override def fatten(e: TP[Any]): TTP = e.rhs match {
-    case op: DeliteOpLoop[_] => 
+    case op: DeliteOpLoop[_] =>
       TTP(List(e.sym), DeliteFatLoop(op.size, op.v, List(op.body)))
     case _ => super.fatten(e)
   }
@@ -460,10 +460,10 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
   def quotearg(x: Sym[Any]) = quote(x) + ": " + quotetp(x)
   def quotetp(x: Sym[Any]) = remap(x.Type)
 /*
-  def quoteZero(x: Sym[Any]) = x.Type.toString match { 
-    case "Int" | "Long" | "Float" | "Double" => "0" 
+  def quoteZero(x: Sym[Any]) = x.Type.toString match {
+    case "Int" | "Long" | "Float" | "Double" => "0"
     case "Boolean" => "false"
-    case _ => "null" 
+    case _ => "null"
   }
 */
   // TODO: conditions!
@@ -520,7 +520,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
           // - combine (reduce step) using concat <-- simpler to implement but slow
           // - use a pre-combine scan step to find out where each processor should write the data
           //   and do the copying in another parallel map <-- faster but more work
-          
+
           stream.println("def size = " + quote(op.size))
           stream.println("def alloc: " + actType + " = {"/*}*/)
           stream.println("val __act = new " + actType)
@@ -625,11 +625,11 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
       }
       deliteKernel = save
     }
-    case op: AbstractLoop[_] => 
+    case op: AbstractLoop[_] =>
       // TODO: we'd like to always have fat loops but currently they are not allowed to have effects
       stream.println("// a *thin* loop follows: " + quote(sym))
       emitFatNode(List(sym), SimpleFatLoop(op.size, op.v, List(op.body)))
-/*    
+/*
       if (!deliteKernel) { // FIXME cond!
         op.body match {
           case elem: DeliteCollectElem[_,_] =>
@@ -658,7 +658,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
       } else {
         stream.println("TODO: thin loop codegen")
       }
-*/      
+*/
     case map:DeliteOpMap[_,_,_] => {
       if (deliteKernel == false){
         stream.println("def " + quote(sym) + "_block = {")

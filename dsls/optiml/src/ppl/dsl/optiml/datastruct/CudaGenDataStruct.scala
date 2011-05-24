@@ -70,7 +70,7 @@ trait CudaGenDataStruct extends CudaCodegen {
     out.append("\t\tjmethodID mid_data = env->GetMethodID(cls,\"data\",\"()[%s\");\n".format(JNITypeDescriptor(typeArg)))
     out.append("\t\tj%sArray data = (j%sArray)(%s);\n".format(typeStr,typeStr,"env->CallObjectMethod(obj,mid_data)"))
     out.append("\t\tj%s *dataPtr = (j%s *)env->GetPrimitiveArrayCritical(data,0);\n".format(typeStr,typeStr))
-	
+
 	// Check if vector view
 	out.append("\tif(isViewCls) {\n")
 	out.append("\t\tint start = 0;\n")
@@ -134,7 +134,7 @@ trait CudaGenDataStruct extends CudaCodegen {
     out.append("\t\t%s *%s = new %s();\n".format(remap(sym.Type),quote(sym),remap(sym.Type)))
     out.append("\t\t%s->length = %s;\n".format(quote(sym),"env->CallIntMethod(obj,mid_length)"))
     out.append("\t\t%s->isRow = %s;\n".format(quote(sym),"env->CallBooleanMethod(obj,mid_isRow)"))
-	
+
 	// If this is not RangeVector
 	out.append("\tif(isRangeCls == false) {\n")
     out.append("\t\tjmethodID mid_data = env->GetMethodID(cls,\"data\",\"()[%s\");\n".format(JNITypeDescriptor(typeArg)))
@@ -207,7 +207,7 @@ trait CudaGenDataStruct extends CudaCodegen {
     out.append("\tjobject obj_labels = env->CallObjectMethod(obj,fid_labels);\n")
     out.append("\tjobject obj_transposed = env->GetObjectField(obj,fid_transposed);\n")
 
-    // Copy Labels 
+    // Copy Labels
     val typeStr_labels = remap(sym.Type.typeArguments(1))
     val numBytesStr_labels = "labels.length * sizeof(%s)".format(typeStr_labels)
     out.append("\tLabels<%s> labels;\n".format(typeStr_labels))
@@ -228,17 +228,17 @@ trait CudaGenDataStruct extends CudaCodegen {
     out.append("\t%s->labels = labels;\n".format(quote(sym)))
     //out.append("\tDeliteCudaMalloc((void**)%s,sizeof(Labels<%s>));\n".format("&labels",typeStr_labels))
 
-    // Copy Transposed 
+    // Copy Transposed
     out.append("\t%s transposed;\n".format(remap(sym.Type)))
     out.append("\ttransposed.numRows = %s->numCols;\n".format(quote(sym)))
     out.append("\ttransposed.numCols = %s->numRows;\n".format(quote(sym)))
     out.append("\ttransposed.labels = labels;\n")
-    
+
 	out.append("\tjclass cls_transposed = env->GetObjectClass(obj_transposed);\n")
     out.append("\tjmethodID mid_data_transposed = env->GetMethodID(cls_transposed,\"data\",\"()[%s\");\n".format(JNITypeDescriptor(sym.Type.typeArguments(0))))
     out.append("\tj%sArray data_transposed = (j%sArray)(%s);\n".format(typeStr,typeStr,"env->CallObjectMethod(obj_transposed,mid_data_transposed)"))
     out.append("\tj%s *dataPtr_transposed = (j%s *)env->GetPrimitiveArrayCritical(data_transposed,0);\n".format(typeStr,typeStr))
-    
+
     out.append("\t%s *devPtr_transposed;\n".format(typeStr))
     out.append("\tDeliteCudaMalloc((void**)%s,%s+sizeof(%s));\n".format("&devPtr_transposed",numBytesStr,remap(sym.Type)))
 	out.append("\ttransposed.data = devPtr_transposed;\n")
@@ -254,7 +254,7 @@ trait CudaGenDataStruct extends CudaCodegen {
     out.append("\treturn %s;\n".format(quote(sym)))
     out.toString
   }
-  
+
   def matrixCopyOutputDtoH(sym: Sym[Any]): String = {
     val out = new StringBuilder
     val typeStr = remap(sym.Type.typeArguments(0))
@@ -438,7 +438,7 @@ trait CudaGenDataStruct extends CudaCodegen {
     else {
       out.append("\t%s->length = %s;\n".format(quote(newSym),length))
       out.append("\t%s->isRow = %s;\n".format(quote(newSym),isRow))
-      out.append("\t%s->data = %s;\n".format(quote(newSym),data))      
+      out.append("\t%s->data = %s;\n".format(quote(newSym),data))
     }
     out.append("\treturn %s;\n".format(quote(newSym)))
     out.append("}\n")

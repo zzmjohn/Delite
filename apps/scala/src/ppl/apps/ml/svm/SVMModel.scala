@@ -49,7 +49,6 @@ trait SVMModel { this: OptiMLApplication =>
     alphas.mt // col vector
 
     val numSamples = X.numRows
-
     var passes = 0
     var iter = 0
 
@@ -62,7 +61,7 @@ trait SVMModel { this: OptiMLApplication =>
       //for (i <- 0 until numSamples) {
         // TODO: x761 -- code is recalculating alphas from original definition here
         val alphasOld = alphas.cloneL
-        
+
         val f_i = (alphasOld*Y*(X*X(i).t)).sum + b //TR M*V alph0
         val E_i = f_i - Y(i)
 
@@ -75,7 +74,7 @@ trait SVMModel { this: OptiMLApplication =>
 
           val f_j = (alphasOld*Y*(X*X(j).t)).sum + b //TR M*V alph0 -- inside if, cannot be fused with the one in f_i (calc actually happens further down)
           val E_j = f_j - Y(j)
-                        
+
           val old_aj = alphasOld(j) //TR: making it a val should not move it down!
           //var old_ai = alphas(i)
 
@@ -106,11 +105,7 @@ trait SVMModel { this: OptiMLApplication =>
               else if (alphas(j) < L) alphas(j) = L
 
               // check alphas(j) convergence
-<<<<<<< HEAD
               if (Math.abs(alphas(j) - old_aj) >  .00001){
-=======
-              if (Math.abs(alphas(j) - old_aj) >  0.00001){
->>>>>>> 8c8ab7439026cf363b85e13a62885e7d5631527b
                 // find a_i to maximize objective function
 
                 val old_ai = alphasOld(i)

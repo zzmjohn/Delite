@@ -31,30 +31,16 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
   val virtualization_lms_core = "scala" % "virtualization-lms-core_2.9.x-virtualized-SNAPSHOT" % "0.1"
   
   val scalaToolsSnapshots = ScalaToolsSnapshots
-<<<<<<< HEAD
+
   val scalatest = "org.scalatest" % "scalatest" % "1.4-SNAPSHOT"
 
-=======
-  val scalatest = "org.scalatest" % "scalatest" % "1.4-SNAPSHOT" % "test"
-  
->>>>>>> 8c8ab7439026cf363b85e13a62885e7d5631527b
   // Define project class with default source tree layout
   class FlatProject(info: ProjectInfo) extends DefaultProject(info) {
     // Source tree layout
     override def mainScalaSourcePath = "src"
     override def mainResourcesPath = "resources"
     
-<<<<<<< HEAD
     val virtualization_lms_core = "scala" % "virtualization-lms-core_2.9.x-virtualized-SNAPSHOT" % "0.1"
-=======
-    override def testScalaSourcePath = "tests" / "src"
-    override def testResourcesPath = "tests" / "resources"
-    
-    val virtualization_lms_core = "scala" % "virtualization-lms-core_2.8.x-virtualized-SNAPSHOT" % "0.1"
-    
-    val scalaToolsSnapshots = ScalaToolsSnapshots
-    val scalatest = "org.scalatest" % "scalatest" % "1.4-SNAPSHOT" % "test"
->>>>>>> 8c8ab7439026cf363b85e13a62885e7d5631527b
     
     override def localScala =
     defineScala("2.9.x-virtualized-SNAPSHOT", new File(local.scalaVirtualizedHome.get.getOrElse {
@@ -64,18 +50,11 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
   }
   
   // Define projects
-<<<<<<< HEAD
   lazy val framework = project("framework", "Delite Framework", new FlatProject(_))  
   //lazy val runtime = project("runtime", "Delite Runtime", new FlatProject(_) {
   //  override def mainClass = Some("ppl.delite.runtime.Delite")
   //})
 
-=======
-  lazy val framework = project("framework", "Delite Framework", new FlatProject(_))
-  lazy val runtime = project("runtime", "Delite Runtime", new FlatProject(_) {
-    override def mainClass = Some("ppl.delite.runtime.Delite")
-  })
->>>>>>> 8c8ab7439026cf363b85e13a62885e7d5631527b
   class DSLs(info: ProjectInfo) extends DefaultProject(info) {
     lazy val optiml = project("optiml", "OptiML", new FlatProject(_){
       override def mainClass = Some("ppl.dsl.tests.SimpleVectorTest")
@@ -83,14 +62,9 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
 	lazy val assignment2 = project("assignment2", "Assignment2", new FlatProject(_), framework)
     // lazy val profiling = project("profiling", "Profiling", new FlatProject(_), framework)
   }
-<<<<<<< HEAD
 
   lazy val dsls = project("dsls", "DSLs", new DSLs(_), framework)
 
-=======
-  lazy val dsls = project("dsls", "DSLs", new DSLs(_), framework)
-  
->>>>>>> 8c8ab7439026cf363b85e13a62885e7d5631527b
   lazy val apps = project("apps", "Applications", new APPs(_), framework, dsls)
   class APPs(info: ProjectInfo) extends DefaultProject(info) {
 	  lazy val scala = project("scala", "Scala Apps", new FlatProject(_), framework, dsls)
@@ -99,5 +73,5 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
   //TR is anybody using this? conflict with defining 'tests' as test source path above...
   //aks: i am, but i'm in the process of trying to convert all the remaining tests to be scalatests.
   //in the meantime, i tried to set this up so it wouldn't conflict with the existing scalatests
-  lazy val tests = project("tests", "Delite Tests", new FlatProject(_), framework, dsls, apps)
+  // lazy val tests = project("tests", "Delite Tests", new FlatProject(_), framework, dsls, apps)
 }

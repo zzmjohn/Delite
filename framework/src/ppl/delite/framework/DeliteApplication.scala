@@ -26,7 +26,7 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile {
   val generators: List[GenericFatCodegen{ val IR: DeliteApplication.this.type }] = targets.map(getCodeGenPkg(_))
 
   // TODO: refactor, this is from ScalaCompile trait
-  lazy val codegen: ScalaCodegen { val IR: DeliteApplication.this.type } = 
+  lazy val codegen: ScalaCodegen { val IR: DeliteApplication.this.type } =
     getCodeGenPkg(scalaTarget).asInstanceOf[ScalaCodegen { val IR: DeliteApplication.this.type }]
 
   // generators created by getCodeGenPkg will use the 'current' scope of the deliteGenerator as global scope
@@ -34,7 +34,7 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile {
                                                val generators = DeliteApplication.this.generators }
 
   var args: Rep[Array[String]] = _
-  
+
   final def main(args: Array[String]) {
     println("Delite Application Being Staged:[" + this.getClass.getSimpleName + "]")
 
@@ -68,7 +68,7 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile {
 
     //Emit and Compile external library (MKL BLAS)
     ExternLibrary.init()
-    
+
     if (Config.degFilename.endsWith(".deg")) {
       val streamScala = new PrintWriter(new FileWriter(Config.degFilename.replace(".deg",".scala")))
       codegen.emitSource(liftedMain, "Application", streamScala) // whole scala application (for testing)
@@ -103,7 +103,7 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile {
   def main(): Unit
 
   def liftedMain(x: Rep[Array[String]]) = { this.args = x; val y = main(); this.args = null; unit(y) }
-  
+
 
   private def nop = throw new RuntimeException("not implemented yet")
 }

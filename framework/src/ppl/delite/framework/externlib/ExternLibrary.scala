@@ -21,10 +21,10 @@ object ExternLibrary {
     val outScalaFile = new File(buildPath + "scalaBLAS.scala")
     val cstream = new PrintWriter(outCFile)
     val scalastream = new PrintWriter(outScalaFile)
-    
+
     val packageName = "generated.scala"
     val jniPackageName = "generated_scala"
-    
+
     scalastream.println("""
 package %s
 object scalaBLAS {
@@ -118,10 +118,10 @@ JNIEXPORT void JNICALL Java_%s_scalaBLAS_00024_sigmoid_00024mFc_00024sp
 {
 	int i = 0;
 	jboolean copy;
-	
+
 	jfloat *vec1_ptr = (jfloat*)((*env)->GetPrimitiveArrayCritical(env, (jarray)vec1, &copy));
 	jfloat *vec2_ptr = (jfloat*)((*env)->GetPrimitiveArrayCritical(env, (jarray)vec2, &copy));
-	
+
 	for(i=start; i<end; i++) {
 		vec2_ptr[i] = 1.0 / (1.0+expf(-1.0*vec1_ptr[i]));
 	}
@@ -135,7 +135,7 @@ JNIEXPORT void JNICALL Java_%s_scalaBLAS_00024_sigmoid_00024mDc_00024sp
 {
 	int i = 0;
 	jboolean copy;
-	
+
 	jdouble *vec1_ptr = (jdouble*)((*env)->GetPrimitiveArrayCritical(env, (jarray)vec1, &copy));
 	jdouble *vec2_ptr = (jdouble*)((*env)->GetPrimitiveArrayCritical(env, (jarray)vec2, &copy));
 

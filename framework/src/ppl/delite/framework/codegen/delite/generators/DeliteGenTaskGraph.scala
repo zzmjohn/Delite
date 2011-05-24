@@ -117,7 +117,7 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
             hasOutputSlotTypes = true
             "generated.scala.DeliteOpMultiLoop[" + "activation_"+kernelName + "]"
           case ("scala", ThinDef(z)) => z match {
-            case op: AbstractLoop[_] => 
+            case op: AbstractLoop[_] =>
             hasOutputSlotTypes = true
             "generated.scala.DeliteOpMultiLoop[" + "activation_"+kernelName + "]"
             // aks TODO: the following two lines somehow cause a scalac internal error (IN IDEA ONLY??) at Infer.scala line 1029; appears to have something to do with alloc
@@ -130,7 +130,7 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
             case foreach: DeliteOpForeachBounded[_,_,_] => "generated.scala.DeliteOpForeach[" + gen.remap(foreach.v.Type) + "]"
             case _ => gen.remap(sym.head.Type)
           }
-          case _ => 
+          case _ =>
             assert(sym.length == 1) // if not set hasOutputSlotTypes and use activation record
             gen.remap(sym.head.Type)
         }
@@ -173,13 +173,13 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
         }
 
         kstream.close()
-        
+
       } catch {
         case e:GenerationFailedException => // no generator found
           gen.exceptionHandler(e, outFile, kstream)
 		      //println(gen.toString + ":" + quote(sym))
           //e.printStackTrace
-          
+
           //if(gen.nested > 1) {
           //  nestedNode = gen.lastNodeAttempted
           //}
@@ -194,8 +194,8 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
     }
 
     val outputs = sym
-    
-    
+
+
     val inputs = deliteInputs
 
     // effectful operations inside kernel
@@ -233,7 +233,7 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
 
     // emit task graph node
     rhs match {
-      case op: AbstractFatLoop => 
+      case op: AbstractFatLoop =>
         emitMultiLoop(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, op.body.exists (loopBodyNeedsCombine _))
       case ThinDef(z) => z match {
         case op:AbstractLoop[_] => emitMultiLoop(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, loopBodyNeedsCombine(op.body))
@@ -407,8 +407,8 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
     stream.println("}")
     kernelInputDeps = saveInputDeps
     kernelMutatingDeps = saveMutatingDeps
-    
-    nested -= 1    
+
+    nested -= 1
   }
 
   def emitMapLikeWhileLoopVariant(vw: DeliteOpMapLikeWhileLoopVariant, id: String, outputs: List[Exp[Any]], inputs: List[Exp[Any]], mutableInputs: List[Exp[Any]], controlDeps: List[Exp[Any]], antiDeps: List[Exp[Any]])
