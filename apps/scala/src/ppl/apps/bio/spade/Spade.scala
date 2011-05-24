@@ -25,7 +25,7 @@ trait Spade extends OptiMLApplication with Downsampling with Upsampling with Clu
       print(densities(i) + " ")
       i += 1
     }
-    println()
+    println("")
     */
 
     /********* clustering *********/
@@ -35,45 +35,9 @@ trait Spade extends OptiMLApplication with Downsampling with Upsampling with Clu
     val assgn = cluster(data, 200)
     toc(assgn)
     for(i <- 0 to 9)
-      print(assgn(i)+"\t")
-    println()
+      print(assgn(i)+" ")
+    println("")
 
-    /*
-    val a = Vector[Double](10,true)
-    val b = Vector[Double](10,true)
-    val c = a(0) - b(0)
-    val d = arith_abs(c)
-    println(d)
-    */
-    /*
-    val numbers = Vector.rand(10).mutable
-    numbers.pprint
-    var i = 0
-    while(i < 5){
-      numbers = numbers.partition(_ > 0.5)._1
-      /*
-      var j = 0
-      while(j < numbers.length){
-        numbers(j) = numbers(j) - 0.1
-        j += 1
-      }
-      */
-      numbers = numbers map { _ += 0.1 }
-      numbers.pprint
-      i += 1
-    }
-
-    var i = 0
-    while(i < 5){
-      numbers mfilter {n:Rep[Double]=> n > 0.5}
-      var j = 0
-      while(j < numbers.length){
-        numbers(j) = numbers(j) - 0.1
-        j += 1
-      }
-      i += 1
-    }
-    */
     /*
     def next(numbers: Rep[Vector[Double]], i: Int):Rep[Vector[Double]] =
     if(i == 5) numbers
@@ -92,17 +56,17 @@ trait Spade extends OptiMLApplication with Downsampling with Upsampling with Clu
     
     /********* upsampling *********/
     /*
-    val tbl = readMatrix(args(0) + "/tbl_small.txt")
-    val cluster_data = readMatrix(args(0) + "/cluster_data_small.txt")
-    val cluster_assign = readMatrix(args(0) + "/cluster_assign_small.txt").mapRows{row:Rep[Vector[Double]]=> row(0).asInstanceOfL[Int]}
+    val tbl = readMatrix(args(0) + "/tbl.txt")
+    val cluster_data = readMatrix(args(0) + "/cluster_data.txt")
+    val cluster_assign = readMatrix(args(0) + "/cluster_assign.txt").mapRows{row:Rep[Vector[Double]]=> row(0).asInstanceOfL[Int]}
 
     tic()
     val assign = upsample(tbl, cluster_data, cluster_assign)
     toc(assign)
 
     for(i <- 0 to 9)
-      print(assign(i)+"\t")
-    println()
+      print(assign(i)+" ")
+    println("")
     */
   }
 

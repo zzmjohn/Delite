@@ -1,0 +1,6 @@
+#!/bin/bash
+
+export LMS=~/delite2/virtualization-lms-core
+export DELITE=~/delite2/delite
+export CLASSPATH=$DELITE/dsls/optiml/target/scala_2.9.x-virtualized-SNAPSHOT/classes/:$DELITE/framework/target/scala_2.9.x-virtualized-SNAPSHOT/classes:$LMS/target/scala_2.9.x-virtualized-SNAPSHOT/classes:$DELITE/apps/scala/target/scala_2.9.x-virtualized-SNAPSHOT/classes:$DELITE/dsls/assignment2/target/scala_2.9.x-virtualized-SNAPSHOT/classes:.
+export PATH=$PATH:~/delite2/scala-virtualized/build/pack/bin

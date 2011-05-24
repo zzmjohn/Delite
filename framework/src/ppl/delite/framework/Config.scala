@@ -4,10 +4,9 @@ object Config {
   //var degFilename = System.getProperty("delite.deg.filename", "")
   var degFilename = System.getProperty("delite.deg.filename", "out.deg")
   var opfusionEnabled = {
-    val f = System.getProperty("delite.opfusion.enabled", "false")
-    val g = false //true //(f != "false")
-    println("delite.opfusion.enabled.f = " + f)
-    println("delite.opfusion.enabled.g = " + g)
+    val f = System.getProperty("delite.opfusion.enabled", "true")
+    val g = f == "true"
+    println("delite.opfusion.enabled=" + g)
     g
   }
   var homeDir = System.getProperty("delite.home.dir", System.getProperty("user.dir"))
