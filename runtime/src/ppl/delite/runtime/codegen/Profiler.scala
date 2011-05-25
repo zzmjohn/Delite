@@ -32,13 +32,13 @@ object Profiler{
   }
 
   def emitKernelTimerHeader(out: StringBuilder, kernelName: String) {
-    if(Config.profileAllKernels){
+    if(Config.profileEnabled && Config.profileAllKernels){
       out.append("generated.scala.ProfileTimer.startKernel(\"" + kernelName + "\")\n")
     }
   }
 
   def emitKernelTimerTailer(out: StringBuilder, kernelName: String) {
-    if(Config.profileAllKernels){
+    if(Config.profileEnabled && Config.profileAllKernels){
       out.append("generated.scala.ProfileTimer.stopKernel(\"" + kernelName + "\")\n")
     }
   }

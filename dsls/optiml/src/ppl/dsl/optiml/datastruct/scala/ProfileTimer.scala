@@ -83,7 +83,7 @@ object ProfileTimer
       println("[PROFILE-SUMMARY]: " + k + ": " + total.formatted("%.6f") + "s")
     }
     for((k,v) <- kernelTimer) {
-      println("[PROFILE-SUMMARY]: " + k + ": " + v)
+      println("[PROFILE-SUMMARY]: " + k + ": " + v.formatted("%.6f") + "s")
     }
   }
 

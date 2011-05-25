@@ -85,7 +85,6 @@ trait Clustering {
         var into = 0
         while(into < num_valid){
           if(!ac_valid(into).merged){
-            println("into = " + into)
             ac_valid(into).merged_=(true)
             val pq = PQ(limit)
             val offset_center = ac_valid(into).offset
