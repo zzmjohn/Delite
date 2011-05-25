@@ -79,12 +79,12 @@ object Zip_SMP_Array_Generator {
     out.append(numChunks)
     out.append('\n')
 
-    Profiler.emitProfileTimerHeader(out, kernelName(master, chunkIdx))
+    Profiler.emitParallelOPTimerHeader(out, kernelName(master, chunkIdx))
     out.append("while (idx < end) {\n")
     out.append("out.dcUpdate(idx, zip.closure.zip(inA.dcApply(idx), inB.dcApply(idx)))\n")
     out.append("idx += 1\n")
     out.append("}\n")
-    Profiler.emitProfileTimerTailer(out, kernelName(master, chunkIdx))
+    Profiler.emitParallelTimerTailer(out, kernelName(master, chunkIdx))
     if (chunkIdx == 0) out.append("out\n")
 
     out.append("}\n")

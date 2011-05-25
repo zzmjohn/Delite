@@ -50,5 +50,8 @@ object Config {
 
   val profileShowStamp: Boolean = System.getProperty("delite.profile.showstamp", "false") == "true"
 
+  val profileAllKernels: Boolean = System.getProperty("delite.profile.allkernels", "false") == "true"
+
+  val profileCoreKernels: Boolean = System.getProperty("delite.profile.corekernels", "true") == "true"
 }
 

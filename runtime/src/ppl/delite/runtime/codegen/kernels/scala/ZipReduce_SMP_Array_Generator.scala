@@ -77,7 +77,7 @@ object ZipReduce_SMP_Array_Generator {
     out.append(numChunks)
     out.append('\n')
 
-    Profiler.emitProfileTimerHeader(out, kernelName(master, chunkIdx))
+    Profiler.emitParallelOPTimerHeader(out, kernelName(master, chunkIdx))
 
     out.append("var acc = zipReduce.closure.zip(inA.dcApply(idx), inB.dcApply(idx))\n")
     out.append("idx += 1\n")
@@ -100,7 +100,7 @@ object ZipReduce_SMP_Array_Generator {
       out.append('\n')
     }
     
-    Profiler.emitProfileTimerTailer(out, kernelName(master, chunkIdx))
+    Profiler.emitParallelTimerTailer(out, kernelName(master, chunkIdx))
 
     if (chunkIdx == 0) { //chunk 0 returns result
       out.append("acc\n")

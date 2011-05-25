@@ -4,6 +4,7 @@ import ppl.delite.runtime.graph.ops._
 import ppl.delite.runtime.scheduler.PartialSchedule
 import java.util.ArrayDeque
 import collection.mutable.{ArrayBuffer, HashSet}
+import ppl.delite.runtime.Config
 
 /**
  * Author: Kevin J. Brown
@@ -106,6 +107,9 @@ abstract class ExecutableGenerator {
 
   protected def writeFunctionCall(op: DeliteOP, out: StringBuilder) {
     if (op.task == null) return //dummy op
+
+    Profiler.emitKernelTimerHeader(out, op.task)
+
     out.append("val ")
     out.append(getSym(op))
     out.append(" : ")
@@ -134,6 +138,9 @@ abstract class ExecutableGenerator {
       }
       out.append('\n')
     }
+
+    Profiler.emitKernelTimerTailer(out, op.task)
+
   }
 
   protected def writeGetter(dep: DeliteOP, out: StringBuilder) {
