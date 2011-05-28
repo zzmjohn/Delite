@@ -111,7 +111,8 @@ trait OptiMLExp extends OptiMLCompiler with OptiMLScalaOpsPkgExp with LanguageOp
   with LanguageImplOpsStandard with VectorImplOpsStandard with VectorViewImplOpsStandard with IndexVectorImplOpsStandard
   with MatrixImplOpsStandard with MLInputReaderImplOpsStandard with MLOutputWriterImplOpsStandard with StreamImplOpsStandard
   with GraphOpsExp with VerticesOpsExp with EdgeOpsExp with VertexOpsExp with MessageEdgeOpsExp with MessageVertexOpsExp
-  with DeliteOpsExp with VariantsOpsExp with DeliteAllOverridesExp {
+  with DeliteOpsExp with VariantsOpsExp with DeliteAllOverridesExp
+  with MatrixOpsExpOptPrfl {
 
   // this: OptiMLApplicationRunner => why doesn't this work?
   this: DeliteApplication with OptiMLApplication with OptiMLExp => // can't be OptiMLApplication right now because code generators depend on stuff inside DeliteApplication (via IR)

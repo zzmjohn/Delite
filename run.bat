@@ -1,3 +1,3 @@
 set SCALA_NORMAL=C:/Research/scala/scala-2.8.1.final
-set JAVA_OPTS=-server -Ddefer=true -d64 -XX:MaxDirectMemorySize=2g -XX:+UseCompressedOops -XX:+DoEscapeAnalysis
-java %JAVA_OPTS% -cp runtime/target/scala_2.8.1/classes;%SCALA_NORMAL%/lib/scala-library.jar;%SCALA_NORMAL%/lib/scala-compiler.jar -Xmx1g -Xms1g -Ddelite.profile.enabled=true -Ddelite.profile.immediateprint=false -Ddelite.profile.showstamp=false -Ddelite.profile.allkernels=true -Ddelite.threads=2 ppl.delite.runtime.Delite %*
+set JAVA_OPTS=-server -XX:MaxDirectMemorySize=2g -XX:+UseCompressedOops -XX:+DoEscapeAnalysis
+java %JAVA_OPTS% -cp runtime/target/scala_2.8.1/classes;%SCALA_NORMAL%/lib/scala-library.jar;%SCALA_NORMAL%/lib/scala-compiler.jar -Xmx1g -Xms1g -Ddelite.profile.enabled=true -Ddelite.profile.showstamp=false -Ddelite.profile.allkernels=false -Ddelite.threads=2 ppl.delite.runtime.Delite %*

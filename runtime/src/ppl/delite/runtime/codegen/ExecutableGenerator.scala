@@ -108,7 +108,7 @@ abstract class ExecutableGenerator {
   protected def writeFunctionCall(op: DeliteOP, out: StringBuilder) {
     if (op.task == null) return //dummy op
 
-    Profiler.emitKernelTimerHeader(out, op.task)
+    ProfileGenerator.emitKernelTimerHeader(out, op.task)
 
     out.append("val ")
     out.append(getSym(op))
@@ -139,7 +139,7 @@ abstract class ExecutableGenerator {
       out.append('\n')
     }
 
-    Profiler.emitKernelTimerTailer(out, op.task)
+    ProfileGenerator.emitKernelTimerTailer(out, op.task)
 
   }
 

@@ -3,7 +3,7 @@ package ppl.delite.runtime.codegen.kernels.scala
 import ppl.delite.runtime.graph.ops.OP_ZipReduce
 import ppl.delite.runtime.graph.DeliteTaskGraph
 import ppl.delite.runtime.Config
-import ppl.delite.runtime.codegen.{Profiler, ExecutableGenerator, ScalaCompile}
+import ppl.delite.runtime.codegen.{ProfileGenerator, ExecutableGenerator, ScalaCompile}
 
 /**
  * Creates a chunk for OP_ZipReduce and generates an executable kernel for that chunk
@@ -77,7 +77,7 @@ object ZipReduce_SMP_Array_Generator {
     out.append(numChunks)
     out.append('\n')
 
-    Profiler.emitParallelOPTimerHeader(out, kernelName(master, chunkIdx))
+    ProfileGenerator.emitParallelOpTimerHeader(out, master.id, chunkIdx, "ZipReduce_SMP_Array")
 
     out.append("var acc = zipReduce.closure.zip(inA.dcApply(idx), inB.dcApply(idx))\n")
     out.append("idx += 1\n")
@@ -100,7 +100,7 @@ object ZipReduce_SMP_Array_Generator {
       out.append('\n')
     }
     
-    Profiler.emitParallelTimerTailer(out, kernelName(master, chunkIdx))
+    ProfileGenerator.emitParallelOpTimerTailer(out, master.id, chunkIdx)
 
     if (chunkIdx == 0) { //chunk 0 returns result
       out.append("acc\n")

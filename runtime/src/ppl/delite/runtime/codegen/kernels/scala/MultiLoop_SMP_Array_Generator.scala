@@ -2,7 +2,7 @@ package ppl.delite.runtime.codegen.kernels.scala
 
 import ppl.delite.runtime.graph.ops.OP_MultiLoop
 import ppl.delite.runtime.graph.DeliteTaskGraph
-import ppl.delite.runtime.codegen.{Profiler, ExecutableGenerator, ScalaCompile}
+import ppl.delite.runtime.codegen.{ProfileGenerator, ExecutableGenerator, ScalaCompile}
 
 /**
  * Author: Kevin J. Brown
@@ -79,7 +79,7 @@ object MultiLoop_SMP_Array_Generator {
     out.append(numChunks)
     out.append('\n')
 
-    Profiler.emitParallelOPTimerHeader(out, kernelName(master, chunkIdx))
+    ProfileGenerator.emitParallelOpTimerHeader(out, master.id, chunkIdx, "MultiLoop_SMP_Array")
     
     if (chunkIdx == 0)
       out.append("val acc = out\n")
@@ -90,7 +90,7 @@ object MultiLoop_SMP_Array_Generator {
     out.append("idx += 1\n")
     out.append("}\n")
 
-    Profiler.emitParallelTimerTailer(out, kernelName(master, chunkIdx))
+    ProfileGenerator.emitParallelOpTimerTailer(out, master.id, chunkIdx)
 
     if (!op.needsCombine) {
       if (chunkIdx == 0) out.append("acc\n")

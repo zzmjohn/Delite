@@ -851,6 +851,7 @@ trait MatrixOpsExpOpt extends MatrixOpsExp {
 }
 
 
+
 trait ScalaGenMatrixOps extends ScalaGenBase {
   val IR: MatrixOpsExp
   import IR._

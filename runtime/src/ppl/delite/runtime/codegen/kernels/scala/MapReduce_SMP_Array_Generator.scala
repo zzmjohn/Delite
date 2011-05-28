@@ -2,7 +2,7 @@ package ppl.delite.runtime.codegen.kernels.scala
 
 import ppl.delite.runtime.graph.ops.OP_MapReduce
 import ppl.delite.runtime.graph.DeliteTaskGraph
-import ppl.delite.runtime.codegen.{Profiler, ExecutableGenerator, ScalaCompile}
+import ppl.delite.runtime.codegen.{ProfileGenerator, ExecutableGenerator, ScalaCompile}
 
 /**
  * Author: Kevin J. Brown
@@ -84,7 +84,7 @@ object MapReduce_SMP_Array_Generator {
     out.append(numChunks)
     out.append('\n')
 
-    Profiler.emitParallelOPTimerHeader(out, kernelName(master, chunkIdx))
+    ProfileGenerator.emitParallelOpTimerHeader(out, master.id, chunkIdx, "MapReduce_SMP_Array")
     out.append("var acc = mapReduce.closure.map(in.dcApply(idx))\n")
     out.append("idx += 1\n")
     out.append("while (idx < end) {\n")
@@ -106,7 +106,7 @@ object MapReduce_SMP_Array_Generator {
       out.append('\n')
     }
 
-    Profiler.emitParallelTimerTailer(out, kernelName(master, chunkIdx))
+    ProfileGenerator.emitParallelOpTimerTailer(out, master.id, chunkIdx)
 
     if (chunkIdx == 0) { //chunk 0 returns result
       out.append("acc\n")

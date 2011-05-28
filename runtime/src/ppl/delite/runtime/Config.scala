@@ -46,8 +46,6 @@ object Config {
   
   val profileEnabled: Boolean = System.getProperty("delite.profile.enabled", "false") == "true"
 
-  val profileImmediatePrint: Boolean = System.getProperty("delite.profile.immediateprint", "false") == "true"
-
   val profileShowStamp: Boolean = System.getProperty("delite.profile.showstamp", "false") == "true"
 
   val profileAllKernels: Boolean = System.getProperty("delite.profile.allkernels", "false") == "true"

@@ -2,7 +2,7 @@ package ppl.delite.runtime.codegen.kernels.scala
 
 import ppl.delite.runtime.graph.ops.OP_Foreach
 import ppl.delite.runtime.graph.DeliteTaskGraph
-import ppl.delite.runtime.codegen.{Profiler, ExecutableGenerator, ScalaCompile}
+import ppl.delite.runtime.codegen.{ProfileGenerator, ExecutableGenerator, ScalaCompile}
 
 /**
  * Author: Kevin J. Brown
@@ -76,9 +76,9 @@ object Foreach_SMP_Array_Generator {
     out.append(numChunks)
     out.append('\n')
 
-    Profiler.emitParallelOPTimerHeader(out, kernelName(master, chunkIdx))
-    out.append("while (idx < end) {\n")
+    ProfileGenerator.emitParallelOpTimerHeader(out, master.id, chunkIdx, "Foreach_SMP_Array")
 
+    out.append("while (idx < end) {\n")
     out.append("val sync = foreach.closure.sync(idx)\n")//_.sortBy(System.identityHashCode(_))\n")
     out.append("for (e <- sync) {\n")
     out.append("foreach.lockMap.putIfAbsent(e, new ReentrantLock)\n")
@@ -92,7 +92,8 @@ object Foreach_SMP_Array_Generator {
 
     out.append("idx += 1\n")
     out.append("}\n")
-    Profiler.emitParallelTimerTailer(out, kernelName(master, chunkIdx))
+
+    ProfileGenerator.emitParallelOpTimerTailer(out, master.id, chunkIdx)
 
     out.append("}\n")
   }

@@ -2,7 +2,7 @@ package ppl.delite.runtime.codegen.kernels.scala
 
 import ppl.delite.runtime.graph.ops.OP_Zip
 import ppl.delite.runtime.graph.DeliteTaskGraph
-import ppl.delite.runtime.codegen.{Profiler, ExecutableGenerator, ScalaCompile}
+import ppl.delite.runtime.codegen.{ProfileGenerator, ExecutableGenerator, ScalaCompile}
 
 /**
  * Author: Kevin J. Brown
@@ -79,12 +79,12 @@ object Zip_SMP_Array_Generator {
     out.append(numChunks)
     out.append('\n')
 
-    Profiler.emitParallelOPTimerHeader(out, kernelName(master, chunkIdx))
+    ProfileGenerator.emitParallelOpTimerHeader(out, master.id, chunkIdx, "Zip_SMP_Array")
     out.append("while (idx < end) {\n")
     out.append("out.dcUpdate(idx, zip.closure.zip(inA.dcApply(idx), inB.dcApply(idx)))\n")
     out.append("idx += 1\n")
     out.append("}\n")
-    Profiler.emitParallelTimerTailer(out, kernelName(master, chunkIdx))
+    ProfileGenerator.emitParallelOpTimerTailer(out, master.id, chunkIdx)
     if (chunkIdx == 0) out.append("out\n")
 
     out.append("}\n")
