@@ -57,7 +57,7 @@ object Profiler
   }
 
   def stopParallelOp(kernelId: String, chunkId: Int, kernelSize: Int, printMessage: Boolean = false) {
-    val newRecord = (kernelSize, (System.currentTimeMillis - currentParallelTimer(kernelId)(chunkId)) / 1000D)
+    val newRecord = (kernelSize, (System.currentTimeMillis - currentParallelTimer(kernelId)(chunkId)).toDouble)
     parallelTimer(kernelId) += newRecord
     if (printMessage)
       println("[PROFILE] " + kernelId + " #" + chunkId + " stopped (size = " + kernelSize + ", time = " + newRecord._2 + ")")
@@ -68,7 +68,7 @@ object Profiler
     for((k,v) <- parallelTimer(kernelId)){
       totalTime += v
     }
-    println("[PROFILE] " + kernelId + ": " + totalTime.formatted("%.6f") + "s" + appendMessage)
+    println("[PROFILE] " + kernelId + ": " + totalTime.formatted("%.2f") + "s" + appendMessage)
   }
 
   def printParallelOpTime(kernelId: String, appendMessage: String = null) {
@@ -76,9 +76,9 @@ object Profiler
     for((k,v) <- parallelTimer(kernelId)){
       totalTime += v
     }
-    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time(on all cores) = " + totalTime.formatted("%.6f") + "s")
+    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time(on all cores) = " + totalTime.formatted("%.2f") + "ms")
     for((k,v) <- parallelTimer(kernelId)){
-      printf("              size = %d, time = %.6fs\n", k, v)
+      printf("              size = %d, time = %.2fs\n", k, v)
     }
   }
 
@@ -91,11 +91,11 @@ object Profiler
   }
 
   def stopSequentialOp(kernelId: String) {
-    sequentialTimer(kernelId) += (System.currentTimeMillis - currentSequentialTimer(kernelId)) / 1000D
+    sequentialTimer(kernelId) += (System.currentTimeMillis - currentSequentialTimer(kernelId))
   }
 
   def printSequentialOpTime(kernelId: String){
-    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time = " + sequentialTimer(kernelId).formatted("%.6f") + "s")
+    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time = " + sequentialTimer(kernelId).formatted("%.2f") + "ms")
   }
 
 
@@ -110,7 +110,7 @@ object Profiler
   }
 
   def stopCoreOpTime(kernelId: String, kernelSize: Int, printMessage: Boolean = false) {
-    val newRecord = (kernelSize, (System.currentTimeMillis - currentCoreTimer(kernelId)) / 1000D)
+    val newRecord = (kernelSize, (System.currentTimeMillis - currentCoreTimer(kernelId)).toDouble)
     coreTimer(kernelId) += newRecord
     if (printMessage)
       println("[PROFILE] " + kernelId + " #" + coreTimer(kernelId).size + " stopped (size = " + kernelSize + ", time = " + newRecord._2 + ")")
@@ -121,7 +121,7 @@ object Profiler
     for((k,v) <- coreTimer(kernelId)){
       totalTime += v
     }
-    println("[PROFILE] " + kernelId + ": " + totalTime.formatted("%.6f") + "s" + appendMessage)
+    println("[PROFILE] " + kernelId + ": " + totalTime.formatted("%.2f") + "ms" + appendMessage)
   }
 
   def printCoreOpTime(kernelId: String, appendMessage: String = null) {
@@ -129,15 +129,19 @@ object Profiler
     for((k,v) <- coreTimer(kernelId)){
       totalTime += v
     }
-    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time(on all cores) = " + totalTime.formatted("%.6f") + "s")
+    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time(on all cores) = " + totalTime.formatted("%.2f") + "ms")
     for((k,v) <- coreTimer(kernelId)){
-      printf("              size = %d, time = %.6fs\n", k, v)
+      printf("              size = %d, time = %.2fms\n", k, v)
     }
   }
 
   def printAll() {
     for((kernelName, timeList) <- parallelTimer){
       printParallelOpTime(kernelName)
+    }
+    val parallelModel = LinearRegression.fit(parallelTimer)
+    for((kernelName, (a,b,r)) <- parallelModel){
+      println("[REGRESSION] " + kernelName + ": " + opType(kernelName) + ", a = " + a + ", b = " + b + ", r = " + r)
     }
 
     for((kernelName, time) <- sequentialTimer) {
@@ -146,6 +150,10 @@ object Profiler
 
     for((kernelName, timeList) <- coreTimer){
       printCoreOpTime(kernelName)
+    }
+    val coreModel = LinearRegression.fit(coreTimer)
+    for((kernelName, (a,b,r)) <- coreModel){
+      println("[REGRESSION] " + kernelName + ": " + opType(kernelName) + ", a = " + a + ", b = " + b + ", r = " + r)
     }
   }
 

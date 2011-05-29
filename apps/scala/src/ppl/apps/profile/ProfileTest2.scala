@@ -36,8 +36,8 @@ trait ProfileTest2 extends OptiMLApplication {
     var i = 0
     while(i < num_run){
       val c = a * b
-      val cf = af * bf
       println(c(i,i))
+      val cf = af * bf
       println(cf(i,i))
       i += 1
     }
