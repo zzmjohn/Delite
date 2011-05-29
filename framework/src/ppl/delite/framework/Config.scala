@@ -15,7 +15,7 @@ object Config {
   var blasHome = System.getProperty("blas.home")
   var useBlas = if (blasHome == null) false else true
   var nestedVariantsLevel = System.getProperty("nested.variants.level", "0").toInt
-  var profileCoreOps = {
+  val profileCoreOps: Boolean = {
     val f = System.getProperty("delite.profile.coreops", "false")
     val g = true // f == "true"
     println("delite.profile.coreops=" + g)

@@ -112,7 +112,7 @@ trait OptiMLExp extends OptiMLCompiler with OptiMLScalaOpsPkgExp with LanguageOp
   with MatrixImplOpsStandard with MLInputReaderImplOpsStandard with MLOutputWriterImplOpsStandard with StreamImplOpsStandard
   with GraphOpsExp with VerticesOpsExp with EdgeOpsExp with VertexOpsExp with MessageEdgeOpsExp with MessageVertexOpsExp
   with DeliteOpsExp with VariantsOpsExp with DeliteAllOverridesExp
-  with MatrixOpsExpOptPrfl {
+  with OptiMLPrfl {
 
   // this: OptiMLApplicationRunner => why doesn't this work?
   this: DeliteApplication with OptiMLApplication with OptiMLExp => // can't be OptiMLApplication right now because code generators depend on stuff inside DeliteApplication (via IR)
@@ -179,7 +179,8 @@ trait OptiMLCodeGenScala extends OptiMLCodeGenBase with OptiMLScalaCodeGenPkg wi
   with ScalaGenGraphOps with ScalaGenVerticesOps with ScalaGenEdgeOps with ScalaGenVertexOps with ScalaGenMessageEdgeOps with ScalaGenMessageVertexOps
   with ScalaGenLabelsOps with ScalaGenTrainingSetOps with ScalaGenVariantsOps with ScalaGenDeliteCollectionOps
   with ScalaGenImageOps with ScalaGenGrayscaleImageOps
-  with DeliteScalaGenAllOverrides { //with ScalaGenMLInputReaderOps {
+  with DeliteScalaGenAllOverrides
+  with OptiMLCodeGenScalaPrfl { //with ScalaGenMLInputReaderOps {
   
   val IR: DeliteApplication with OptiMLExp
 

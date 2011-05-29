@@ -17,19 +17,29 @@ object Profiler
 {
   // "name" -> (chuck_id -> start_time)
   // "x34"  -> (0 -> 12.34)
-  val currentParallelTimer = new HashMap[String, HashMap[Int, Double]]
+  val currentParallelTimer = new HashMap[String, HashMap[Int,Long]]
 
-  // "name" -> (size_id, run_time)
+  // "name" -> (size, run_time)
   // "x34"  -> (1000, 0.23)
   val parallelTimer = new HashMap[String, ArrayBuffer[(Int,Double)]]
 
-  val currentSequentialTimer = new HashMap[String, Double]
+  // "name" -> start_time
+  val currentSequentialTimer = new HashMap[String, Long]
 
+  // "name" -> run_time
   val sequentialTimer = new HashMap[String, Double]
 
-  val coreKernelTimer = new HashMap[String, Double]
+  // "name" -> start_time
+  val currentCoreTimer = new HashMap[String,Long]
+
+  // "name" -> (size, run_time)
+  val coreTimer = new HashMap[String, ArrayBuffer[(Int,Double)]]
 
   val opType = new HashMap[String, String]
+
+  def recordOpType(kernelId: String, kernelType: String) {
+    opType += kernelId -> kernelType
+  }
 
   // Note: the assumption here is the same kernel will not be launched twice at the same time
   //       for example, kernel_x34 is splited into 4 chunks, the identities here are
@@ -41,7 +51,7 @@ object Profiler
     }
     if (printMessage) println("[PROFILE] " + kernelId + " #" + chunkId + " started")
     if (!currentParallelTimer.contains(kernelId)) {
-      currentParallelTimer += kernelId -> new HashMap[Int, Double]
+      currentParallelTimer += kernelId -> new HashMap[Int, Long]
     }
     currentParallelTimer(kernelId) += chunkId -> System.currentTimeMillis
   }
@@ -72,10 +82,6 @@ object Profiler
     }
   }
 
-  def recordOpType(kernelId: String, kernelType: String) {
-    opType += kernelId -> kernelType
-  }
-
 
   def startSequentialOp(kernelId: String) {
     if (!sequentialTimer.contains(kernelId)) {
@@ -93,21 +99,41 @@ object Profiler
   }
 
 
-/*
-  def startCoreKernel(kernelId: String, printMessage: Boolean = false) {
-    if (!coreKernelTimer.contains(kernelId)) {
-      coreKernelTimer += kernelId -> new ArrayBuffer[Double]()
+  def startCoreOpTime(kernelId: String, printMessage: Boolean = false) {
+    if (!coreTimer.contains(kernelId)) {
+      coreTimer += kernelId -> new ArrayBuffer[(Int, Double)]
+      opType += kernelId -> "SingleTask"
     }
-    if (printMessage) println("[PROFILE]: " + kernelId + " #" + coreKernelTimer(kernelId).size + " started")
-    currentTimer += kernelId -> System.currentTimeMillis
+    if (printMessage)
+      println("[PROFILE] " + kernelId + " #" + coreTimer(kernelId).size + " started")
+    currentCoreTimer += kernelId -> System.currentTimeMillis
   }
 
-  def stopCoreKernel(kernelId: String, printMessage: Boolean = false) {
-    val x = (System.currentTimeMillis - currentTimer(kernelId)) / 1000D
-    coreKernelTimer(kernelId) += x
-    if (printMessage) println("[PROFILE]: " + kernelId + " #" + (coreKernelTimer(kernelId).size - 1) + " stopped")
+  def stopCoreOpTime(kernelId: String, kernelSize: Int, printMessage: Boolean = false) {
+    val newRecord = (kernelSize, (System.currentTimeMillis - currentCoreTimer(kernelId)) / 1000D)
+    coreTimer(kernelId) += newRecord
+    if (printMessage)
+      println("[PROFILE] " + kernelId + " #" + coreTimer(kernelId).size + " stopped (size = " + kernelSize + ", time = " + newRecord._2 + ")")
   }
-*/
+
+  def totalCoreOpTime(kernelId: String, appendMessage: String = null) {
+    var totalTime = 0.0
+    for((k,v) <- coreTimer(kernelId)){
+      totalTime += v
+    }
+    println("[PROFILE] " + kernelId + ": " + totalTime.formatted("%.6f") + "s" + appendMessage)
+  }
+
+  def printCoreOpTime(kernelId: String, appendMessage: String = null) {
+    var totalTime = 0.0
+    for((k,v) <- coreTimer(kernelId)){
+      totalTime += v
+    }
+    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time(on all cores) = " + totalTime.formatted("%.6f") + "s")
+    for((k,v) <- coreTimer(kernelId)){
+      printf("              size = %d, time = %.6fs\n", k, v)
+    }
+  }
 
   def printAll() {
     for((kernelName, timeList) <- parallelTimer){
@@ -118,12 +144,15 @@ object Profiler
       printSequentialOpTime(kernelName)
     }
 
+    for((kernelName, timeList) <- coreTimer){
+      printCoreOpTime(kernelName)
+    }
   }
 
   def clearAll() {
     parallelTimer.clear
     sequentialTimer.clear
-    coreKernelTimer.clear
+    coreTimer.clear
   }
 
 }

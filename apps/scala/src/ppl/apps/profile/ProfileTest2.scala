@@ -30,11 +30,15 @@ trait ProfileTest2 extends OptiMLApplication {
 
     val a = Matrix.ones(m,n)
     val b = Matrix.ones(n,m)
+    val af = Matrix.onesf(m,n)
+    val bf = Matrix.onesf(n,m)
 
     var i = 0
     while(i < num_run){
       val c = a * b
+      val cf = af * bf
       println(c(i,i))
+      println(cf(i,i))
       i += 1
     }
 
