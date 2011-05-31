@@ -41,6 +41,8 @@ trait ProfileTest5 extends OptiMLApplication {
 
     val v1 = Vector.ones(m*n)
     val v2 = Vector.ones(m*n/2)
+    val v3 = Vector[Double](m,true)
+    val v4 = Vector[Double](n,true)
 
     var i = 0
     while(i < num_run){
@@ -54,10 +56,12 @@ trait ProfileTest5 extends OptiMLApplication {
       println(c4(i,i))
       val c5 = a5 * b5
       println(c5(i,i))
-      val v3 = v1 map (_*5)
-      val v4 = v2 map (_+5)
-      val v5 = v3(i) + v4(i)
-      println(v5)
+      val v5 = v1 map (_*5.0)
+      println(v5(i))
+      val v6 = v2 map (_+5.0)
+      println(v6(i))
+      val m7 = v3 ** v4
+      println(m7(i,i))
       i += 1
     }
 

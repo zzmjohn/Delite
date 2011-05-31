@@ -1,6 +1,8 @@
 package ppl.dsl.optiml
 
-import matrix.{ScalaGenMatrixOpsPrfl, MatrixOpsExpOptPrfl}
+import matrix.{ScalaGenMatrixOpsPrfl, MatrixOpsExpPrfl}
+import vector.{ScalaGenVectorOpsPrfl, VectorOpsExpPrfl}
+import ppl.delite.framework.DeliteApplication
 
 /**
  * Author: Bo Wang
@@ -11,9 +13,13 @@ import matrix.{ScalaGenMatrixOpsPrfl, MatrixOpsExpOptPrfl}
  * Stanford University
  */
 
-trait OptiMLPrfl extends MatrixOpsExpOptPrfl {
+
+
+trait OptiMLPrfl extends MatrixOpsExpPrfl with VectorOpsExpPrfl {
   this: OptiMLExp =>
 }
 
-trait OptiMLCodeGenScalaPrfl extends ScalaGenMatrixOpsPrfl
+trait OptiMLCodeGenScalaPrfl extends ScalaGenMatrixOpsPrfl with ScalaGenVectorOpsPrfl {
+  val IR: DeliteApplication with OptiMLExp
+}
 

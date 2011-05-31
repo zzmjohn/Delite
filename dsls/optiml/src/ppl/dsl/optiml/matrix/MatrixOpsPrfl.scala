@@ -1,15 +1,10 @@
 package ppl.dsl.optiml.matrix
 
 import java.io.{PrintWriter}
-import ppl.delite.framework.{DeliteApplication, DSLType}
-import scala.virtualization.lms.common.DSLOpsExp
-import scala.virtualization.lms.common.{VariablesExp, Variables}
-import scala.virtualization.lms.common.{CudaGenBase, ScalaGenBase, CGenBase}
-import ppl.delite.framework.ops.DeliteOpsExp
-import scala.virtualization.lms.internal.{GenerationFailedException}
+import scala.virtualization.lms.common.ScalaGenBase
 import ppl.delite.framework.Config
-import ppl.dsl.optiml.{OptiMLExp, OptiML}
 import ppl.dsl.optiml.datastruct.scala._
+import ppl.dsl.optiml.{ProfileOps, OptiMLExp, OptiML}
 
 /**
  * Author: Bo Wang
@@ -21,11 +16,8 @@ import ppl.dsl.optiml.datastruct.scala._
  */
 
 
-trait MatrixOpsExpOptPrfl extends MatrixOpsExpOpt {
+trait MatrixOpsExpPrfl extends MatrixOpsExpOpt with ProfileOps {
   this: MatrixImplOps with OptiMLExp =>
-
-  case class TimerBegin(e: Def[Any]) extends Def[Unit]
-  case class TimerEnd(e: Def[Any]) extends Def[Unit]
 
   override def matrix_multiply[A:Manifest:Arith](x: Exp[Matrix[A]], y: Exp[Matrix[A]]) = {
     val m = MatrixMultiply(x,y)
@@ -38,7 +30,7 @@ trait MatrixOpsExpOptPrfl extends MatrixOpsExpOpt {
 }
 
 trait ScalaGenMatrixOpsPrfl extends ScalaGenBase {
-  val IR: MatrixOpsExpOptPrfl
+  val IR: MatrixOpsExpPrfl
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = rhs match {
@@ -57,4 +49,5 @@ trait ScalaGenMatrixOpsPrfl extends ScalaGenBase {
     case _ => super.emitNode(sym, rhs)
   }
 }
+
 
