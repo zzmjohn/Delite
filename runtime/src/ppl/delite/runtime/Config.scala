@@ -50,6 +50,5 @@ object Config {
 
   val profileAllKernels: Boolean = System.getProperty("delite.profile.allkernels", "false") == "true"
 
-  val profileCoreKernels: Boolean = System.getProperty("delite.profile.corekernels", "true") == "true"
 }
 
