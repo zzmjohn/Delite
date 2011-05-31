@@ -87,6 +87,7 @@ trait LinReg extends OptiMLApplication {
     guess.pprint
     print("\\n")
 
+    profilePrintAll()
     //PerformanceTimer.save("LinReg")
   }
 }

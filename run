@@ -1,5 +1,5 @@
 #!/bin/bash
 
 export SCALA_NORMAL=~/scala-2.8.1.final
-JAVA_OPTS=-server -XX:MaxDirectMemorySize=2g -XX:+UseCompressedOops -XX:+DoEscapeAnalysis
+JAVA_OPTS=-server -XX:+UseCompressedOops -XX:+DoEscapeAnalysis
 java $JAVA_OPTS -cp runtime/target/scala_2.8.1/classes:$SCALA_NORMAL/lib/scala-library.jar:$SCALA_NORMAL/lib/scala-compiler.jar -Xmx20g -Xms20g -Ddelite.profile.enabled=true -Ddelite.profile.showstamp=false -Ddelite.profile.allkernels=false -Ddelite.threads=4 ppl.delite.runtime.Delite "$@"
