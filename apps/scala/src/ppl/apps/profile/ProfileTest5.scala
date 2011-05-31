@@ -2,23 +2,21 @@ package ppl.apps.profile
 
 import ppl.dsl.optiml.{OptiMLApplication, OptiMLApplicationRunner}
 
-
 /**
  * Author: Bo Wang
- * Date: May 28, 2011
- * Time: 11:44:19 PM
+ * Date: May 30, 2011
+ * Time: 7:38:36 PM
  *
  * Pervasive Parallelism Laboratory (PPL)
  * Stanford University
  */
 
+object ProfileTest5Runner extends OptiMLApplicationRunner with ProfileTest5
 
-object ProfileTest4Runner extends OptiMLApplicationRunner with ProfileTest4
-
-trait ProfileTest4 extends OptiMLApplication {
+trait ProfileTest5 extends OptiMLApplication {
 
   def print_usage = {
-    println("Usage: ProfileTest4 <m> <n> <num_run>")
+    println("Usage: ProfileTest5 <m> <n> <num_run>")
     exit(-1)
   }
 
@@ -41,6 +39,9 @@ trait ProfileTest4 extends OptiMLApplication {
     val a5 = Matrix.ones(m/2,n/2)
     val b5 = Matrix.ones(n/2,m/2)
 
+    val v1 = Vector.ones(m*n)
+    val v2 = Vector.ones(m*n/2)
+
     var i = 0
     while(i < num_run){
       val c1 = a1 * b1
@@ -53,12 +54,15 @@ trait ProfileTest4 extends OptiMLApplication {
       println(c4(i,i))
       val c5 = a5 * b5
       println(c5(i,i))
+      val v3 = v1 map (_*5)
+      val v4 = v2 map (_+5)
+      val v5 = v3(i) + v4(i)
+      println(v5)
       i += 1
     }
 
     profilePrintAll()
   }
 }
-
 
 

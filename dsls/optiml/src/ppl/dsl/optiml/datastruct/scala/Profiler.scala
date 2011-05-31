@@ -53,11 +53,11 @@ object Profiler
     if (!currentParallelTimer.contains(kernelId)) {
       currentParallelTimer += kernelId -> new HashMap[Int, Long]
     }
-    currentParallelTimer(kernelId) += chunkId -> System.currentTimeMillis
+    currentParallelTimer(kernelId) += chunkId -> System.nanoTime
   }
 
   def stopParallelOp(kernelId: String, chunkId: Int, kernelSize: Int, printMessage: Boolean = false) {
-    val newRecord = (kernelSize, (System.currentTimeMillis - currentParallelTimer(kernelId)(chunkId)).toDouble)
+    val newRecord = (kernelSize, (System.nanoTime - currentParallelTimer(kernelId)(chunkId)).toDouble)
     parallelTimer(kernelId) += newRecord
     if (printMessage)
       println("[PROFILE] " + kernelId + " #" + chunkId + " stopped (size = " + kernelSize + ", time = " + newRecord._2 + ")")
@@ -68,7 +68,7 @@ object Profiler
     for((k,v) <- parallelTimer(kernelId)){
       totalTime += v
     }
-    println("[PROFILE] " + kernelId + ": " + totalTime.formatted("%.2f") + "s" + appendMessage)
+    println("[PROFILE] " + kernelId + ": " + totalTime.formatted("%.0f") + " ns" + appendMessage)
   }
 
   def printParallelOpTime(kernelId: String, appendMessage: String = null) {
@@ -76,9 +76,9 @@ object Profiler
     for((k,v) <- parallelTimer(kernelId)){
       totalTime += v
     }
-    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time(on all cores) = " + totalTime.formatted("%.2f") + "ms")
+    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time(on all cores) = " + totalTime.formatted("%.0f") + " ns")
     for((k,v) <- parallelTimer(kernelId)){
-      printf("              size = %d, time = %.2fs\n", k, v)
+      printf("              size = %d, time = %.0f ns\n", k, v)
     }
   }
 
@@ -87,15 +87,15 @@ object Profiler
     if (!sequentialTimer.contains(kernelId)) {
       sequentialTimer += kernelId -> 0.0
     }
-    currentSequentialTimer += kernelId -> System.currentTimeMillis
+    currentSequentialTimer += kernelId -> System.nanoTime
   }
 
   def stopSequentialOp(kernelId: String) {
-    sequentialTimer(kernelId) += (System.currentTimeMillis - currentSequentialTimer(kernelId))
+    sequentialTimer(kernelId) += (System.nanoTime - currentSequentialTimer(kernelId))
   }
 
   def printSequentialOpTime(kernelId: String){
-    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time = " + sequentialTimer(kernelId).formatted("%.2f") + "ms")
+    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time = " + sequentialTimer(kernelId).formatted("%.0f") + " ns")
   }
 
 
@@ -106,11 +106,11 @@ object Profiler
     }
     if (printMessage)
       println("[PROFILE] " + kernelId + " #" + coreTimer(kernelId).size + " started")
-    currentCoreTimer += kernelId -> System.currentTimeMillis
+    currentCoreTimer += kernelId -> System.nanoTime
   }
 
   def stopCoreOpTime(kernelId: String, kernelSize: Int, printMessage: Boolean = false) {
-    val newRecord = (kernelSize, (System.currentTimeMillis - currentCoreTimer(kernelId)).toDouble)
+    val newRecord = (kernelSize, (System.nanoTime - currentCoreTimer(kernelId)).toDouble)
     coreTimer(kernelId) += newRecord
     if (printMessage)
       println("[PROFILE] " + kernelId + " #" + coreTimer(kernelId).size + " stopped (size = " + kernelSize + ", time = " + newRecord._2 + ")")
@@ -121,7 +121,7 @@ object Profiler
     for((k,v) <- coreTimer(kernelId)){
       totalTime += v
     }
-    println("[PROFILE] " + kernelId + ": " + totalTime.formatted("%.2f") + "ms" + appendMessage)
+    println("[PROFILE] " + kernelId + ": " + totalTime.formatted("%.0f") + " ns" + appendMessage)
   }
 
   def printCoreOpTime(kernelId: String, appendMessage: String = null) {
@@ -129,19 +129,16 @@ object Profiler
     for((k,v) <- coreTimer(kernelId)){
       totalTime += v
     }
-    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time(on all cores) = " + totalTime.formatted("%.2f") + "ms")
+    println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time(on all cores) = " + totalTime.formatted("%.0f") + " ns")
     for((k,v) <- coreTimer(kernelId)){
-      printf("              size = %d, time = %.2fms\n", k, v)
+      printf("              size = %d, time = %.0f ns\n", k, v)
     }
   }
 
   def printAll() {
+    // print out
     for((kernelName, timeList) <- parallelTimer){
       printParallelOpTime(kernelName)
-    }
-    val parallelModel = LinearRegression.fit(parallelTimer)
-    for((kernelName, (a,b,r)) <- parallelModel){
-      println("[REGRESSION] " + kernelName + ": " + opType(kernelName) + ", a = " + a + ", b = " + b + ", r = " + r)
     }
 
     for((kernelName, time) <- sequentialTimer) {
@@ -151,16 +148,52 @@ object Profiler
     for((kernelName, timeList) <- coreTimer){
       printCoreOpTime(kernelName)
     }
+
+    // profile
+    val parallelModel = LinearRegression.fit(parallelTimer)
+    for((kernelName, (a,b,r)) <- parallelModel){
+      println("[REGRESSION] " + kernelName + ": " + opType(kernelName) + ", a = " + a + ", b = " + b + ", r = " + r)
+    }
+
     val coreModel = LinearRegression.fit(coreTimer)
     for((kernelName, (a,b,r)) <- coreModel){
       println("[REGRESSION] " + kernelName + ": " + opType(kernelName) + ", a = " + a + ", b = " + b + ", r = " + r)
     }
+
+    // output as JSON
+    val stream = new PrintWriter(new FileWriter("out.mod"))
+    stream.println("{\"OpModels\":{\n" +
+                   "\"ops\": [")
+    generateJSON(parallelTimer, parallelModel, stream)
+    generateJSON(coreTimer, coreModel, stream)
+    stream.println("]\n}\n}")
+    stream.flush
   }
 
   def clearAll() {
     parallelTimer.clear
     sequentialTimer.clear
     coreTimer.clear
+  }
+
+  def generateJSON(timer: HashMap[String, ArrayBuffer[(Int,Double)]], model: HashMap[String, (Double,Double,Double)], stream: PrintWriter){
+
+    for((kernelId, timeList) <- timer){
+      stream.print("{\"type\": \"" + opType(kernelId) + "\",\n" +
+                     "\"kernelId\": \"" + kernelId + "\",\n" +
+                     "\"timing\": [\n"
+                    )
+      for((size, time) <- timeList){
+        stream.print("\"" + size + "\": " + time + ",\n")
+      }
+      val (a,b,r) = model(kernelId)
+      stream.print("],\n" +
+                     "\"model\": [\n" +
+                     "\"type\": \"Linear\",\n" +
+                     "\"a\": " + a + ",\n" +
+                     "\"b\": " + b + ",\n" +
+                     "\"r\": " + r + "\n")
+    }
   }
 
 }

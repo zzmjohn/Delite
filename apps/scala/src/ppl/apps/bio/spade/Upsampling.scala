@@ -14,10 +14,19 @@ trait Upsampling {
 
     val assign = data.mapRows {row1:Rep[Vector[Double]] =>
       val distances = cluster_data.mapRows{row2:Rep[Vector[Double]]=> dist(row1,row2)}
-      cluster_assign(distances.minIndex)
+      val idx = distances.minIndex
+      cluster_assign(idx)
     }
     assign
 
+    /*
+    val assign = data.mapRows {row1:Rep[Vector[Double]] =>
+      val distances = cluster_data.mapRows{row2:Rep[Vector[Double]]=> dist(row1,row2)}
+      val idx = distances.minIndex
+      cluster_assign(idx)
+    }
+    assign
+    */
     /*
     var assign = Vector[Int](data.numRows)
     for( idx <- (0::data.numRows)){
