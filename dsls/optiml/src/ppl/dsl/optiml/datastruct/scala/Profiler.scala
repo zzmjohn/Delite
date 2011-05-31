@@ -37,6 +37,13 @@ object Profiler
 
   val opType = new HashMap[String, String]
 
+  val parallelOpLock1: AnyRef = new Object()
+  val parallelOpLock2: AnyRef = new Object()
+  val sequentialOpLock1: AnyRef = new Object()
+  val sequentialOpLock2: AnyRef = new Object()
+  val coreOpLock1: AnyRef = new Object()
+  val coreOpLock2: AnyRef = new Object()
+  
   def recordOpType(kernelId: String, kernelType: String) {
     opType += kernelId -> kernelType
   }
@@ -46,19 +53,25 @@ object Profiler
   //       x34_0, x34_1, x34_2, x34_3. if kernel_x34 is launched twice, then the timing
   //       information is incorrect because of naming conflicts.
   def startParallelOp(kernelId: String, chunkId: Int, printMessage: Boolean = false) {
-    if (!parallelTimer.contains(kernelId)) {
-      parallelTimer += kernelId -> new ArrayBuffer[(Int, Double)]
+    parallelOpLock1.synchronized {
+      if (!parallelTimer.contains(kernelId)) {
+        parallelTimer += kernelId -> new ArrayBuffer[(Int, Double)]
+      }
+      if (!currentParallelTimer.contains(kernelId)) {
+        currentParallelTimer += kernelId -> new HashMap[Int, Long]
+      }
+      currentParallelTimer(kernelId) += chunkId -> System.nanoTime
+      parallelOpLock1.notifyAll
     }
     if (printMessage) println("[PROFILE] " + kernelId + " #" + chunkId + " started")
-    if (!currentParallelTimer.contains(kernelId)) {
-      currentParallelTimer += kernelId -> new HashMap[Int, Long]
-    }
-    currentParallelTimer(kernelId) += chunkId -> System.nanoTime
   }
 
   def stopParallelOp(kernelId: String, chunkId: Int, kernelSize: Int, printMessage: Boolean = false) {
     val newRecord = (kernelSize, (System.nanoTime - currentParallelTimer(kernelId)(chunkId)).toDouble)
-    parallelTimer(kernelId) += newRecord
+    parallelOpLock2.synchronized {
+      parallelTimer(kernelId) += newRecord
+      parallelOpLock2.notifyAll
+    }
     if (printMessage)
       println("[PROFILE] " + kernelId + " #" + chunkId + " stopped (size = " + kernelSize + ", time = " + newRecord._2 + ")")
   }
@@ -84,14 +97,20 @@ object Profiler
 
 
   def startSequentialOp(kernelId: String) {
-    if (!sequentialTimer.contains(kernelId)) {
-      sequentialTimer += kernelId -> 0.0
+    sequentialOpLock1.synchronized {
+      if (!sequentialTimer.contains(kernelId)) {
+        sequentialTimer += kernelId -> 0.0
+      }
+      currentSequentialTimer += kernelId -> System.nanoTime
+      sequentialOpLock1.notifyAll
     }
-    currentSequentialTimer += kernelId -> System.nanoTime
   }
 
   def stopSequentialOp(kernelId: String) {
-    sequentialTimer(kernelId) += (System.nanoTime - currentSequentialTimer(kernelId))
+    sequentialOpLock2.synchronized {
+      sequentialTimer(kernelId) += (System.nanoTime - currentSequentialTimer(kernelId))
+      sequentialOpLock2.notifyAll
+    }
   }
 
   def printSequentialOpTime(kernelId: String){
@@ -100,18 +119,24 @@ object Profiler
 
 
   def startCoreOpTime(kernelId: String, printMessage: Boolean = false) {
-    if (!coreTimer.contains(kernelId)) {
-      coreTimer += kernelId -> new ArrayBuffer[(Int, Double)]
-      opType += kernelId -> "SingleTask"
+    coreOpLock1.synchronized {
+      if (!coreTimer.contains(kernelId)) {
+        coreTimer += kernelId -> new ArrayBuffer[(Int, Double)]
+        opType += kernelId -> "SingleTask"
+      }
+      currentCoreTimer += kernelId -> System.nanoTime
+      coreOpLock1.notifyAll
     }
     if (printMessage)
       println("[PROFILE] " + kernelId + " #" + coreTimer(kernelId).size + " started")
-    currentCoreTimer += kernelId -> System.nanoTime
   }
 
   def stopCoreOpTime(kernelId: String, kernelSize: Int, printMessage: Boolean = false) {
     val newRecord = (kernelSize, (System.nanoTime - currentCoreTimer(kernelId)).toDouble)
-    coreTimer(kernelId) += newRecord
+    coreOpLock2.synchronized {
+      coreTimer(kernelId) += newRecord
+      coreOpLock2.notifyAll
+    }
     if (printMessage)
       println("[PROFILE] " + kernelId + " #" + coreTimer(kernelId).size + " stopped (size = " + kernelSize + ", time = " + newRecord._2 + ")")
   }
@@ -166,7 +191,7 @@ object Profiler
                    "\"ops\": [")
     generateJSON(parallelTimer, parallelModel, stream)
     generateJSON(coreTimer, coreModel, stream)
-    stream.println("]\n}\n}")
+    stream.println("}\n}")
     stream.flush
   }
 
@@ -192,7 +217,9 @@ object Profiler
                      "\"type\": \"Linear\",\n" +
                      "\"a\": " + a + ",\n" +
                      "\"b\": " + b + ",\n" +
-                     "\"r\": " + r + "\n")
+                     "\"r\": " + r + "\n" + 
+                     "]\n")
+      stream.print("},\n")
     }
   }
 
