@@ -37,12 +37,14 @@ object Profiler
 
   val opType = new HashMap[String, String]
 
+/* TODO: should not use lock otherwise measurement is inaccurate. the right approach is one-thread-one-timer
   val parallelOpLock1: AnyRef = new Object()
   val parallelOpLock2: AnyRef = new Object()
   val sequentialOpLock1: AnyRef = new Object()
   val sequentialOpLock2: AnyRef = new Object()
   val coreOpLock1: AnyRef = new Object()
   val coreOpLock2: AnyRef = new Object()
+*/
   
   def recordOpType(kernelId: String, kernelType: String) {
     opType += kernelId -> kernelType
@@ -52,6 +54,18 @@ object Profiler
   //       for example, kernel_x34 is splited into 4 chunks, the identities here are
   //       x34_0, x34_1, x34_2, x34_3. if kernel_x34 is launched twice, then the timing
   //       information is incorrect because of naming conflicts.
+  def startParallelOp(kernelId: String, chunkId: Int, printMessage: Boolean = false) {
+    if (!parallelTimer.contains(kernelId)) {
+      parallelTimer += kernelId -> new ArrayBuffer[(Int, Double)]
+    }
+    if (!currentParallelTimer.contains(kernelId)) {
+      currentParallelTimer += kernelId -> new HashMap[Int, Long]
+    }
+    currentParallelTimer(kernelId) += chunkId -> System.nanoTime
+    if (printMessage) println("[PROFILE] " + kernelId + " #" + chunkId + " started")
+  }
+
+/*
   def startParallelOp(kernelId: String, chunkId: Int, printMessage: Boolean = false) {
     parallelOpLock1.synchronized {
       if (!parallelTimer.contains(kernelId)) {
@@ -65,7 +79,16 @@ object Profiler
     }
     if (printMessage) println("[PROFILE] " + kernelId + " #" + chunkId + " started")
   }
+*/
 
+  def stopParallelOp(kernelId: String, chunkId: Int, kernelSize: Int, printMessage: Boolean = false) {
+    val newRecord = (kernelSize, (System.nanoTime - currentParallelTimer(kernelId)(chunkId)).toDouble)
+    parallelTimer(kernelId) += newRecord
+    if (printMessage)
+      println("[PROFILE] " + kernelId + " #" + chunkId + " stopped (size = " + kernelSize + ", time = " + newRecord._2 + ")")
+  }
+  
+/*
   def stopParallelOp(kernelId: String, chunkId: Int, kernelSize: Int, printMessage: Boolean = false) {
     val newRecord = (kernelSize, (System.nanoTime - currentParallelTimer(kernelId)(chunkId)).toDouble)
     parallelOpLock2.synchronized {
@@ -75,6 +98,7 @@ object Profiler
     if (printMessage)
       println("[PROFILE] " + kernelId + " #" + chunkId + " stopped (size = " + kernelSize + ", time = " + newRecord._2 + ")")
   }
+*/
 
   def totalParallelOpTime(kernelId: String, appendMessage: String = null) {
     var totalTime = 0.0
@@ -95,7 +119,7 @@ object Profiler
     }
   }
 
-
+/*
   def startSequentialOp(kernelId: String) {
     sequentialOpLock1.synchronized {
       if (!sequentialTimer.contains(kernelId)) {
@@ -105,19 +129,33 @@ object Profiler
       sequentialOpLock1.notifyAll
     }
   }
+*/
 
+  def startSequentialOp(kernelId: String) {
+    if (!sequentialTimer.contains(kernelId)) {
+      sequentialTimer += kernelId -> 0.0
+    }
+    currentSequentialTimer += kernelId -> System.nanoTime
+  }
+
+/*
   def stopSequentialOp(kernelId: String) {
     sequentialOpLock2.synchronized {
       sequentialTimer(kernelId) += (System.nanoTime - currentSequentialTimer(kernelId))
       sequentialOpLock2.notifyAll
     }
   }
+*/
+
+  def stopSequentialOp(kernelId: String) {
+    sequentialTimer(kernelId) += (System.nanoTime - currentSequentialTimer(kernelId))
+  }
 
   def printSequentialOpTime(kernelId: String){
     println("[PROFILE] " + kernelId + ": " + opType(kernelId) + ", total-time = " + sequentialTimer(kernelId).formatted("%.0f") + " ns")
   }
 
-
+/*
   def startCoreOpTime(kernelId: String, printMessage: Boolean = false) {
     coreOpLock1.synchronized {
       if (!coreTimer.contains(kernelId)) {
@@ -130,7 +168,19 @@ object Profiler
     if (printMessage)
       println("[PROFILE] " + kernelId + " #" + coreTimer(kernelId).size + " started")
   }
+*/
 
+  def startCoreOpTime(kernelId: String, printMessage: Boolean = false) {
+    if (!coreTimer.contains(kernelId)) {
+      coreTimer += kernelId -> new ArrayBuffer[(Int, Double)]
+      opType += kernelId -> "SingleTask"
+    }
+    currentCoreTimer += kernelId -> System.nanoTime
+    if (printMessage)
+      println("[PROFILE] " + kernelId + " #" + coreTimer(kernelId).size + " started")
+  }
+
+/*
   def stopCoreOpTime(kernelId: String, kernelSize: Int, printMessage: Boolean = false) {
     val newRecord = (kernelSize, (System.nanoTime - currentCoreTimer(kernelId)).toDouble)
     coreOpLock2.synchronized {
@@ -140,6 +190,15 @@ object Profiler
     if (printMessage)
       println("[PROFILE] " + kernelId + " #" + coreTimer(kernelId).size + " stopped (size = " + kernelSize + ", time = " + newRecord._2 + ")")
   }
+*/
+
+  def stopCoreOpTime(kernelId: String, kernelSize: Int, printMessage: Boolean = false) {
+    val newRecord = (kernelSize, (System.nanoTime - currentCoreTimer(kernelId)).toDouble)
+    coreTimer(kernelId) += newRecord
+    if (printMessage)
+      println("[PROFILE] " + kernelId + " #" + coreTimer(kernelId).size + " stopped (size = " + kernelSize + ", time = " + newRecord._2 + ")")
+  }
+
 
   def totalCoreOpTime(kernelId: String, appendMessage: String = null) {
     var totalTime = 0.0
@@ -190,8 +249,11 @@ object Profiler
     stream.println("{\"OpModels\":{\n" +
                    "\"ops\": [")
     generateJSON(parallelTimer, parallelModel, stream)
-    generateJSON(coreTimer, coreModel, stream)
-    stream.println("}\n}")
+    if(coreTimer.size > 0){
+      stream.println(",\n")
+      generateJSON(coreTimer, coreModel, stream)
+    }
+    stream.println("]\n}\n}")
     stream.flush
   }
 
@@ -201,26 +263,45 @@ object Profiler
     coreTimer.clear
   }
 
-  def generateJSON(timer: HashMap[String, ArrayBuffer[(Int,Double)]], model: HashMap[String, (Double,Double,Double)], stream: PrintWriter){
+  def generateJSON(timerMap: HashMap[String, ArrayBuffer[(Int,Double)]], model: HashMap[String, (Double,Double,Double)], stream: PrintWriter){
 
-    for((kernelId, timeList) <- timer){
+    val timer = timerMap.toArray
+    val num_timer = timer.length
+    for(i <- 0 until num_timer){
+      val (kernelId, timeList) = timer(i)
       stream.print("{\"type\": \"" + opType(kernelId) + "\",\n" +
                      "\"kernelId\": \"" + kernelId + "\",\n" +
-                     "\"timing\": [\n"
+                     "\"timing\": {\n"
                     )
-      for((size, time) <- timeList){
-        stream.print("\"" + size + "\": " + time + ",\n")
+      val num_time = timeList.length
+      for(j <- 0 until num_time){
+        val (size, time) = timeList(j)
+        stream.print("\"" + size + "\": " + time)
+        if(j < num_time-1)
+          stream.print(",\n")
+        else
+          stream.print("\n")
       }
       val (a,b,r) = model(kernelId)
-      stream.print("],\n" +
-                     "\"model\": [\n" +
+      stream.print("},\n" +
+                     "\"model\": {\n" +
                      "\"type\": \"Linear\",\n" +
-                     "\"a\": " + a + ",\n" +
-                     "\"b\": " + b + ",\n" +
-                     "\"r\": " + r + "\n" + 
-                     "]\n")
-      stream.print("},\n")
+                     "\"a\": " + toString(a) + ",\n" +
+                     "\"b\": " + toString(b) + ",\n" +
+                     "\"r\": " + toString(r) + "\n" +
+                     "}\n")
+      if(i < num_timer-1)
+        stream.print("},\n")
+      else
+        stream.print("}\n")
     }
   }
 
+  def toString(x: Double) = x match {
+    case e if(e.isNegInfinity) => "\"-Infinity\""
+    case e if(e.isPosInfinity) => "\"Infinity\""
+    case e if(e.toString=="NaN") => "\"NaN\""
+    case e => e.toString
+  }
+  
 }
