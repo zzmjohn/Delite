@@ -178,8 +178,6 @@ def launchApps(options):
             
             stats_dir = os.path.expandvars(options['stats-dir'])
             
-            print stats_dir
-            
             opts = "-Ddelite.home=" + props['delite.home'] +" -Ddelite.threads=1 -Ddelite.gpus=1 -Ddelite.runs=" + options['runs'] + " -Dstats.dump -Dstats.dump.component=app -Dstats.dump.overwrite -Dstats.output.dir=" + stats_dir + " -Dstats.output.filename=" + app + "-gpu.times"         
             print "== executing application: " + app + " " + params[app],
             print "== with options: " + opts + "\n"
