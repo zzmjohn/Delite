@@ -1,7 +1,7 @@
 package ppl.apps.bio.spade
 
 import ppl.dsl.optiml.OptiMLApplication
-import ppl.dsl.optiml.datastruct.scala.{ACluster, Vector, Matrix}
+import ppl.dsl.optiml.datastruct.scala.{ACluster, PQ, Vector, Matrix}
 
 trait Clustering {
   this: OptiMLApplication =>
@@ -71,17 +71,49 @@ trait Clustering {
             ac_valid(i).reset_RM
         }
         val limit = max(1, num_valid/5000).asInstanceOfL[Int]
-
-        // TODO: Concise
 /*
-        for(ac_into <- ac_valid if !ac_into.merged){
-          ac_into.merged_=(true)
-          val candidates = (0::num_valid-1) map {from=> ac_into.getCandidates(ac_valid(from))}
-          ac_into.mergeCandidates(candidates, limit)
+        // TODO: Concise
+        // for(ac_into <- ac_valid if !ac_into.merged){
+        for(ac_into <- ac_valid){
+          if(!ac_into.merged){
+            ac_into.merged_=(true)
+            val candidates = (0::num_valid-1) map {from=> ac_into.getCandidates(ac_valid(from))}
+            ac_into.mergeCandidates(candidates, limit)
+          }
         }
 */
 
         // TODO: Imperative
+        var into = 0
+        while (into < num_valid){
+          if (!ac_valid(into).merged){
+            ac_valid(into).merged_=(true)
+            val num_threads = 8
+            val pq = PQ(limit)
+            val pq_p = Vector[PQ](num_threads, true)
+            for (tid <- (0::num_threads)){
+              var begin = tid / num_threads * num_valid
+              var end   = (tid+1) / num_threads * num_valid
+              end = if (end > num_valid) num_valid else end
+              pq_p(tid) = PQ(limit)
+              while (begin < end){
+                if (begin != into)
+                  ac_valid(into).push_on_pq(ac_valid(begin), pq_p(tid))
+                begin += 1
+              }
+            }
+            var i = 0
+            while (i < num_threads){
+              pq.merge(pq_p(i))
+              i += 1
+            }
+            ac_valid(into).merge_in_pq(pq)
+          }
+          into += 1
+        }
+
+/*
+        // TODO: Sequential
         var into = 0
         while(into < num_valid){
           if(!ac_valid(into).merged){
@@ -121,8 +153,8 @@ trait Clustering {
           into += 1
         }
         // System.exit(-1)
+*/
         round += 1
-
       }
 
     }

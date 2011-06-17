@@ -130,6 +130,14 @@ class PQ(val fold:Int) {
     }
   }
 
+  def merge(pq: PQ){
+    if(MMD > pq.MMD) MMD = pq.MMD
+    while(!pq.empty) {
+      push(pq.Q.element)
+      pq.pop
+    }
+  }
+  
   def top = Q.element._1
 
   def pop(){
@@ -183,7 +191,15 @@ class ACluster(val dim: Int) extends Ordered[ACluster] {
       i += 1
     }
   }
-
+  
+  def push_on_pq(from: ACluster, pq: PQ){
+    var i = 0
+    while(i < from.num_members){
+      pq.push(from, absdist(centers, offset, from.data, from.members(i), dim))
+      i += 1
+    }
+  }
+  
   def getCandidates(from: ACluster) = {
     var d = scala.Double.MaxValue
     if(index != from.index){
@@ -194,7 +210,7 @@ class ACluster(val dim: Int) extends Ordered[ACluster] {
         i += 1
       }
     }
-    Pair(from, d)
+    APair(from, d)
   }
 
   def mergeCandidates(candidates:Vector[APair], fold:Int) {

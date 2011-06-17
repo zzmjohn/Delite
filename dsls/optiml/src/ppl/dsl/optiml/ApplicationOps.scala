@@ -495,8 +495,9 @@ trait PQOps extends DSLType with Variables with OverloadHack {
     def MMD = pq_MMD(__x)
     def empty = pq_empty(__x)
     def normalize = pq_normalize(__x)
-    def push(__c: Rep[ACluster], __d: Rep[Double]) = pq_push(__x, __c, __d)
     def push(__p: Rep[APair]) = pq_push(__x, __p)
+    def push(__c: Rep[ACluster], __d: Rep[Double]) = pq_push(__x, __c, __d)
+    def merge(__pq: Rep[PQ]) = pq_merge(__x, __pq)
     def top = pq_top(__x)
     def pop = pq_pop(__x)
   }
@@ -510,8 +511,9 @@ trait PQOps extends DSLType with Variables with OverloadHack {
   def pq_MMD(__x: Rep[PQ]): Rep[Double]
   def pq_empty(__x: Rep[PQ]): Rep[Boolean]
   def pq_normalize(__x: Rep[PQ]): Rep[Unit]
-  def pq_push(__x: Rep[PQ], __c: Rep[ACluster], __d: Rep[Double]): Rep[Unit]
   def pq_push(__x: Rep[PQ], __p: Rep[APair]): Rep[Unit]
+  def pq_push(__x: Rep[PQ], __c: Rep[ACluster], __d: Rep[Double]): Rep[Unit]
+  def pq_merge(__x: Rep[PQ], __pq: Rep[PQ]): Rep[Unit]
   def pq_top(__x: Rep[PQ]): Rep[ACluster]
   def pq_pop(__x: Rep[PQ]): Rep[Unit]
 }
@@ -525,6 +527,7 @@ trait PQOpsExp extends PQOps with EffectExp {
   case class PQNormalize(__x: Exp[PQ]) extends Def[Unit]
   case class PQPush1(__x: Exp[PQ], __p: Exp[APair]) extends Def[Unit]
   case class PQPush2(__x: Exp[PQ], __c: Exp[ACluster], __d: Exp[Double]) extends Def[Unit]
+  case class PQMerge(__x: Exp[PQ], __pq: Exp[PQ]) extends Def[Unit]
   case class PQTop(__x: Exp[PQ]) extends Def[ACluster]
   case class PQPop(__x: Exp[PQ]) extends Def[Unit]
 
@@ -534,8 +537,9 @@ trait PQOpsExp extends PQOps with EffectExp {
   def pq_MMD(__x: Exp[PQ]) = PQMMD(__x)
   def pq_empty(__x: Exp[PQ]) = PQEmpty(__x)
   def pq_normalize(__x: Exp[PQ]) = reflectWrite(__x)(PQNormalize(__x))
-  def pq_push(__x: Exp[PQ], __c: Exp[ACluster], __d: Exp[Double]) = reflectWrite(__x)(PQPush2(__x, __c, __d))
   def pq_push(__x: Exp[PQ], __p: Exp[APair]) = reflectWrite(__x)(PQPush1(__x, __p))
+  def pq_push(__x: Exp[PQ], __c: Exp[ACluster], __d: Exp[Double]) = reflectWrite(__x)(PQPush2(__x, __c, __d))
+  def pq_merge(__x: Exp[PQ], __pq: Exp[PQ]) = reflectWrite(__x)(PQMerge(__x, __pq))
   def pq_top(__x: Exp[PQ]) = PQTop(__x)
   def pq_pop(__x: Exp[PQ]) = reflectWrite(__x)(PQPop(__x))
 }
@@ -554,6 +558,7 @@ trait ScalaGenPQOps extends ScalaGenBase {
     case PQNormalize(x) => emitValDef(sym, quote(x) + ".normalize")
     case PQPush1(x,p) => emitValDef(sym, quote(x) + ".push(" + quote(p) + ")")
     case PQPush2(x,c,d) => emitValDef(sym, quote(x) + ".push(" + quote(c) + "," + quote(d) + ")")
+    case PQMerge(x,pq) => emitValDef(sym, quote(x) + ".merge(" + quote(pq) + ")")
     case PQTop(x) => emitValDef(sym, quote(x) + ".top()")
     case PQPop(x) => emitValDef(sym, quote(x) + ".pop()")
     case _ => super.emitNode(sym, rhs)
@@ -583,7 +588,9 @@ trait AClusterOps extends DSLType with Variables with OverloadHack {
     // def data
     def init_RM(d:Rep[Vector[Double]], c:Rep[Vector[Double]], m:Rep[Vector[Int]], i:Rep[Int]) = acluster_init_RM(__x,d,c,m,i)
     def reset_RM = acluster_reset_RM(__x)
+    def push_on_pq(from: Rep[ACluster], pq: Rep[PQ]) = acluster_push_on_pq(__x,from,pq)
     def getCandidates(from: Rep[ACluster]) = acluster_getCandidates(__x,from)
+    def mergeCandidates(c: Rep[Vector[APair]], l: Rep[Int]) = acluster_mergeCandidates(__x, c, l)
     def merge_in_pq(pq: Rep[PQ]) = acluster_merge_in_pq(__x,pq)
   }
 
@@ -602,9 +609,10 @@ trait AClusterOps extends DSLType with Variables with OverloadHack {
   def acluster_num_members(__x: Rep[ACluster]): Rep[Int]
   def acluster_init_RM(__x:Rep[ACluster], d:Rep[Vector[Double]], c:Rep[Vector[Double]], m:Rep[Vector[Int]], i:Rep[Int]): Rep[Unit]
   def acluster_reset_RM(__x: Rep[ACluster]): Rep[Unit]
+  def acluster_push_on_pq(__x: Rep[ACluster], from: Rep[ACluster], pq:Rep[PQ]): Rep[Unit]
+  def acluster_merge_in_pq(__x: Rep[ACluster], pq: Rep[PQ]): Rep[Unit]
   def acluster_getCandidates(__x: Rep[ACluster], from: Rep[ACluster]): Rep[APair]
   def acluster_mergeCandidates(__x: Rep[ACluster], candidates:Rep[Vector[APair]], fold:Rep[Int]): Rep[Unit]
-  def acluster_merge_in_pq(__x: Rep[ACluster], pq:Rep[PQ]): Rep[Unit]
 }
 
 trait AClusterOpsExp extends AClusterOps with EffectExp {
@@ -623,6 +631,7 @@ trait AClusterOpsExp extends AClusterOps with EffectExp {
   case class AClusterNumMembers(__x: Exp[ACluster]) extends Def[Int]
   case class AClusterInitRM(x:Exp[ACluster], d:Exp[Vector[Double]], c:Exp[Vector[Double]], m:Exp[Vector[Int]], i:Exp[Int]) extends Def[Unit]
   case class AClusterResetRM(__x: Exp[ACluster]) extends Def[Unit]
+  case class AClusterPushOnPQ(__x:Exp[ACluster], from:Exp[ACluster], pq:Exp[PQ]) extends Def[Unit]
   case class AClusterGetCandidates(__x: Exp[ACluster], from: Exp[ACluster]) extends Def[APair]
   case class AClusterMergeCandidates(__x: Exp[ACluster], candidates:Exp[Vector[APair]], fold:Exp[Int]) extends Def[Unit]
   case class AClusterMergeInPQ(__x: Exp[ACluster], pq: Exp[PQ]) extends Def[Unit]
@@ -650,6 +659,10 @@ trait AClusterOpsExp extends AClusterOps with EffectExp {
   def acluster_reset_RM(__x: Exp[ACluster]): Exp[Unit] = __x match{
     case Def(Reflect(VectorApply(v,n),_,_)) => reflectWrite(v)(AClusterResetRM(__x))
     case _ => reflectWrite(__x)(AClusterResetRM(__x))
+  }
+  def acluster_push_on_pq(__x: Exp[ACluster], from: Exp[ACluster], pq: Exp[PQ]) = __x match{
+    case Def(Reflect(VectorApply(v,n),_,_)) => reflectWrite(v)(AClusterPushOnPQ(__x,from,pq))
+    case _ => reflectWrite(__x)(AClusterPushOnPQ(__x,from,pq))
   }
   def acluster_getCandidates(__x: Exp[ACluster], from: Exp[ACluster]) = AClusterGetCandidates(__x, from)
   def acluster_mergeCandidates(__x: Exp[ACluster], candidates:Exp[Vector[APair]], fold:Exp[Int]) = __x match{
@@ -680,6 +693,7 @@ trait ScalaGenAClusterOps extends ScalaGenBase {
     case AClusterNumMembers(x) =>  emitValDef(sym, quote(x) + ".num_members")
     case AClusterInitRM(x,d,c,m,i) =>  emitValDef(sym, quote(x) + ".init_RM(" + quote(d) + "," + quote(c) + "," + quote(m) + "," + quote(i) + ")")
     case AClusterResetRM(x) => emitValDef(sym, quote(x) + ".reset_RM")
+    case AClusterPushOnPQ(x,from,pq) => emitValDef(sym, quote(x) + ".push_on_pq(" + quote(from) + ", " + quote(pq) + ")")
     case AClusterGetCandidates(x,f) => emitValDef(sym, quote(x) + ".getCandidates(" + quote(f) + ")")
     case AClusterMergeCandidates(x,c,f) => emitValDef(sym, quote(x) + ".mergeCandidates(" + quote(c) + "," + quote(f) + ")")
     case AClusterMergeInPQ(x,pq) => emitValDef(sym, quote(x) + ".merge_in_pq(" + quote(pq) + ")")
