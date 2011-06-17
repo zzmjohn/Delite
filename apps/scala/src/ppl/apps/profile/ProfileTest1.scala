@@ -34,7 +34,7 @@ trait ProfileTest1 extends OptiMLApplication {
       println(b(i))
       i += 1
     }
-    profilePrintAll()
+    // profilePrintAll()
 
   }
 }

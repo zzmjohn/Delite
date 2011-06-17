@@ -42,7 +42,7 @@ trait ProfileTest2 extends OptiMLApplication {
       i += 1
     }
 
-    profilePrintAll()
+    // profilePrintAll()
   }
 }
 

@@ -18,7 +18,9 @@ trait SimpleVectorApp extends SimpleVectorApplication {
   def ode(func:(Rep[Double],Rep[Vector[Double]])=>Rep[Vector[Double]],
           t0:Rep[Double], tf:Rep[Double], step: Rep[Double], y0:Rep[Vector[Double]]) = {
 
-    val num_steps = ((tf-t0)/step).asInstanceOfL[Int]
+    val num_steps = 100
+    // TODO: numeric divide is not supported by LMS
+    // val num_steps = ((tf-t0)/step).asInstanceOfL[Int]
     val T = Vector[Double](num_steps)
     val Y = Vector[Vector[Double]](num_steps)
     var t = t0

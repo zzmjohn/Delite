@@ -64,7 +64,7 @@ trait ProfileTest5 extends OptiMLApplication {
     println(counter)
     println(m7(1,1))
 
-    profilePrintAll()
+    // profilePrintAll()
   }
 }
 

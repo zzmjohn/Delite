@@ -38,6 +38,6 @@ trait ProfileTest3 extends OptiMLApplication {
       i += 1
     }
 
-    profilePrintAll()
+    // profilePrintAll()
   }
 }

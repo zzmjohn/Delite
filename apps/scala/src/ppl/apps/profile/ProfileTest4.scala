@@ -56,7 +56,7 @@ trait ProfileTest4 extends OptiMLApplication {
       i += 1
     }
 
-    profilePrintAll()
+    // profilePrintAll()
   }
 }
 
