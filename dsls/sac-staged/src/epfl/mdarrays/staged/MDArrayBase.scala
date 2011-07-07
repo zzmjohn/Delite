@@ -1,7 +1,7 @@
 package epfl.mdarrays.staged
 
 import scala.virtualization.lms.common._
-import epfl.mdarrays.library._
+import epfl.mdarrays.datastruct.scala._
 
 
 trait MDArrayBase extends Base with Arguments {
@@ -15,8 +15,7 @@ trait MDArrayBase extends Base with Arguments {
     def apply(iv: Rep[MDArray[Int]]): Rep[MDArray[A]] = sel(iv, array)
     def unary_-(implicit numeric: Numeric[A]): Rep[MDArray[A]] = uop(array)(numeric.negate, "-")
     def unary_!(implicit ev: A =:= Boolean): Rep[MDArray[Boolean]] = uop(array)((a) => !(ev(a)), "!")
-    override def toString() = doToString(array)
-    def getString() = doToString(array)
+    def getString(): Rep[String] = doToString(array)
   }
   implicit def toRepMDArray[A: Manifest](a: Rep[MDArray[A]]): RepMDArray[A] = new RepMDArray[A](a)
 
@@ -41,7 +40,7 @@ trait MDArrayBase extends Base with Arguments {
   def +++[A: Manifest](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]]): Rep[MDArray[A]] = cat(0, o1, o2)
 
   // toString operation
-  def doToString[A](a: Rep[MDArray[A]]): String
+  def doToString[A: Manifest](a: Rep[MDArray[A]]): Rep[String]
 
   /*
     Implicit conversions discussion

@@ -1,7 +1,7 @@
 package epfl.mdarrays.staged
 
-import epfl.mdarrays.library._
-import epfl.mdarrays.library.Conversions._
+import epfl.mdarrays.datastruct.scala._
+import epfl.mdarrays.datastruct.scala.Conversions._
 import java.io.{Writer, PrintWriter}
 import collection.immutable.HashMap
 
@@ -76,24 +76,30 @@ trait MDArrayTypingWithScope extends MDArrayTypingConstraints {
 
     val shapeVar: TypingVariable = ShapeVar(sym)
     val valueVar: TypingVariable = ValueVar(sym)
-    val shapeVarValue: TypingVariable = currentScope.fullSubsts(shapeVar)
-    val valueVarValue: TypingVariable = currentScope.fullSubsts(valueVar)
 
-    // need to limit the value size so we don't overcrowd the graph
-    var valueString = valueVarValue.toString
-    (valueString.length > 40) match {
-      case true =>
-        valueString = valueString.substring(0, 18) + " ... " + valueString.substring(valueString.length - 18)
-      case _ =>
-        ;
-    }
+    val result = if (currentScope ne null) {
+      val shapeVarValue: TypingVariable = currentScope.fullSubsts(shapeVar)
+      val valueVarValue: TypingVariable = currentScope.fullSubsts(valueVar)
 
-    (valueVar != valueVarValue, shapeVar != shapeVarValue) match {
-      case (true, true) => valueVar.toString + "=" + valueString + " and " + shapeVar.toString + "=" + shapeVarValue.toString
-      case (true, false) => valueVar.toString + "=" + valueString
-      case (false, true) => shapeVar.toString + "=" + shapeVarValue.toString
-      case (false, false) => "?!?"
-    }
+      // need to limit the value size so we don't overcrowd the graph
+      var valueString = valueVarValue.toString
+      (valueString.length > 40) match {
+        case true =>
+          valueString = valueString.substring(0, 18) + " ... " + valueString.substring(valueString.length - 18)
+        case _ =>
+          ;
+      }
+
+      (valueVar != valueVarValue, shapeVar != shapeVarValue) match {
+        case (true, true) => valueVar.toString + "=" + valueString + " and " + shapeVar.toString + "=" + shapeVarValue.toString
+        case (true, false) => valueVar.toString + "=" + valueString
+        case (false, true) => shapeVar.toString + "=" + shapeVarValue.toString
+        case (false, false) => "?!?"
+      }
+    } else
+      "?!? (typing not performed)"
+
+    result
   }
 
 
@@ -181,10 +187,10 @@ trait MDArrayTypingWithScope extends MDArrayTypingConstraints {
     case _ => getNewUnknownElement
   }
 
-  def getShapeLength(sym: Exp[_]): Option[Int] = currentScope.getLengthFull(ShapeVar(sym.asInstanceOf[Sym[_]]))
-  def getValueLength(sym: Exp[_]): Option[Int] = currentScope.getLengthFull(ValueVar(sym.asInstanceOf[Sym[_]]))
-  def getShapeValue(sym: Exp[_]): Option[List[Int]] = currentScope.getValueFull(ShapeVar(sym.asInstanceOf[Sym[_]]))
-  def getValueValue(sym: Exp[_]): Option[List[Int]] = currentScope.getValueFull(ValueVar(sym.asInstanceOf[Sym[_]]))
+  def getShapeLength(sym: Exp[_]): Option[Int] = if (currentScope ne null) currentScope.getLengthFull(ShapeVar(sym.asInstanceOf[Sym[_]])) else None
+  def getValueLength(sym: Exp[_]): Option[Int] = if (currentScope ne null) currentScope.getLengthFull(ValueVar(sym.asInstanceOf[Sym[_]])) else None
+  def getShapeValue(sym: Exp[_]): Option[List[Int]] = if (currentScope ne null) currentScope.getValueFull(ShapeVar(sym.asInstanceOf[Sym[_]])) else None
+  def getValueValue(sym: Exp[_]): Option[List[Int]] = if (currentScope ne null) currentScope.getValueFull(ValueVar(sym.asInstanceOf[Sym[_]])) else None
 
   protected def getAffectedSymbols(a: Any): List[Sym[_]] = a match {
     case ShapeVar(s) => s::Nil

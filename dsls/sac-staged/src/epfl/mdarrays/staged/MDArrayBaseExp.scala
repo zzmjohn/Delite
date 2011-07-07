@@ -1,9 +1,9 @@
 package epfl.mdarrays.staged
 
 import _root_.scala.virtualization.lms.common._
-import epfl.mdarrays.library._
-import epfl.mdarrays.library.Conversions._
-import epfl.mdarrays.library.Operations._
+import epfl.mdarrays.datastruct.scala._
+import epfl.mdarrays.datastruct.scala.Conversions._
+import epfl.mdarrays.datastruct.scala.Operations._
 
 trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with ArgumentsExp {
   // needed so that foldTerms are not collected by the CSE
@@ -55,6 +55,7 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
   case class ToList[A: Manifest](value: Exp[MDArray[A]]) extends Def[List[A]] { override def toString() = "ToList(" + value.toString + ")" }
   case class ToArray[A: Manifest](value: Exp[MDArray[A]]) extends Def[Array[A]] { override def toString() = "ToArray(" + value.toString + ")" }
   case class ToValue[A: Manifest](value: Exp[MDArray[A]]) extends Def[A] { override def toString() = "ToValue(" + value.toString + ")" }
+  case class ToString[A: Manifest](value: Exp[MDArray[A]]) extends Def[String]
 
   // With
   case class WithNode[A: Manifest](lb: Exp[MDArray[Int]], lbStrict: Exp[Boolean], ub: Exp[MDArray[Int]], ubStrict: Exp[Boolean], step: Exp[MDArray[Int]], width: Exp[MDArray[Int]], sym: Sym[MDArray[Int]], expr: Exp[MDArray[A]]) extends Def[MDArray[A]] {
@@ -185,7 +186,7 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
   }
 
   // ToString
-  def doToString[A](a: Exp[MDArray[A]]) = a.toString()
+  def doToString[A: Manifest](a: Exp[MDArray[A]]) = ToString(a)
 
   // Function wrapping for scalar elements to mdarrays
   def scalarOperationWrapper[A: Manifest, B: Manifest, C: Manifest](f: (A,B)=>C, operator: String): ((Exp[MDArray[A]], Exp[MDArray[B]]) => Exp[MDArray[C]]) = ScalarOperatorWrapper(f, operator)

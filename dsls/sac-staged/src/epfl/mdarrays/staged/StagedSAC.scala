@@ -18,11 +18,11 @@ trait StagedSACApplication extends StagedSAC {
   def main(): Unit
 }
 
-trait StagedSAC extends MDArrayBase {
+trait StagedSAC extends MDArrayBase with MiscOps {
 	this: StagedSACApplication =>
 }
 
-trait StagedSACExp extends StagedSAC with MDArrayBaseExp
+trait StagedSACExp extends StagedSAC with MDArrayBaseExp with MiscOpsExp
  	with DeliteOpsExp with DeliteAllOverridesExp {
 	
 	this: DeliteApplication with StagedSACApplication with StagedSACExp => 
@@ -53,7 +53,7 @@ trait StagedSACCodegenBase extends GenericFatCodegen with Utils {
 }
 
 trait StagedSACCodegenScala extends StagedSACCodegenBase with ScalaGenMDArray
-  with ScalaGenDeliteOps with ScalaGenDeliteCollectionOps with DeliteScalaGenAllOverrides {
+  with ScalaGenDeliteOps with ScalaGenDeliteCollectionOps with DeliteScalaGenAllOverrides with ScalaGenMiscOps {
 	
   val IR: TY.IR.type with DeliteApplication with StagedSACExp
 	

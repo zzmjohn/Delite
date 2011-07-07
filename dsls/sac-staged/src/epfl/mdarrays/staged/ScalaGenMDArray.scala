@@ -3,7 +3,7 @@ package epfl.mdarrays.staged
 import _root_.scala.virtualization.lms.internal.GenericNestedCodegen
 import _root_.scala.virtualization.lms.common._
 import _root_.scala.virtualization.lms.internal._
-import epfl.mdarrays.library.MDArray
+import epfl.mdarrays.datastruct.scala.MDArray
 import java.io.PrintWriter
 
 trait BaseGenMDArray extends GenericNestedCodegen {
@@ -55,7 +55,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
       if (stripped)
         remap(m.typeArguments.head)
       else
-        "MDArray[" + remap(m.typeArguments.head) + "]"
+        m.toString //"MDArray[" + remap(m.typeArguments.head) + "]"
     else super.remap[A](m)
   }
 
@@ -260,14 +260,21 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     }
   }
 
+  def val_quote(a: Any): String = a match {
+    case s: String => "\"" + s.replace("\"","\\\"") + "\""
+    case n: Number => n.toString
+    case _ => sys.error("unable to generate value for: " + a.toString)
+  }
+
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = {
     emitChecks(sym, rhs)
     emitShapeValue(sym)
+
     rhs match {
 
       case kc: KnownAtCompileTime[_] =>
         emitSymDecl(sym)
-        stream.println("internalReshape(" + (kc.value.shape.content.map(t => t.toString).toList ::: ("Nil"::Nil)).mkString("::") + ", Array(" + kc.value.content.mkString(", ") +"), \"knownAtCompileTime\")")
+        stream.println("internalReshape(" + (kc.value.shape.content.map(t => t.toString).toList ::: ("Nil"::Nil)).mkString("::") + ", Array(" + kc.value.content.map(val_quote(_)).mkString(", ") +"), \"knownAtCompileTime\")")
       case kr: KnownAtRuntime[_] =>
         emitSymDecl(sym)
         stream.println(kr.name + " // this is a function argument")
@@ -386,23 +393,19 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
           (ite.thenp.asInstanceOf[Sym[_]], () => {emitBlock(ite.thenp); stream.println(quote(getBlockResult(ite.thenp))); stream.println("} else {")})::
           (ite.elsep.asInstanceOf[Sym[_]], () => {emitBlock(ite.elsep); stream.println(quote(getBlockResult(ite.elsep))); stream.println("}")})::
           Nil)
-      // let error cases be shown at compile time :)
+      case st: ToString[_] =>
+        emitSymDecl(sym)
+        stream.println(quote(st.value) + ".toString")
+      case _ =>
+        super.emitNode(sym, rhs)
     }
   }
 
-  // the emitSource in ScalaCodeGen is not exactly what we need - we need to select the parameters on our own
-  override def emitSource[A: Manifest, B: Manifest](f: Exp[A] => Exp[B], className: String, stream: PrintWriter): Unit = {
-
-    stream.println("")
-    stream.println("package epfl")
-    stream.println("")
-    stream.println("package original")
-    stream.println()
-    stream.println("import test7.original.Conversions._")
-    stream.println("import test7.original.Operations._")
-    stream.println("import test7.original.SpecificOperations._")
-    stream.println()
-
-    super.emitSource(f, className, stream)
+  override def emitImports(implicit stream:PrintWriter): Unit = {
+    stream.println("import datastruct.scala._;")
+    stream.println("import datastruct.scala.Conversions._;")
+    stream.println("import datastruct.scala.Operations._;")
+    stream.println("import datastruct.scala.SpecificOperations._;")
   }
+
 }

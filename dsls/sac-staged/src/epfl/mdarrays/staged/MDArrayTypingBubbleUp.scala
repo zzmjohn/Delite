@@ -1,8 +1,8 @@
 package epfl.mdarrays.staged
 
 import _root_.scala.virtualization.lms.common._
-import epfl.mdarrays.library._
-import epfl.mdarrays.library.Conversions._
+import epfl.mdarrays.datastruct.scala._
+import epfl.mdarrays.datastruct.scala.Conversions._
 import java.io.{Writer, PrintWriter}
 import collection.immutable.HashMap
 
@@ -48,7 +48,12 @@ trait MDArrayTypingBubbleUp extends MDArrayTypingWithScope {
   }
 
   // Gets the exact runtime checks
-  def getRuntimeChecks(sym: Sym[_]) = runtimeChecks(sym)
+  // TODO: Remove the default value once typing is done
+  def getRuntimeChecks(sym: Sym[_]) =
+    if (runtimeChecks contains sym)
+      runtimeChecks(sym)
+    else
+      Nil
 
   def emitRuntimeChecks(sym: Sym[_])(implicit stream: PrintWriter) = {
     for (check <- runtimeChecks(sym)) {

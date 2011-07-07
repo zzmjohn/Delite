@@ -1,8 +1,8 @@
 package epfl.mdarrays.staged
 
 import _root_.scala.virtualization.lms.common._
-import epfl.mdarrays.library._
-import epfl.mdarrays.library.Conversions._
+import epfl.mdarrays.datastruct.scala._
+import epfl.mdarrays.datastruct.scala.Conversions._
 
 import java.io.{Writer, PrintWriter}
 import collection.immutable.HashMap
