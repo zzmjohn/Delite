@@ -263,8 +263,12 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
   def val_quote(a: Any): String = a match {
     case s: String => "\"" + s.replace("\"","\\\"") + "\""
     case n: Number => n.toString
+    case b: Boolean => b.toString
     case _ => sys.error("unable to generate value for: " + a.toString)
   }
+
+  override def performTyping[A: Manifest, B: Manifest](x: Exp[A], y: Exp[B]): Unit =
+    TY.doTyping(y, false)
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = {
     emitChecks(sym, rhs)

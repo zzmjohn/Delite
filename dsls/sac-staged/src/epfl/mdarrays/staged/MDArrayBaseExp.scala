@@ -110,6 +110,9 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
   implicit def convertFromArrayRepRep[A: Manifest](a: Exp[Array[A]]): Exp[MDArray[A]] = FromArray(a)
   implicit def convertFromValueRepRep[A: Manifest](a: Exp[A]): Exp[MDArray[A]] = FromValue(a)
 
+  // Implicit conversion from MDArray to staged array
+  implicit def convertFromMDArrayToRep[A: Manifest](a: MDArray[A]): Exp[MDArray[A]] = KnownAtCompileTime(a)
+
   implicit def convertToListRep[A: Manifest](a: Exp[MDArray[A]]): Exp[List[A]] = ToList(a)
   implicit def convertToArrayRep[A: Manifest](a: Exp[MDArray[A]]): Exp[Array[A]] = ToArray(a)
   implicit def convertToValueRep[A: Manifest](a: Exp[MDArray[A]]): Exp[A] = ToValue(a)

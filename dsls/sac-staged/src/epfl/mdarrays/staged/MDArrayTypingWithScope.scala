@@ -14,7 +14,8 @@ trait MDArrayTypingWithScope extends MDArrayTypingConstraints {
 
   protected def addConstraints(tl: List[TypingConstraint]): Unit = {
     currentScope.constraints = tl ::: currentScope.constraints
-    currentScope.affectedSymbols = currentScope.affectedSymbols ++ getAffectedSymbols(tl)
+    // TODO: FIX Stack overflow
+    //currentScope.affectedSymbols = currentScope.affectedSymbols ++ getAffectedSymbols(tl)
   }
 
   protected def addSymbol(sym: Sym[_]): Unit =
@@ -192,10 +193,14 @@ trait MDArrayTypingWithScope extends MDArrayTypingConstraints {
   def getShapeValue(sym: Exp[_]): Option[List[Int]] = if (currentScope ne null) currentScope.getValueFull(ShapeVar(sym.asInstanceOf[Sym[_]])) else None
   def getValueValue(sym: Exp[_]): Option[List[Int]] = if (currentScope ne null) currentScope.getValueFull(ValueVar(sym.asInstanceOf[Sym[_]])) else None
 
-  protected def getAffectedSymbols(a: Any): List[Sym[_]] = a match {
-    case ShapeVar(s) => s::Nil
-    case ValueVar(s) => s::Nil
-    case p: Product => p.productIterator.toList.flatMap(getAffectedSymbols(_))
-    case _ => Nil
+  protected def getAffectedSymbols(a: Any): List[Sym[_]] = {
+    // TODO: FIX!!!
+    println(a)
+    a match {
+      case ShapeVar(s) => s::Nil
+      case ValueVar(s) => s::Nil
+      case p: Product => p.productIterator.toList.distinct.flatMap(getAffectedSymbols(_))
+      case _ => Nil
+    }
   }
 }

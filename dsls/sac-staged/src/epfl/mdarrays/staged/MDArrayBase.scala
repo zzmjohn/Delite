@@ -4,7 +4,7 @@ import scala.virtualization.lms.common._
 import epfl.mdarrays.datastruct.scala._
 
 
-trait MDArrayBase extends Base with Arguments {
+trait MDArrayBase extends Base with Arguments with IfThenElse {
   // TODO: What are the implications of having something like MDArray[Rep[T]]? Do the implicits still work?
 
   /**
@@ -30,6 +30,7 @@ trait MDArrayBase extends Base with Arguments {
   def infix_<=[A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit ordering: Ordering[A], mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)(ordering.lteq, "<=")
   def infix_> [A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit ordering: Ordering[A], mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)(ordering.gt, ">")
   def infix_>=[A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit ordering: Ordering[A], mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)(ordering.gteq, ">=")
+
   def infix_===[A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)((a, b) => a == b, "===")
   def infix_!==[A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)((a, b) => !(a == b), "!==")
 
@@ -74,6 +75,7 @@ trait MDArrayBase extends Base with Arguments {
   implicit def convertToListRep[A: Manifest](a: Rep[MDArray[A]]): Rep[List[A]]
   implicit def convertToArrayRep[A: Manifest](a: Rep[MDArray[A]]): Rep[Array[A]]
   implicit def convertToValueRep[A: Manifest](a: Rep[MDArray[A]]): Rep[A]
+  implicit def convertFromMDArrayToRep[A: Manifest](a: MDArray[A]): Rep[MDArray[A]]
 
   // Implicit conversions from unknown elements
   implicit def convertFromListRepRep[A: Manifest](a: Rep[List[A]]): Rep[MDArray[A]]

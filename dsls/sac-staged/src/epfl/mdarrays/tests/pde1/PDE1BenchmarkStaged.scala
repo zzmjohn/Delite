@@ -1,16 +1,29 @@
-package epfl.mdarrays
+package epfl.mdarrays.tests.pde1
 
 import epfl.mdarrays.datastruct.scala.Conversions._
 import epfl.mdarrays.datastruct.scala._
-import epfl.mdarrays.staged._
-import virtualization.lms.common.IfThenElse
 
-trait PDE1BenchmarkStaged { this: MDArrayBase with IfThenElse =>
+import epfl.mdarrays.staged._
+import scala.util.Random
+
+object PDE1BenchmarkStagedRunner extends StagedSACApplicationRunner with PDE1BenchmarkStaged
+trait PDE1BenchmarkStaged extends StagedSACApplication with PDE1BenchmarkStagedFakeReadMDArray {
 
   type MDArrayBool = Rep[MDArray[Boolean]]
   type MDArrayDbl  = Rep[MDArray[Double]]
   type MDArrayInt  = Rep[MDArray[Int]]
   type Dbl         = Rep[MDArray[Double]]
+
+  // modify this to run other tests
+  val range = range1 _
+
+  def main() {
+    /*
+     * Right now we don't have IO from files => let's generate the array by hand
+     */
+    val matrix = fakeReadMDArray()
+    println(range(matrix, 1).getString)
+  }
 
   def testWithLoopExtraction(matrix: MDArrayInt): MDArrayInt = {
     With(function = iv => sel(iv, matrix * 3 - matrix)).GenArray(shape(matrix))
@@ -100,9 +113,6 @@ trait PDE1BenchmarkStaged { this: MDArrayBase with IfThenElse =>
     CombineInnerOuter(u2 * factor, u)
   }
 
-// To stage this we need support for iterators
-// TODO: Check if this can be easily staged
-//
 //  def Relax4(u: MDArrayDbl, f: MDArrayDbl, hsq: Dbl): MDArrayDbl = {
 //
 //    val factor:Double = 1d/6d
@@ -136,5 +146,23 @@ trait PDE1BenchmarkStaged { this: MDArrayBase with IfThenElse =>
     val u1: MDArrayDbl = With[Double](lb=shape(W) * 0, ub=shape(W)-1, function = iv => shift(-iv + 1, 0d, u)).Fold((a:MDArrayDbl, b:MDArrayDbl) => infix_+(a, b), f * hsq)
 
     CombineInnerOuter(u1 * factor, u)
+  }
+}
+
+trait PDE1BenchmarkStagedFakeReadMDArray {
+  def fakeReadMDArray(): MDArray[Double] = {
+    Random.setSeed(0);
+
+    import epfl.mdarrays.datastruct.scala.Operations._
+    import epfl.mdarrays.datastruct.scala.Conversions._
+    import epfl.mdarrays.datastruct.scala._
+
+    val size: Int = 10
+    val arr: Array[Double] = new Array[Double](size * size * size)
+    val rnd: Random = new Random(1) // We need to have a fixed seed
+    for (i <- arr.indices)
+      arr(i) = rnd.nextDouble()
+    val matrix: MDArray[Double] = reshape(size :: size :: size :: Nil, arr)
+    matrix
   }
 }

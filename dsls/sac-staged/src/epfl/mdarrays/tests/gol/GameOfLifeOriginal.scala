@@ -1,4 +1,4 @@
-package epfl.mdarrays
+package epfl.mdarrays.tests.gol
 
 import epfl.mdarrays.datastruct.scala.Conversions._
 import epfl.mdarrays.datastruct.scala.Operations._

@@ -1,12 +1,14 @@
-package epfl.mdarrays
+package epfl.mdarrays.tests.gol
 
 import epfl.mdarrays.datastruct.scala.Conversions._
 import epfl.mdarrays.datastruct.scala._
-import epfl.mdarrays.staged._
-import virtualization.lms.common.IfThenElse
-import ppl.delite.framework.DeliteApplication
 
-trait GameOfLifeStaged extends DeliteApplication with MDArrayBaseExp {
+import epfl.mdarrays.staged._
+import scala.util.Random
+
+
+object GameOfLifeStagedRunner extends StagedSACApplicationRunner with GameOfLifeStaged
+trait GameOfLifeStaged extends StagedSACApplication with GameOfLifeStagedFakeReadMDArray {
 
   def main() = {
     /*
@@ -15,6 +17,8 @@ trait GameOfLifeStaged extends DeliteApplication with MDArrayBaseExp {
       2. run testGameOfLife(1000, <array>)
       3. print the result? -- we don't have any effects, is there another way to do this?
      */
+    val matrix = fakeReadMDArray()
+    println(testGameOfLife(1000, matrix).getString)
   }
 
   def testGameOfLife(iter: Int, start: Rep[MDArray[Int]]): Rep[MDArray[Int]] = {
@@ -60,5 +64,26 @@ trait GameOfLifeStaged extends DeliteApplication with MDArrayBaseExp {
 
     val result = alive - dead + reborn
     result
+  }
+}
+
+trait GameOfLifeStagedFakeReadMDArray {
+  def fakeReadMDArray(): MDArray[Int] = {
+    // We want deterministic random
+    Random.setSeed(0);
+
+    import epfl.mdarrays.datastruct.scala.Operations._
+    import epfl.mdarrays.datastruct.scala.Conversions._
+    import epfl.mdarrays.datastruct.scala._
+
+    // Create the matrix
+    val size: Int = 10
+    val arr2: Array[Int] = new Array[Int](size * size)
+    val rnd2: Random = new Random(1) // We need to have a fixed seed
+    for (i <- arr2.indices)
+      arr2(i) = rnd2.nextInt(2)
+    val gameOfLifeMatrix: MDArray[Int] = reshape(size :: size :: Nil, arr2)
+
+    gameOfLifeMatrix
   }
 }

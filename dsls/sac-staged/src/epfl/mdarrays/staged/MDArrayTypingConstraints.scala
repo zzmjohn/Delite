@@ -8,9 +8,9 @@ import java.io.{Writer, PrintWriter}
 import collection.immutable.HashMap
 
 
-trait MDArrayTypingConstraints extends BaseGenMDArray with BaseGenIfThenElse with MDArrayTypingUnifier {
+trait MDArrayTypingConstraints extends BaseGenMDArray with BaseGenIfThenElse with ScalaGenMiscOps with MDArrayTypingUnifier {
 
-  val IR: MDArrayBaseExp
+  val IR: MDArrayBaseExp with IfThenElseExp with MiscOpsExp
   import IR._
 
   override type Symbol = Sym[_]
@@ -171,6 +171,14 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with BaseGenIfThenElse wit
       Equality(ShapeVar(sym), Lst(Nil), postReq, rhs)::Nil
     case Argument(base, index) =>
       Nil // arguments are not constrained in any way
+    case PrintLn(x) =>
+      //Equality(x, Lst(Nil), preReq, rhs)::Nil
+      Nil
+    case ToString(x) =>
+      Nil
+    case _ =>
+      super.emitNode(sym, rhs)(null) // for Reify() - careful, if it outputs anything it will crash&burn!
+      Nil
   }
 
   def toValue(i: Any): TypingElement = i match {

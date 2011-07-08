@@ -5,6 +5,13 @@ import epfl.mdarrays.datastruct.scala.Operations._
 
 object SpecificOperations {
 
+  def internalReshape[A: ClassManifest](iv: List[MDArray[Int]], a: Array[A], opName: String): MDArray[A] = {
+//    if (iv.length==1)
+//      internalReshape(convertFromList((iv.head.content()(0))::Nil), a, opName)
+//    else
+      internalReshape(convertFromList(iv.map(_.content()(0))), a, opName)
+  }
+
   /** Reshape implementation */
   def internalReshape[A: ClassManifest](iv: MDArray[Int], a: Array[A], opName: String): MDArray[A] = {
 
