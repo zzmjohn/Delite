@@ -90,14 +90,15 @@ object Delite {
       val numTimes = Config.numRuns
       for (i <- 1 to numTimes) {
         println("Beginning Execution Run " + i)
+        val globalStart = System.currentTimeMillis
         PerformanceTimer.start("all", false)
         executor.run(executable)
         EOP.await //await the end of the application program
         PerformanceTimer.stop("all", false)
-        PerformanceTimer.print("all")
+        PerformanceTimer.print("all", globalStart)
         // check if we are timing another component
         if(Config.dumpStatsComponent != "all")
-          PerformanceTimer.print(Config.dumpStatsComponent)
+          PerformanceTimer.print(Config.dumpStatsComponent, globalStart)
       }
 
       if(Config.dumpStats)
