@@ -112,7 +112,7 @@ abstract class ExecutableGenerator {
     def resultName = if (returnsResult) getSym(op, op.getOutputs.head) else "op_" + getSym(op, op.id)
 
     if (op.task == null) return //dummy op
-    out.append("PerformanceTimer.start(\""+op.id+"\", false)\n")
+    out.append("PerformanceTimer.start(\""+op.id+"\", Thread.currentThread.getName(), false)\n")
     out.append("val ")
     out.append(resultName)
     out.append(" : ")

@@ -15,31 +15,36 @@ object PerformanceTimer
   // TODO: remove times and only use stats
   val times = new mutable.HashMap[String, mutable.ArrayBuffer[Double]]
   
-  var stats: Map[String, List[(Long, Long)]] = Map()
+  var stats: Map[String, List[(String, Long, Long)]] = Map()
   
   // TODO: use Platform instead of System
   // TODO: System.nanoTime() has lower overhead
-  def start(component: String, printMessage: Boolean = true) {
+  def start(component: String, threadName: String, printMessage: Boolean) = synchronized {
     if (!times.contains(component)) {
       times += component -> new mutable.ArrayBuffer[Double]()
-      stats += component -> List[(Long, Long)]()
+      stats += component -> List[(String, Long, Long)]()
     }
     if (printMessage) println("[METRICS]: Timing " + component + " #" + times(component).size + " started")
     val startTime = System.currentTimeMillis
     currentTimer += component -> startTime
     
     val previous = stats(component)
-    val current = (startTime, 0l) :: previous
+    val current = (threadName, startTime, 0l) :: previous
     stats += component -> current
   }
 
+  def start(component: String, printMessage: Boolean = true): Unit = {
+    println("thread " + Thread.currentThread().getName() + " executing component " + component)
+    start(component, "main", printMessage)
+  }
+  
   // TODO: use Platform instead of System
   // TODO: System.nanoTime() has lower overhead
-  def stop(component: String, printMessage: Boolean = true) {
+  def stop(component: String, printMessage: Boolean = true) = synchronized {
     val endTime = System.currentTimeMillis
     stats(component) match {
-      case (startTime, _) :: previousTimings =>
-        val updatedTimings = (startTime, endTime) :: previousTimings
+      case (threadName, startTime, _) :: previousTimings =>
+        val updatedTimings = (threadName, startTime, endTime) :: previousTimings
         stats += component -> updatedTimings
     }
     
@@ -74,7 +79,7 @@ object PerformanceTimer
     
     for (component <- stats.keys) {
       val timingsInSecs = stats(component) map { p =>
-        (inSecs(p._1 - globalStart), inSecs(p._2 - globalStart))
+        (inSecs(p._2 - globalStart), inSecs(p._3 - globalStart))
       }
       
       println("[METRICS]: Timings for component " + component + ": " + timingsInSecs.mkString(" "))
@@ -95,7 +100,7 @@ object PerformanceTimer
   
   def writeProfile(globalStart: Long, writer: PrintWriter) {
     for (component <- stats.keys) {
-      val timings = stats(component).flatMap(p => List(p._1 - globalStart, p._2 - globalStart))
+      val timings = stats(component).flatMap(p => List(p._1, (p._2 - globalStart).toString(), (p._3 - globalStart).toString()))
       writer.println(component + " " + timings.mkString(" "))
     }
     writer.flush()
