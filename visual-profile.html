@@ -1,0 +1,63 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Delite Visual Profile</title>
+
+<style type="text/css">
+.chart rect {
+  stroke: white;
+  fill: steelblue;
+}
+</style>
+
+<script src="d3.js"></script>
+
+<script type="text/javascript">
+
+function load() {
+
+var duration = [40, 800, 150, 90, 1500, 600];
+
+var start = [1000, 10, 800, 820, 2, 200];
+
+var chart = d3.select("div")
+  .append("svg:svg")
+    .attr("class", "chart")
+    .attr("width", 32 * duration.length)
+    .attr("height", 420);
+
+var duration_scaled = d3.scale.linear()
+    .domain([0, d3.max(duration)])
+    .range([0, 100]);
+
+var start_scaled = d3.scale.linear()
+  .domain([0, d3.max(duration)])
+  .range([0, 100]);
+
+chart.selectAll("rect")
+    .data(duration)
+  .enter().append("svg:rect")
+    .attr("x", function(d, i) { return i * 32; })
+    .attr("width", 20)
+    .attr("height", duration_scaled);
+
+chart.selectAll("rect")
+  .data(start)
+  .attr("y", start_scaled);
+
+}
+</script>
+
+</head>
+
+<body onload="load()">
+<h1>Delite Visual Profile</h1>
+
+<button type="button" onclick="load()">Show profile</button>
+
+<div>
+</div>
+
+<hr>
+<address></address>
+<!-- hhmts start --> Last modified: Mon Aug  8 17:51:02 PDT 2011 <!-- hhmts end -->
+</body> </html>
