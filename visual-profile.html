@@ -3,9 +3,24 @@
 <title>Delite Visual Profile</title>
 
 <style type="text/css">
-.chart rect {
-  stroke: white;
-  fill: steelblue;
+body { font-size:100%; }
+.task {
+  stroke: black;
+  fill: lightblue;
+}
+.header {
+  stroke: black;
+  fill: white;
+}
+.label {
+  color: blue;
+}
+.startlabel {
+  font-size: 0.75em; /* 12px/16=0.75em */
+}
+.mainrect {
+  stroke: black;
+  fill: white;
 }
 </style>
 
@@ -13,34 +28,132 @@
 
 <script type="text/javascript">
 
+/* TODO:
+   - add time scale and labels
+ */
+
 function load() {
 
-var duration = [40, 800, 150, 90, 1500, 600];
+var duration = [280, 800, 400, 500, 1500, 600];
 
 var start = [1000, 10, 800, 820, 2, 200];
+
+var kernels = ["x174", "x277", "x107", "x135", "x108", "x99"];
+
+var res = ["T0", "T1", "T2", "T3", "T4", "T5"];
+
+var header_height = 64;
+var schedule_height = 400;
+var sidebar_width = 56;
+var task_width = 40;
+var task_offset = 12 + sidebar_width;
 
 var chart = d3.select("div")
   .append("svg:svg")
     .attr("class", "chart")
-    .attr("width", 32 * duration.length)
-    .attr("height", 420);
+    .attr("width", 64 * duration.length + sidebar_width)
+    .attr("height", 600);
+
+chart.selectAll(".header")
+  .data([0])
+  .enter().append("svg:rect")
+    .attr("class", "header")
+    .attr("x", sidebar_width)
+    .attr("y", 0)
+    .attr("width", 64 * duration.length)
+    .attr("height", header_height);
+
+chart.selectAll(".mainrect")
+  .data([0])
+  .enter().append("svg:rect")
+    .attr("class", "mainrect")
+    .attr("x", sidebar_width)
+    .attr("y", header_height)
+    .attr("width", 64 * duration.length)
+    .attr("height", schedule_height);
+
+/* a dashed line per resource */
+chart.selectAll(".resline")
+    .data(res)
+  .enter().append("svg:line")
+    .attr("x1", function(d, i) { return i * 64 + task_offset +
+      (task_width / 2); })
+    .attr("x2", function(d, i) { return i * 64 + task_offset +
+      (task_width / 2); })
+    .attr("y1", header_height)
+    .attr("y2", header_height + schedule_height)
+    .attr("stroke", "#ccc")
+    .attr("stroke-dasharray", "8, 8");
+
+chart.selectAll(".reslabel")
+    .data(res)
+  .enter().append("svg:text")
+    .attr("class", "reslabel")
+    .attr("x", function(d, i) { return i * 64 + task_offset +
+      (task_width / 2); })
+    .attr("y", header_height)
+    .attr("dx", "-8")
+    .attr("dy", "-16")
+    .attr("text-anchor", "start")
+    .text(String);
 
 var duration_scaled = d3.scale.linear()
     .domain([0, d3.max(duration)])
     .range([0, 100]);
 
 var start_scaled = d3.scale.linear()
-  .domain([0, d3.max(duration)])
-  .range([0, 100]);
+  .domain([0, d3.max(start)])
+/*.range([header_height, header_height + 100])*/
+  .range([header_height, header_height + schedule_height - 100]);
 
-chart.selectAll("rect")
+chart.selectAll(".startline")
+    .data(start)
+  .enter().append("svg:line")
+    .attr("x1", sidebar_width - 8)
+    .attr("x2", function(d, i) { return i * 64 + task_offset; })
+    .attr("y1", start_scaled)
+    .attr("y2", start_scaled)
+    .attr("stroke", "#ccc");
+
+chart.selectAll(".startlabel")
+    .data(start)
+  .enter().append("svg:text")
+    .attr("class", "startlabel")
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("dx", "+4")
+    .attr("dy", "+4")
+    .attr("text-anchor", "start")
+    .text(function(d, i) { return d + " ms"; });
+
+chart.selectAll(".startlabel")
+  .data(start)
+  .attr("y", start_scaled);
+
+chart.selectAll(".task")
     .data(duration)
   .enter().append("svg:rect")
-    .attr("x", function(d, i) { return i * 32; })
-    .attr("width", 20)
+    .attr("class", "task")
+    .attr("x", function(d, i) { return i * 64 + task_offset; })
+    .attr("width", task_width)
     .attr("height", duration_scaled);
 
-chart.selectAll("rect")
+chart.selectAll(".task")
+  .data(start)
+  .attr("y", start_scaled);
+
+chart.selectAll(".label")
+    .data(kernels)
+  .enter().append("svg:text")
+    .attr("class", "label")
+    .attr("x", function(d, i) { return i * 64 + task_offset; })
+    .attr("y", 20)
+    .attr("dx", "+6")
+    .attr("dy", "+16")
+    .attr("text-anchor", "start")
+    .text(String);
+
+chart.selectAll(".label")
   .data(start)
   .attr("y", start_scaled);
 
@@ -52,12 +165,11 @@ chart.selectAll("rect")
 <body onload="load()">
 <h1>Delite Visual Profile</h1>
 
+<!--
 <button type="button" onclick="load()">Show profile</button>
+//-->
 
 <div>
 </div>
 
-<hr>
-<address></address>
-<!-- hhmts start --> Last modified: Mon Aug  8 17:51:02 PDT 2011 <!-- hhmts end -->
 </body> </html>
