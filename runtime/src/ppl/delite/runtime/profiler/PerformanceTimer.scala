@@ -15,21 +15,72 @@ object PerformanceTimer
   // TODO: remove times and only use stats
   val times = new mutable.HashMap[String, mutable.ArrayBuffer[Double]]
   
-  var stats: Map[String, List[(String, Long, Long)]] = Map()
+  var stats: Map[String, List[Timing]] = Map()
+  
+  def startChunked(master: String, threadName: String, numChunks: Int, chunk: Int) = synchronized {
+    println("start chunked timing of "+master+", chunk: "+chunk)
+    val time = System.currentTimeMillis()
+    
+    def startMultiTiming(previous: List[Timing]) {
+      val timing = new MultiTiming(threadName, time, numChunks)
+      timing.start(chunk, threadName)
+      stats += master -> (timing :: previous)
+    }
+    
+    // when to start a new timing?
+    stats.get(master) match {
+      case None =>
+        startMultiTiming(List())
+      
+      case Some(List()) =>
+        // should never happen, but repair
+        startMultiTiming(List())
+      
+      case Some((timing: MultiTiming) :: previousTimings) =>
+        if (timing(chunk) != null) {
+          // timing for chunk already exists
+          startMultiTiming(timing :: previousTimings)
+        } else {
+          timing.start(chunk, threadName)
+        }
+      
+      case Some(timing :: previousTimings) =>
+        // most recent timing is not a MultiTiming
+        startMultiTiming(timing :: previousTimings)
+    }
+  }
+
+  def stopChunked(master: String, chunk: Int) = synchronized {
+	println("stop chunked timing of "+master+", chunk: "+chunk)
+	
+    stats.get(master) match {
+      case None =>
+        error("cannot stop timing that doesn't exist")
+      
+      case Some(List()) =>
+        error("cannot stop timing that doesn't exist")
+      
+      case Some((timing: MultiTiming) :: previousTimings) =>
+        if (timing(chunk) != null) {
+          timing.stop(chunk)
+        } else {
+          error("cannot stop timing that doesn't exist")
+        }
+    }
+  }
   
   // TODO: use Platform instead of System
-  // TODO: System.nanoTime() has lower overhead
   def start(component: String, threadName: String, printMessage: Boolean) = synchronized {
     if (!times.contains(component)) {
       times += component -> new mutable.ArrayBuffer[Double]()
-      stats += component -> List[(String, Long, Long)]()
+      stats += component -> List[Timing]()
     }
     if (printMessage) println("[METRICS]: Timing " + component + " #" + times(component).size + " started")
     val startTime = System.currentTimeMillis
     currentTimer += component -> startTime
     
     val previous = stats(component)
-    val current = (threadName, startTime, 0l) :: previous
+    val current = (new Timing(threadName, startTime)) :: previous
     stats += component -> current
   }
 
@@ -39,13 +90,15 @@ object PerformanceTimer
   }
   
   // TODO: use Platform instead of System
-  // TODO: System.nanoTime() has lower overhead
   def stop(component: String, printMessage: Boolean = true) = synchronized {
     val endTime = System.currentTimeMillis
     stats(component) match {
-      case (threadName, startTime, _) :: previousTimings =>
-        val updatedTimings = (threadName, startTime, endTime) :: previousTimings
-        stats += component -> updatedTimings
+      case List() =>
+        // should never happen
+        error("cannot stop timing that doesn't exist")
+      
+      case timing :: previousTimings =>
+      	timing.endTime = endTime
     }
     
     val x = (endTime - currentTimer(component)) / 1000D
@@ -79,7 +132,7 @@ object PerformanceTimer
     
     for (component <- stats.keys) {
       val timingsInSecs = stats(component) map { p =>
-        (inSecs(p._2 - globalStart), inSecs(p._3 - globalStart))
+        (inSecs(p.startTime - globalStart), inSecs(p.endTime - globalStart))
       }
       
       println("[METRICS]: Timings for component " + component + ": " + timingsInSecs.mkString(" "))
@@ -87,8 +140,9 @@ object PerformanceTimer
   }
   
   /** Writes profile to file provided using system properties.
-    * Example: -Dstats.output.dir=profile -Dstats.output.filename=profile.txt
-    */
+   * 
+   *  Example: -Dstats.output.dir=profile -Dstats.output.filename=profile.txt
+   */
   def writeProfile(globalStart: Long) {
     val directory = getOrCreateOutputDirectory()
     val timesFile = new File(directory, Config.statsOutputFilename)
@@ -100,7 +154,15 @@ object PerformanceTimer
   
   def writeProfile(globalStart: Long, writer: PrintWriter) {
     for (component <- stats.keys) {
-      val timings = stats(component).flatMap(p => List(p._1, (p._2 - globalStart).toString(), (p._3 - globalStart).toString()))
+      val timings = stats(component).flatMap(p => {
+        val postfix = if (p.isInstanceOf[MultiTiming]) {
+          "MultiLoop"
+        } else
+          ""
+        val start = (p.startTime - globalStart).toString()
+        val end = (p.endTime - globalStart).toString()
+        List(p.threadName, start, end, postfix)
+      })
       writer.println(component + " " + timings.mkString(" "))
     }
     writer.flush()

@@ -112,7 +112,8 @@ abstract class ExecutableGenerator {
     def resultName = if (returnsResult) getSym(op, op.getOutputs.head) else "op_" + getSym(op, op.id)
 
     if (op.task == null) return //dummy op
-    out.append("PerformanceTimer.start(\""+op.id+"\", Thread.currentThread.getName(), false)\n")
+    if (!op.isInstanceOf[OP_MultiLoop])
+      out.append("PerformanceTimer.start(\""+op.id+"\", Thread.currentThread.getName(), false)\n")
     out.append("val ")
     out.append(resultName)
     out.append(" : ")
@@ -127,7 +128,8 @@ abstract class ExecutableGenerator {
       out.append(getSym(input, name))
     }
     out.append(")\n")
-    out.append("PerformanceTimer.stop(\""+op.id+"\", false)\n")
+    if (!op.isInstanceOf[OP_MultiLoop])
+      out.append("PerformanceTimer.stop(\""+op.id+"\", false)\n")
 
     if (!returnsResult) {
       for (name <- op.getOutputs) {

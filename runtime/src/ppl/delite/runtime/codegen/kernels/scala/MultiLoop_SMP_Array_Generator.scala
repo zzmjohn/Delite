@@ -51,6 +51,7 @@ object MultiLoop_SMP_Array_Generator {
   }
 
   private def writeHeader(out: StringBuilder, master: OP_MultiLoop, idx: Int, kernelPath: String) {
+    out.append("import ppl.delite.runtime.profiler.PerformanceTimer\n")
     ExecutableGenerator.writePath(kernelPath, out)
     out.append("object ")
     out.append(kernelName(master, idx))
@@ -63,6 +64,9 @@ object MultiLoop_SMP_Array_Generator {
     out.append("): ")
     out.append(op.outputType)
     out.append(" = {\n")
+
+    // profiling
+    out.append("PerformanceTimer.startChunked(\""+master.id+"\", Thread.currentThread.getName(), "+numChunks+", "+chunkIdx+")\n")
 
     //tree reduction
     //first every chunk performs its primary (map-)reduction
@@ -84,6 +88,9 @@ object MultiLoop_SMP_Array_Generator {
     out.append("head.closure.process(acc, idx)\n")
     out.append("idx += 1\n")
     out.append("}\n")
+
+    // profiling
+    out.append("PerformanceTimer.stopChunked(\""+master.id+"\", "+chunkIdx+")\n")
 
     if (op.needsCombine) {
       var half = chunkIdx
@@ -113,6 +120,7 @@ object MultiLoop_SMP_Array_Generator {
       out.append("head.closure.postProcess(acc)\n")
     }
     if (chunkIdx == 0) out.append("acc\n")    
+    
     out.append("}\n")
   }
 
