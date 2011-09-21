@@ -72,6 +72,7 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
     lazy val optiml = project("optiml", "OptiML", new FlatProject(_){
       override def mainClass = Some("ppl.dsl.tests.SimpleVectorTest")
     }, framework)
+    lazy val profiling = project("profiling", "Profiling", new FlatProject(_), framework)
   }
 
   lazy val dsls = project("dsls", "DSLs", new DSLs(_), framework)
