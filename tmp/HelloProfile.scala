@@ -1,7 +1,9 @@
-import example.profiling
+package example.profiling
+
 
 
 object HelloProfileRunner extends ProfileApplicationRunner with HelloProfile
+
 
 trait HelloProfile extends ProfileApplication {
   

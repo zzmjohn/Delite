@@ -1,0 +1,5 @@
+DELITE=~/workspaces/scala/delite
+LMS=~/workspaces/scala/virtualization-lms-core 
+CLASSPATH=$DELITE/dsls/profiling/target/scala_2.9.x-virtualized-SNAPSHOT/classes
+alias delitec='$DELITE/scripts/delitec'
+alias delite='$DELITE/scripts/delite'
