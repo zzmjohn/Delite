@@ -68,14 +68,14 @@ trait ScalaGenProfileArrayOps extends ScalaGenBase {
     rhs match {
       case ReportMedian(x) =>
         val a = quote(x)
-        val size = a + ".size"
+        val size = a + ".dcSize"
         stream.println("val " + quote(sym) + " = {")
         stream.println("val d = new Array[Double]("+size+")")
         stream.println("System.arraycopy("+a+"._data, 0, d, 0, "+size+")")
         stream.println("scala.util.Sorting.quickSort(d)")
         stream.println("d(Math.ceil("+size+"/2).asInstanceOf[Int])")
         stream.println("}")
-      case ProfileLength(x) => emitValDef(sym, quote(x) + ".size")
+      case ProfileLength(x) => emitValDef(sym, quote(x) + ".dcSize")
       case _ => super.emitNode(sym, rhs)
     }  
 }
