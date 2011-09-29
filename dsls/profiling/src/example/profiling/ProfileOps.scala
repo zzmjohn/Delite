@@ -12,7 +12,7 @@ trait ProfileOps extends Base {
 
   // syntax
   class ProfileOpsCls(n: Rep[Int]) {
-    def times(func: => Rep[Any]) = profile_body(n, func)
+    def times(func: =>Rep[Any]) = profile_body(n, func)
   }
  
   // implementation
