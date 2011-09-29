@@ -55,7 +55,7 @@ trait ProfileCodeGenBase extends GenericFatCodegen with codegen.Utils {
                                         
   def dsmap(s: String) = s.replaceAll("example.profiling.datastruct", "generated")
   
-  override def remap[A](m: Manifest[A]): String = dsmap(m.toString)
+  override def remap[A](m: Manifest[A]): String = dsmap(super.remap(m))
   
   override def emitDataStructures(path: String) {
     val s = File.separator
