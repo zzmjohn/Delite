@@ -9,6 +9,7 @@ import ppl.delite.framework.ops._
 import codegen.delite.overrides._
 import codegen.scala.TargetScala
 import java.io.File
+import example.profiling.datastruct.scala.ProfileArray
                    
 
 trait ProfileApplication extends Profile with ProfileLift {

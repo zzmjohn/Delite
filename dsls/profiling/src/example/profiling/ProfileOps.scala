@@ -3,6 +3,7 @@ package example.profiling
 
 import scala.virtualization.lms.common.{ScalaGenBase, Base, EffectExp}
 import java.io.PrintWriter
+import example.profiling.datastruct.scala.ProfileArray
 
 
 // this is the abstract interface of our profiling methods

@@ -5,6 +5,7 @@ import scala.virtualization.lms.common.{NumericOpsExp, FractionalOpsExp, Base}
 import scala.virtualization.lms.common.ScalaGenBase
 import ppl.delite.framework.ops.DeliteOpsExp
 import java.io.PrintWriter
+import example.profiling.datastruct.scala.ProfileArray
 
 
 trait ProfileArrayOps extends Base {

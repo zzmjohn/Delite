@@ -1,4 +1,4 @@
-package example.profiling
+package example.profiling.datastruct.scala
 
 
 import ppl.delite.framework.datastruct.scala.DeliteCollection
