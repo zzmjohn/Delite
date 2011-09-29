@@ -23,17 +23,18 @@ trait ProfileOpsExp extends ProfileOps with EffectExp {
   case class Profile(n: Exp[Int], body: Exp[Any]) extends Def[ProfileArray]
   
   protected def profile_body(n: Rep[Int], func: =>Exp[Any]) = reflectEffect(Profile(n, reifyEffects(func)))
+
+  override def boundSyms(e: Any): List[Sym[Any]] = e match {
+    case Profile(n, body) => effectSyms(body)
+    case _ => super.boundSyms(e)
+  }
+  
 }
 
 
 trait ScalaGenProfileOps extends ScalaGenBase {
   val IR: ProfileOpsExp
   import IR._
-  
-  // override def boundSyms(e: Any): List[Sym[Any]] = e match {
-  //   case Profile(n, body) => effectSyms(body)
-  //   case _ => super.boundSyms(e)
-  // }
   
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = 
     rhs match {
