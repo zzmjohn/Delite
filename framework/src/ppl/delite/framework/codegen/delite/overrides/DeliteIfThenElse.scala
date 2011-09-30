@@ -4,6 +4,7 @@ import scala.virtualization.lms.common._
 import ppl.delite.framework.ops.DeliteOpsExp
 import java.io.PrintWriter
 import scala.virtualization.lms.internal.{GenericNestedCodegen,GenerationFailedException}
+import scala.reflect.SourceContext
 
 trait DeliteIfThenElseExp extends IfThenElseExp with BooleanOpsExp with EqualExpBridge with DeliteOpsExp {
 
@@ -33,8 +34,8 @@ trait DeliteIfThenElseExp extends IfThenElseExp with BooleanOpsExp with EqualExp
   }  
   
 
-  override def mirror[A:Manifest](e: Def[A], f: Transformer): Exp[A] = (e match {
-    case DeliteIfThenElse(c,a,b,h) => reflectPure(DeliteIfThenElse(f(c),f(a),f(b),h))(mtype(manifest[A]))
+  override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit ctx: SourceContext): Exp[A] = (e match {
+    case DeliteIfThenElse(c,a,b,h) => reflectPure(DeliteIfThenElse(f(c),f(a),f(b),h))(mtype(manifest[A]), ctx)
     case Reflect(DeliteIfThenElse(c,a,b,h), u, es) => reflectMirrored(Reflect(DeliteIfThenElse(f(c),f(a),f(b),h), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case _ => super.mirror(e, f)
   }).asInstanceOf[Exp[A]] // why??

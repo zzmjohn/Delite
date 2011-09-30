@@ -5,7 +5,7 @@ import executor._
 import graph.ops.{EOP, Arguments}
 import graph.targets.Targets
 import graph.{TestGraph, DeliteTaskGraph}
-import profiler.PerformanceTimer
+import profiler.{PerformanceTimer, Profiler}
 import scheduler._
 import tools.nsc.io._
 
@@ -81,6 +81,9 @@ object Delite {
       //load kernels & data structures
       loadSources(graph)
 
+      //initialize profiler
+      Profiler.init(sourceInfo, graph)
+      
       //schedule
       scheduler.schedule(graph)
 
@@ -132,4 +135,8 @@ object Delite {
     mainThread.interrupt()
   }
 
+  // maps op ids to the op's source info (fileName, line, opName)
+  // used in the profiler
+  var sourceInfo: Map[String, (String, Int, String)] = Map()
+  
 }

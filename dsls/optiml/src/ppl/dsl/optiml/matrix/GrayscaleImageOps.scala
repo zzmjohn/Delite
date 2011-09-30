@@ -3,6 +3,7 @@ package ppl.dsl.optiml.matrix
 import java.io.{PrintWriter}
 import scala.virtualization.lms.common.{VariablesExp, Variables, CGenBase, CudaGenBase, ScalaGenBase}
 import scala.virtualization.lms.internal.{GenerationFailedException}
+import scala.reflect.SourceContext
 import ppl.delite.framework.{DeliteApplication, DSLType}
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.delite.framework.Config
@@ -91,7 +92,7 @@ trait GrayscaleImageOpsExp extends GrayscaleImageOps with VariablesExp {
   // mirroring
 
   override def mirror[A:Manifest](e: Def[A], f: Transformer): Exp[A] = (e match {
-    case GrayscaleImageObjectCartToPolarPhase(a,b) => reflectPure(new { override val original = Some(f,e) } with GrayscaleImageObjectCartToPolarPhase(f(a),f(b)))(mtype(manifest[A]))
+    case GrayscaleImageObjectCartToPolarPhase(a,b) => reflectPure(new { override val original = Some(f,e) } with GrayscaleImageObjectCartToPolarPhase(f(a),f(b)))(mtype(manifest[A]), implicitly[SourceContext])
     case Reflect(GrayscaleImageObjectFromMat(x), u, es) => reflectMirrored(Reflect(GrayscaleImageObjectFromMat(f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case _ => super.mirror(e, f)
   }).asInstanceOf[Exp[A]] // why??

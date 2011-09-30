@@ -2,6 +2,7 @@ package ppl.delite.runtime.profiler
 
 import collection.mutable
 import java.io.{BufferedWriter, File, PrintWriter, FileWriter}
+import java.util.concurrent.ConcurrentHashMap
 import ppl.delite.runtime.Config
 
 /** Measures execution times of various components.
@@ -17,14 +18,28 @@ object PerformanceTimer
   
   var stats: Map[String, List[Timing]] = Map()
   
+  // sequence numbers per thread
+  val threadSeqNums = new ConcurrentHashMap[String, Integer]
+  
+  def nextSeqNum(threadName: String): Int = {
+    var currSeqNum = threadSeqNums.get(threadName)
+    if (currSeqNum == null) {
+      currSeqNum = new Integer(0)
+    }
+    threadSeqNums.put(threadName, new Integer(currSeqNum.intValue() + 1))
+    currSeqNum.intValue()
+  }
+  
   def startChunked(master: String, threadName: String, numChunks: Int, chunk: Int) = synchronized {
     println("start chunked timing of "+master+", chunk: "+chunk)
-    val time = System.currentTimeMillis()
+    val time = System.nanoTime()
     
     def startMultiTiming(previous: List[Timing]) {
-      val timing = new MultiTiming(threadName, time, numChunks)
+      val timing = new MultiTiming(threadName, time, numChunks, master)
       timing.start(chunk, threadName)
-      stats += master -> (timing :: previous)
+      stats.synchronized {
+        stats += master -> (timing :: previous)
+      }
     }
     
     // when to start a new timing?
@@ -73,15 +88,19 @@ object PerformanceTimer
   def start(component: String, threadName: String, printMessage: Boolean) = synchronized {
     if (!times.contains(component)) {
       times += component -> new mutable.ArrayBuffer[Double]()
-      stats += component -> List[Timing]()
+      stats.synchronized {
+        stats += component -> List[Timing]()
+      }
     }
     if (printMessage) println("[METRICS]: Timing " + component + " #" + times(component).size + " started")
-    val startTime = System.currentTimeMillis
+    val startTime = System.nanoTime()
     currentTimer += component -> startTime
     
     val previous = stats(component)
-    val current = (new Timing(threadName, startTime)) :: previous
-    stats += component -> current
+    val current = (new Timing(threadName, startTime, component)) :: previous
+    stats.synchronized {
+      stats += component -> current
+    }
   }
 
   def start(component: String, printMessage: Boolean = true): Unit = {
@@ -91,7 +110,7 @@ object PerformanceTimer
   
   // TODO: use Platform instead of System
   def stop(component: String, printMessage: Boolean = true) = synchronized {
-    val endTime = System.currentTimeMillis
+    val endTime = System.nanoTime()
     stats(component) match {
       case List() =>
         // should never happen
@@ -120,9 +139,11 @@ object PerformanceTimer
   def print(component: String, globalStart: Long) {
     // special case for component == "prof"
     if (component == "prof") {
-      writeProfile(globalStart)
+      Profiler.writeProfile(globalStart, stats)
     } else {
-      val timeStr = times.get(component) map { "[METRICS]: Latest time for component " + component + ": " +  _.last.formatted("%.6f") + "s" }
+      val timeStr = times.get(component) map { time =>
+        "[METRICS]: Latest time for component " + component + ": " +  (time.last / 1000000).formatted("%.6f") + "s"
+      }
       println(timeStr getOrElse "[METRICS]: No data for component " + component)
     }
   }
@@ -139,45 +160,6 @@ object PerformanceTimer
     }
   }
   
-  /** Writes profile to file provided using system properties.
-   * 
-   *  Example: -Dstats.output.dir=profile -Dstats.output.filename=profile.txt
-   */
-  def writeProfile(globalStart: Long) {
-    val directory = getOrCreateOutputDirectory()
-    val timesFile = new File(directory, Config.statsOutputFilename)
-    if (timesFile.exists)
-      throw new RuntimeException("stats file " + timesFile + " already exists")
-    val fileWriter = new PrintWriter(new FileWriter(timesFile))
-    writeProfile(globalStart, fileWriter)
-  }
-  
-  def writeProfile(globalStart: Long, writer: PrintWriter) {
-    for (component <- stats.keys) {
-      val timings = stats(component).flatMap(p => {
-        val postfix = if (p.isInstanceOf[MultiTiming]) {
-          "MultiLoop"
-        } else
-          ""
-        val start = (p.startTime - globalStart).toString()
-        val end = (p.endTime - globalStart).toString()
-        List(p.threadName, start, end, postfix)
-      })
-      writer.println(component + " " + timings.mkString(" "))
-    }
-    writer.flush()
-  }
-  
-  def getOrCreateOutputDirectory(): File = {
-    // check that directory is there or make it
-    val directory = new File(Config.statsOutputDirectory)
-    if(directory.exists == false)
-      directory.mkdirs
-    else if(directory.isDirectory == false)
-      throw new RuntimeException("statsOutputDirectory doesn't refer to a directory")
-    directory
-  }
-  
   /**
    * dump stats to values provided by config parameters
    */
@@ -187,7 +169,7 @@ object PerformanceTimer
   }
 
   def dumpStats(component: String) {
-    val directory = getOrCreateOutputDirectory()
+    val directory = Profiler.getOrCreateOutputDirectory()
     val timesFile = new File(directory.getCanonicalPath + File.separator  + Config.statsOutputFilename)
     if(Config.dumpStatsOverwrite == false && timesFile.exists)
       throw new RuntimeException("stats file " + timesFile + " already exists")

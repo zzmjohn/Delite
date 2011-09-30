@@ -3,6 +3,7 @@ package ppl.dsl.optiml.matrix
 import ppl.dsl.optiml.datastruct.scala.{Vector,Matrix,MatrixRow}
 import scala.virtualization.lms.common.ScalaOpsPkg
 import scala.virtualization.lms.common.{BaseExp, Base}
+import scala.reflect.SourceContext
 import ppl.dsl.optiml.{OptiMLExp, OptiMLCompiler, OptiMLLift, OptiML}
 
 trait MatrixImplOps { this: OptiML =>
@@ -93,7 +94,7 @@ trait MatrixImplOpsStandard extends MatrixImplOps {
         val out = Matrix[A](numRows, numCols)
         for (i <- 0 until numRows){
           for (j <- 0 until numCols){
-            out(i,j) = xs(i)(j)
+            out(i,j) = xs(i)(implicitly[SourceContext])(j)(implicitly[SourceContext])
           }
         }
         out.unsafeImmutable
@@ -104,7 +105,7 @@ trait MatrixImplOpsStandard extends MatrixImplOps {
         val out = Matrix[A](numRows, numCols)
         for (i <- 0 until numCols){
           for (j <- 0 until numRows){
-            out(j,i) = xs(i)(j)
+            out(j,i) = xs(i)(implicitly[SourceContext])(j)(implicitly[SourceContext])
           }
         }
         out.unsafeImmutable

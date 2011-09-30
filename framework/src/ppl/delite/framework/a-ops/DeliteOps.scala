@@ -2,6 +2,7 @@ package ppl.delite.framework.ops
 
 import java.io.{FileWriter, File, PrintWriter}
 
+import scala.reflect.SourceContext
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal.{GenericCodegen, GenericFatCodegen, GenerationFailedException}
 import ppl.delite.framework.datastruct.scala.DeliteCollection
@@ -70,6 +71,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
   class DeliteOpSingleTask[A](block0: => Exp[A], val requireInputs: Boolean = false) extends DeliteOp[A] {
     type OpType <: DeliteOpSingleTask[A]
     final lazy val block: Exp[A] = copyTransformedOrElse(_.block)(block0)
+    def sourceContext: Option[SourceContext] = None
   }
 
   /**
@@ -86,6 +88,8 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
    * The base class for most data parallel Delite ops. 
    */
   abstract class DeliteOpLoop[A] extends AbstractLoop[A] with DeliteOp[A] {
+    //println("creating DeliteOpLoop with context "+sourceContext)
+    //println("dynamic type of op: "+this.getClass())
     type OpType <: DeliteOpLoop[A]
     def copyBodyOrElse(e: => Def[A]): Def[A] = original.map(p=>mirrorLoopBody(p._2.asInstanceOf[OpType].body,p._1)).getOrElse(e)
     final lazy val v: Sym[Int] = copyTransformedOrElse(_.v)(fresh[Int]).asInstanceOf[Sym[Int]]
@@ -637,7 +641,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
 
   // alternative: leave reflectPure as above and override toAtom...
 
-  def reflectPure[A:Manifest](d: Def[A]): Exp[A] = d match {
+  def reflectPure[A:Manifest](d: Def[A])(implicit ctx: SourceContext): Exp[A] = d match {
     case x: DeliteOpLoop[_] =>
       val mutableInputs = readMutableData(d) //TODO: necessary or not??
       //val mutableInputs = Nil // readMutableData(d) TODO: necessary or not??
@@ -1131,7 +1135,12 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
     val kernelName = symList.map(quote).mkString("")
     val actType = "activation_"+kernelName
     //deliteKernel = false
-    stream.println("val " + kernelName + " = new generated.scala.DeliteOpMultiLoop[" + actType + "] {"/*}*/)
+    scala.reflect.SourceContext.debug = true
+    stream.println("val " + kernelName + " = new generated.scala.DeliteOpMultiLoop[" + actType + "]"+
+      (if (!op.sourceContext.isEmpty)
+        " /* "+op.sourceContext.get+" */ {"
+      else
+        " {"/*}*/))
     // TODO: if there are conditions, the output size is not known (but for now it is known to be smaller than the input size)
     // two options:
     // - combine (reduce step) using concat <-- simpler to implement but slow
@@ -1343,7 +1352,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
       emitAbstractFatLoopKernelExtra(op, symList)
     case ThinDef(op: AbstractLoop[_]) => 
       stream.println("//activation record for thin loop")
-      emitAbstractFatLoopKernelExtra(SimpleFatLoop(op.size, op.v, List(op.body)), symList)
+      emitAbstractFatLoopKernelExtra(SimpleFatLoop(op.size, op.v, List(op.body), op.sourceContext), symList)
     case _ => 
       super.emitFatNodeKernelExtra(symList, rhs)
   }
@@ -1373,8 +1382,9 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
     }
     case op: AbstractLoop[_] => 
       // TODO: we'd like to always have fat loops but currently they are not allowed to have effects
+      println("emitting AbstractLoop: "+op.getClass())
       stream.println("// a *thin* loop follows: " + quote(sym))
-      emitFatNode(List(sym), SimpleFatLoop(op.size, op.v, List(op.body)))
+      emitFatNode(List(sym), SimpleFatLoop(op.size, op.v, List(op.body), op.sourceContext))
 /*    
       if (!deliteKernel) { // FIXME cond!
         op.body match {
@@ -1529,7 +1539,7 @@ trait CudaGenDeliteOps extends CudaGenLoopsFat with BaseGenDeliteOps {
     case op: AbstractLoop[_] => 
       // TODO: we'd like to always have fat loops but currently they are not allowed to have effects
       stream.println("// a *thin* loop follows: " + quote(sym))
-      emitFatNode(List(sym), SimpleFatLoop(op.size, op.v, List(op.body)))
+      emitFatNode(List(sym), SimpleFatLoop(op.size, op.v, List(op.body), op.sourceContext))
     
     case foreach:DeliteOpForeach2[_,_] => {
       if(!isPrimitiveType(foreach.v.Type)) throw new GenerationFailedException("CudaGen: Only primitive Types are allowed for input of foreach.")

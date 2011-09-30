@@ -5,6 +5,7 @@ import ppl.dsl.optiml.{OptiMLExp, OptiML}
 import ppl.delite.framework.{DeliteApplication, DSLType}
 import scala.virtualization.lms.common.{EffectExp, BaseExp, Base, ScalaGenBase}
 import scala.virtualization.lms.util.OverloadHack
+import scala.reflect.SourceContext
 import java.io.PrintWriter
 
 trait IndexVectorOps extends DSLType with Base with OverloadHack { this: OptiML =>
@@ -14,11 +15,11 @@ trait IndexVectorOps extends DSLType with Base with OverloadHack { this: OptiML 
     def apply(xs: Rep[Vector[Int]])(implicit o: Overloaded1) = indexvector_obj_fromvec(xs)
   }
 
-  implicit def repIndexVectorToIndexVectorOps(x: Rep[IndexVector]) = new IndexVectorOpsCls(x)
+  implicit def repIndexVectorToIndexVectorOps(x: Rep[IndexVector])(implicit ctx: SourceContext) = new IndexVectorOpsCls(x)
 
-  class IndexVectorOpsCls(x: Rep[IndexVector]){
-    def apply(index: Rep[Int]) = vector_apply(x,index)
-    def apply[A:Manifest](block: Rep[Int] => Rep[A]) = indexvector_construct(x, block)
+  class IndexVectorOpsCls(x: Rep[IndexVector])(implicit ctx: SourceContext) {
+    def apply(index: Rep[Int])(implicit ctx: SourceContext) = vector_apply(x,index)
+    def apply[A:Manifest](block: Rep[Int] => Rep[A])(implicit ctx: SourceContext) = indexvector_construct(x, block)
   }
 
   // impl defs
@@ -27,7 +28,7 @@ trait IndexVectorOps extends DSLType with Base with OverloadHack { this: OptiML 
   def indexvector_obj_fromvec(xs: Rep[Vector[Int]]): Rep[IndexVector]
 
   // class defs
-  def indexvector_construct[A:Manifest](x: Rep[IndexVector], block: Rep[Int] => Rep[A]): Rep[Vector[A]]
+  def indexvector_construct[A:Manifest](x: Rep[IndexVector], block: Rep[Int] => Rep[A])(implicit ctx: SourceContext): Rep[Vector[A]]
 }
 
 trait IndexVectorOpsExp extends IndexVectorOps with EffectExp { this: OptiMLExp with IndexVectorImplOps =>
@@ -45,7 +46,7 @@ trait IndexVectorOpsExp extends IndexVectorOps with EffectExp { this: OptiMLExp 
 
   // Note: Construction from a discrete index vector set will curently return a contiguous (non-sparse) vector.
   // Is this what we want?
-  case class IndexVectorConstruct[B:Manifest](in: Exp[IndexVector], func: Exp[Int] => Exp[B])
+  case class IndexVectorConstruct[B:Manifest](in: Exp[IndexVector], func: Exp[Int] => Exp[B])(implicit ctx: SourceContext)
     extends DeliteOpMap[Int,B,Vector[B]] {
 
     val size = copyTransformedOrElse(_.size)(in.length)
@@ -53,6 +54,8 @@ trait IndexVectorOpsExp extends IndexVectorOps with EffectExp { this: OptiMLExp 
     def alloc = Vector[B](in.length, in.isRow)
 
     def m = manifest[B]
+    
+    override def sourceContext = Some(ctx)
   }
   
   // impl defs
@@ -61,7 +64,7 @@ trait IndexVectorOpsExp extends IndexVectorOps with EffectExp { this: OptiMLExp 
   def indexvector_obj_fromvec(xs: Exp[Vector[Int]]) = reflectPure(IndexVectorObjectFromVec(xs))
 
   // class defs
-  def indexvector_construct[A:Manifest](x: Exp[IndexVector], block: Exp[Int] => Exp[A]): Exp[Vector[A]] = {
+  def indexvector_construct[A:Manifest](x: Exp[IndexVector], block: Exp[Int] => Exp[A])(implicit ctx: SourceContext): Exp[Vector[A]] = {
     reflectPure(IndexVectorConstruct(x, block))
     // HACK -- better scheduling performance in our apps, forces some expensive dependencies to be hoisted
     // TR TODO: use effect summary of func
@@ -72,8 +75,8 @@ trait IndexVectorOpsExp extends IndexVectorOps with EffectExp { this: OptiMLExp 
   // mirroring
 
   override def mirror[A:Manifest](e: Def[A], f: Transformer): Exp[A] = (e match {
-    case e@IndexVectorConstruct(in,b) => reflectPure(new { override val original = Some(f,e) } with IndexVectorConstruct(f(in),f(b))(e.m))(mtype(manifest[A]))
-    case Reflect(e@IndexVectorConstruct(in,b), u, es) => reflectMirrored(Reflect(new { override val original = Some(f,e) } with IndexVectorConstruct(f(in),f(b))(e.m), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case e@IndexVectorConstruct(in,b) => reflectPure(new { override val original = Some(f,e) } with IndexVectorConstruct(f(in),f(b))(e.m, implicitly[SourceContext]))(mtype(manifest[A]), implicitly[SourceContext])
+    case Reflect(e@IndexVectorConstruct(in,b), u, es) => reflectMirrored(Reflect(new { override val original = Some(f,e) } with IndexVectorConstruct(f(in),f(b))(e.m, implicitly[SourceContext]), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case _ => super.mirror(e, f)
   }).asInstanceOf[Exp[A]]
 }

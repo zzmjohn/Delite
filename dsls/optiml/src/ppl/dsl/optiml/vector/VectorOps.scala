@@ -10,6 +10,7 @@ import ppl.delite.framework.datastruct.scala.DeliteCollection
 import reflect.Manifest
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal.{GenerationFailedException, GenericFatCodegen}
+import scala.reflect.SourceContext
 import ppl.dsl.optiml.{OptiMLExp, OptiML}
 
 trait VectorOps extends DSLType with Variables {
@@ -44,14 +45,14 @@ trait VectorOps extends DSLType with Variables {
       vector_obj_uniform(start, step_size, end, isRow)
   }
 
-  implicit def repVecToVecOps[A:Manifest](x: Rep[Vector[A]]) = new vecOpsCls(x)
+  implicit def repVecToVecOps[A:Manifest](x: Rep[Vector[A]])(implicit ctx: SourceContext) = new vecOpsCls(x)
   implicit def varToVecOps[A:Manifest](x: Var[Vector[A]]) = new vecOpsCls(readVar(x))
 
   /**
    * This class defines the public interface for the Vector[T] class.
    * (could convert to infix, but apply doesn't work with it anyways yet)
    */
-  class vecOpsCls[A:Manifest](x: Rep[Vector[A]]) {
+  class vecOpsCls[A:Manifest](x: Rep[Vector[A]])(implicit ctx: SourceContext) {
     // TODO: how to make this work? the implicit won't kick in
     // override def toString = ..
 
@@ -67,7 +68,7 @@ trait VectorOps extends DSLType with Variables {
     // accessors
     def length = vector_length(x)
     def isRow = vector_isRow(x)
-    def apply(n: Rep[Int]) = vector_apply(x, n)
+    def apply(n: Rep[Int])(implicit ctx: SourceContext) = vector_apply(x, n)
     def isEmpty = length == 0
     def first = apply(0)
     def last = apply(repArithToArithOps(length) - 1) // TODO: why doesn't this get invoked implicitly?
@@ -125,17 +126,17 @@ trait VectorOps extends DSLType with Variables {
     def exp(implicit a: Arith[A]) = vector_exp(x)
 
     // ordering operations
-    def sort(implicit o: Ordering[A]) = vector_sort(x)
+    def sort(implicit o: Ordering[A], ctx: SourceContext) = vector_sort(x)
     def min(implicit o: Ordering[A], mx: HasMinMax[A]) = vector_min(x)
     def minIndex(implicit o: Ordering[A], mx: HasMinMax[A]) = vector_minindex(x)
     def max(implicit o: Ordering[A], mx: HasMinMax[A]) = vector_max(x)
     def maxIndex(implicit o: Ordering[A], mx: HasMinMax[A]) = vector_maxindex(x)
-    def median(implicit o: Ordering[A]) = vector_median(x)
+    def median(implicit o: Ordering[A], ctx: SourceContext) = vector_median(x)
     def :>(y: Rep[Vector[A]])(implicit o: Ordering[A]) = zip(y) { (a,b) => a > b }
     def :<(y: Rep[Vector[A]])(implicit o: Ordering[A]) = zip(y) { (a,b) => a < b }
 
     // bulk operations
-    def map[B:Manifest](f: Rep[A] => Rep[B]) = vector_map(x,f)
+    def map[B:Manifest](f: Rep[A] => Rep[B])(implicit ctx: SourceContext) = vector_map(x,f)
     def mmap(f: Rep[A] => Rep[A]) = { vector_mmap(x,f); x }
     def foreach(block: Rep[A] => Rep[Unit]) = vector_foreach(x, block)
     def zip[B:Manifest,R:Manifest](y: Rep[Vector[B]])(f: (Rep[A],Rep[B]) => Rep[R]) = vector_zipwith(x,y,f)
@@ -192,7 +193,7 @@ trait VectorOps extends DSLType with Variables {
   // class defs
   def vector_length[A:Manifest](x: Rep[Vector[A]]): Rep[Int]
   def vector_isRow[A:Manifest](x: Rep[Vector[A]]): Rep[Boolean]
-  def vector_apply[A:Manifest](x: Rep[Vector[A]], n: Rep[Int]): Rep[A]
+  def vector_apply[A:Manifest](x: Rep[Vector[A]], n: Rep[Int])(implicit ctx: SourceContext): Rep[A]
   def vector_slice[A:Manifest](x: Rep[Vector[A]], start: Rep[Int], end: Rep[Int]): Rep[Vector[A]]
   def vector_contains[A:Manifest](x: Rep[Vector[A]], y: Rep[A]): Rep[Boolean]
   def vector_distinct[A:Manifest](x: Rep[Vector[A]]): Rep[Vector[A]]
@@ -236,14 +237,14 @@ trait VectorOps extends DSLType with Variables {
   def vector_abs[A:Manifest:Arith](x: Rep[Vector[A]]): Rep[Vector[A]]
   def vector_exp[A:Manifest:Arith](x: Rep[Vector[A]]): Rep[Vector[A]]
 
-  def vector_sort[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[Vector[A]]
+  def vector_sort[A:Manifest:Ordering](x: Rep[Vector[A]])(implicit ctx: SourceContext): Rep[Vector[A]]
   def vector_min[A:Manifest:Ordering:HasMinMax](x: Rep[Vector[A]]): Rep[A]
   def vector_minindex[A:Manifest:Ordering:HasMinMax](x: Rep[Vector[A]]): Rep[Int]
   def vector_max[A:Manifest:Ordering:HasMinMax](x: Rep[Vector[A]]): Rep[A]
   def vector_maxindex[A:Manifest:Ordering:HasMinMax](x: Rep[Vector[A]]): Rep[Int]
-  def vector_median[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[A]
+  def vector_median[A:Manifest:Ordering](x: Rep[Vector[A]])(implicit ctx: SourceContext): Rep[A]
 
-  def vector_map[A:Manifest,B:Manifest](x: Rep[Vector[A]], f: Rep[A] => Rep[B]): Rep[Vector[B]]
+  def vector_map[A:Manifest,B:Manifest](x: Rep[Vector[A]], f: Rep[A] => Rep[B])(implicit ctx: SourceContext): Rep[Vector[B]]
   def vector_mmap[A:Manifest](x: Rep[Vector[A]], f: Rep[A] => Rep[A]): Rep[Unit]
   def vector_foreach[A:Manifest](x: Rep[Vector[A]], block: Rep[A] => Rep[Unit]): Rep[Unit]
   def vector_zipwith[A:Manifest,B:Manifest,R:Manifest](x: Rep[Vector[A]], y: Rep[Vector[B]], f: (Rep[A],Rep[B]) => Rep[R]): Rep[Vector[R]]
@@ -300,7 +301,7 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
   case class VectorClone[A:Manifest](x: Exp[Vector[A]]) extends Def[Vector[A]]
   // TODO: right now we just use the underlying data structure sort, but we should implement our own
   // fast parallel sort with delite ops
-  case class VectorSort[A:Manifest:Ordering](x: Exp[Vector[A]]) extends Def[Vector[A]]
+  case class VectorSort[A:Manifest:Ordering](x: Exp[Vector[A]])(implicit ctx: SourceContext) extends Def[Vector[A]]
   case class VectorToList[A:Manifest](x: Exp[Vector[A]]) extends Def[List[A]]
   case class VectorRawData[A:Manifest](x: Exp[Vector[A]]) extends Def[Array[A]]
 
@@ -367,8 +368,10 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
   case class VectorMkString[A:Manifest](x: Exp[Vector[A]], sep: Exp[String])
     extends DeliteOpSingleTask(reifyEffectsHere(vector_mkstring_impl[A](x, sep)))
 
-  case class VectorMedian[A:Manifest:Ordering](x: Exp[Vector[A]])
-    extends DeliteOpSingleTask(reifyEffectsHere(vector_median_impl[A](x)))
+  case class VectorMedian[A:Manifest:Ordering](x: Exp[Vector[A]])(implicit ctx: SourceContext)
+    extends DeliteOpSingleTask(reifyEffectsHere(vector_median_impl[A](x))) {
+    override def sourceContext = Some(ctx)
+  }
 
 //  case class VectorFilter[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean])
 //    extends DeliteOpSingleTask(reifyEffectsHere(vector_filter_impl(x, pred)))
@@ -614,7 +617,7 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
     val p = implicitly[HasMinMax[A]]
   }
     
-  case class VectorMap[A:Manifest,B:Manifest](in: Exp[Vector[A]], func: Exp[A] => Exp[B])
+  case class VectorMap[A:Manifest,B:Manifest](in: Exp[Vector[A]], func: Exp[A] => Exp[B])(implicit ctx: SourceContext)
     extends DeliteOpMap[A,B,Vector[B]] {
 
     val size = copyTransformedOrElse(_.size)(in.length)
@@ -622,6 +625,8 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
     
     val mA = manifest[A]
     val mB = manifest[B]
+    
+    override def sourceContext = Some(ctx)
   }
 
   case class VectorMutableMap[A:Manifest](in: Exp[Vector[A]], block: Exp[A] => Exp[A])
@@ -733,8 +738,8 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
   // class interface
 
   def vector_length[A:Manifest](x: Exp[Vector[A]]) = reflectPure(VectorLength(x))
-  def vector_isRow[A:Manifest](x: Exp[Vector[A]]) = reflectPure(VectorIsRow(x))
-  def vector_apply[A:Manifest](x: Exp[Vector[A]], n: Exp[Int]) = dc_apply(x,n)//reflectPure(VectorApply(x, n))
+  def vector_isRow[A:Manifest](x: Exp[Vector[A]])(implicit ctx: SourceContext) = reflectPure(VectorIsRow(x))
+  def vector_apply[A:Manifest](x: Exp[Vector[A]], n: Exp[Int])(implicit ctx: SourceContext) = dc_apply(x,n)//reflectPure(VectorApply(x, n))
   def vector_slice[A:Manifest](x: Exp[Vector[A]], start: Exp[Int], end: Exp[Int]) = reflectPure(VectorSlice(x, start, end))
   def vector_contains[A:Manifest](x: Exp[Vector[A]], y: Exp[A]) = reflectPure(VectorContains(x, y))
   def vector_distinct[A:Manifest](x: Exp[Vector[A]]) = reflectPure(VectorDistinct(x))
@@ -779,14 +784,14 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
   def vector_abs[A:Manifest:Arith](x: Exp[Vector[A]]) = reflectPure(VectorAbs(x))
   def vector_exp[A:Manifest:Arith](x: Exp[Vector[A]]) = reflectPure(VectorExp(x))
 
-  def vector_sort[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorSort(x))
+  def vector_sort[A:Manifest:Ordering](x: Exp[Vector[A]])(implicit ctx: SourceContext) = reflectPure(VectorSort(x))
   def vector_min[A:Manifest:Ordering:HasMinMax](x: Exp[Vector[A]]) = reflectPure(VectorMin(x))
   def vector_minindex[A:Manifest:Ordering:HasMinMax](x: Exp[Vector[A]]) = /*tuple2_get1*/(reflectPure(VectorMinIndex(x)))
   def vector_max[A:Manifest:Ordering:HasMinMax](x: Exp[Vector[A]]) = reflectPure(VectorMax(x))
   def vector_maxindex[A:Manifest:Ordering:HasMinMax](x: Exp[Vector[A]]) = tuple2_get1(reflectPure(VectorMaxIndex(x)))
-  def vector_median[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorMedian(x))
+  def vector_median[A:Manifest:Ordering](x: Exp[Vector[A]])(implicit ctx: SourceContext) = reflectPure(VectorMedian(x))
 
-  def vector_map[A:Manifest,B:Manifest](x: Exp[Vector[A]], f: Exp[A] => Exp[B]) = reflectPure(VectorMap(x, f)) // TODO: effect if func effectful!
+  def vector_map[A:Manifest,B:Manifest](x: Exp[Vector[A]], f: Exp[A] => Exp[B])(implicit ctx: SourceContext) = reflectPure(VectorMap(x, f)) // TODO: effect if func effectful!
   def vector_mmap[A:Manifest](x: Exp[Vector[A]], f: Exp[A] => Exp[A]) = reflectWrite(x)(VectorMutableMap(x, f)) // TODO: effect if func effectful!
   def vector_foreach[A:Manifest](x: Exp[Vector[A]], block: Exp[A] => Exp[Unit]) = {
     reflectEffect(VectorForeach(x, block))
@@ -822,24 +827,24 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
     case VectorLength(x) => vector_length(f(x))
     case VectorIsRow(x) => vector_isRow(f(x))
     // implemented as DeliteOpSingleTask and DeliteOpLoop
-    case e@VectorObjectOnes(x) => reflectPure(new { override val original = Some(f,e) } with VectorObjectOnes(f(x)))(mtype(manifest[A]))
-    case e@VectorObjectOnesF(x) => reflectPure(new { override val original = Some(f,e) } with VectorObjectOnesF(f(x)))(mtype(manifest[A]))
-    case e@VectorObjectUniform(x,y,z,w) => reflectPure(new { override val original = Some(f,e) } with VectorObjectUniform(f(x),f(y),f(z),f(w)))(mtype(manifest[A]))
-    case e@VectorTrans(x) => reflectPure(new { override val original = Some(f,e) } with VectorTrans(f(x))(e.m))(mtype(manifest[A]))
-    case e@VectorOuter(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorOuter(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
-    case e@VectorPlus(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorPlus(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
-    case e@VectorMinus(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorMinus(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
-    case e@VectorTimes(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorTimes(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
-    case e@VectorTimesScalar(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorTimesScalar(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
-    case e@VectorDivideScalar(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorDivideScalar(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
-    case e@VectorSum(x) => reflectPure(new { override val original = Some(f,e) } with VectorSum(f(x))(e.m, e.a))(mtype(manifest[A]))
-    case e@VectorAbs(x) => reflectPure(new { override val original = Some(f,e) } with VectorAbs(f(x))(e.m, e.a))(mtype(manifest[A]))
-    case e@VectorExp(x) => reflectPure(new { override val original = Some(f,e) } with VectorExp(f(x))(e.m, e.a))(mtype(manifest[A]))
-    case e@VectorFilter(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorFilter(f(x),f(p))(e.m))(mtype(manifest[A]))
-    case e@VectorFind(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorFind(f(x),f(p))(e.m))(mtype(manifest[A]))
-    case e@VectorCount(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorCount(f(x),f(p))(e.m))(mtype(manifest[A]))
-    case e@VectorMinIndex(x) => reflectPure(new { override val original = Some(f,e) } with VectorMinIndex(f(x))(e.m,e.o,e.p))(mtype(manifest[A]))
-    case e@VectorMap(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorMap(f(x),f(p))(e.mA,e.mB))(mtype(manifest[A]))
+    case e@VectorObjectOnes(x) => reflectPure(new { override val original = Some(f,e) } with VectorObjectOnes(f(x)))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorObjectOnesF(x) => reflectPure(new { override val original = Some(f,e) } with VectorObjectOnesF(f(x)))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorObjectUniform(x,y,z,w) => reflectPure(new { override val original = Some(f,e) } with VectorObjectUniform(f(x),f(y),f(z),f(w)))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorTrans(x) => reflectPure(new { override val original = Some(f,e) } with VectorTrans(f(x))(e.m))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorOuter(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorOuter(f(x),f(y))(e.m, e.a))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorPlus(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorPlus(f(x),f(y))(e.m, e.a))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorMinus(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorMinus(f(x),f(y))(e.m, e.a))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorTimes(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorTimes(f(x),f(y))(e.m, e.a))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorTimesScalar(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorTimesScalar(f(x),f(y))(e.m, e.a))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorDivideScalar(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorDivideScalar(f(x),f(y))(e.m, e.a))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorSum(x) => reflectPure(new { override val original = Some(f,e) } with VectorSum(f(x))(e.m, e.a))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorAbs(x) => reflectPure(new { override val original = Some(f,e) } with VectorAbs(f(x))(e.m, e.a))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorExp(x) => reflectPure(new { override val original = Some(f,e) } with VectorExp(f(x))(e.m, e.a))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorFilter(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorFilter(f(x),f(p))(e.m))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorFind(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorFind(f(x),f(p))(e.m))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorCount(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorCount(f(x),f(p))(e.m))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorMinIndex(x) => reflectPure(new { override val original = Some(f,e) } with VectorMinIndex(f(x))(e.m,e.o,e.p))(mtype(manifest[A]), implicitly[SourceContext])
+    case e@VectorMap(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorMap(f(x),f(p))(e.mA,e.mB,e.sourceContext.get))(mtype(manifest[A]), implicitly[SourceContext])
     // read/write effects
     case Reflect(VectorApply(l,r), u, es) => reflectMirrored(Reflect(VectorApply(f(l),f(r)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case Reflect(VectorLength(x), u, es) => reflectMirrored(Reflect(VectorLength(f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))
@@ -1033,11 +1038,11 @@ trait VectorOpsExpOpt extends VectorOpsExp with DeliteCollectionOpsExp {
     case _ => None
   }
   
-  override def vector_apply[A:Manifest](x: Exp[Vector[A]], n: Exp[Int]) = {
+  override def vector_apply[A:Manifest](x: Exp[Vector[A]], n: Exp[Int])(implicit ctx: SourceContext) = {
     vector_optimize_apply(x.asInstanceOf[Exp[DeliteCollection[A]]],n) getOrElse super.vector_apply(x,n)
   }
   
-  override def dc_apply[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int]) = {
+  override def dc_apply[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int])(implicit ctx: SourceContext) = {
     vector_optimize_apply(x,n) getOrElse super.dc_apply(x,n)
   }
 }

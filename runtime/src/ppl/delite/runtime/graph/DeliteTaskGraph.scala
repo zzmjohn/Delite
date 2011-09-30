@@ -4,6 +4,7 @@ import java.io.File
 import _root_.scala.util.parsing.json.JSON
 import ops._
 import targets._
+import ppl.delite.runtime.Delite
 import ppl.delite.runtime.scheduler.PartialSchedule
 import collection.mutable.{HashSet, HashMap}
 
@@ -88,6 +89,16 @@ object DeliteTaskGraph {
     }
   }
 
+  def getFieldMapOption(map: Map[Any, Any], field: String): Option[Map[Any, Any]] = {
+    map.get(field) match {
+      case Some(field) => field match {
+        case map: Map[Any, Any] => Some(map)
+        case err@_ => None
+      }
+      case None => None
+    }
+  }
+  
   def getFieldMap(map: Map[Any, Any], field: String): Map[Any,Any] = {
     map.get(field) match {
       case Some(field) => field match {
@@ -125,13 +136,23 @@ object DeliteTaskGraph {
 
     val resultMap = processOutputTypes(op)
 
+    // source context
+    val (fileName, line, opName) = getFieldMapOption(op, "sourceContext") match {
+	  case None =>
+		("<unknown file>", 0, id)
+      case Some(sourceContext) =>
+		(getFieldString(sourceContext, "fileName"), getFieldString(sourceContext, "line").toInt, getFieldString(sourceContext, "opName"))
+    }
+    // TODO: maybe it would be better to add source info to DeliteOP?
+	Delite.sourceInfo += (id -> (fileName, line, opName))
+	
     val newop = opType match {
       case "OP_Single" => new OP_Single(id, "kernel_"+id, resultMap)
       case "OP_External" => new OP_External(id, "kernel_"+id, resultMap)
       case "OP_MultiLoop" => 
-			  val size = getFieldString(op, "sizeValue")
-				val sizeIsConst = getFieldString(op, "sizeType") == "const"				
-				new OP_MultiLoop(id, size, sizeIsConst, "kernel_"+id, resultMap, getFieldBoolean(op, "needsCombine"), getFieldBoolean(op, "needsPostProcess"))
+		val size = getFieldString(op, "sizeValue")
+		val sizeIsConst = getFieldString(op, "sizeType") == "const"				
+		new OP_MultiLoop(id, size, sizeIsConst, "kernel_"+id, resultMap, getFieldBoolean(op, "needsCombine"), getFieldBoolean(op, "needsPostProcess"))
       case "OP_Foreach" => new OP_Foreach(id, "kernel_"+id, resultMap)
       case other => error("OP Type not recognized: " + other)
     }

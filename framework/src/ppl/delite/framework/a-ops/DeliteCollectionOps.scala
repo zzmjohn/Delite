@@ -4,40 +4,41 @@ import ppl.delite.framework.datastruct.scala.DeliteCollection
 import java.io.PrintWriter
 import scala.virtualization.lms.common.{EffectExp, BaseFatExp, Base, ScalaGenFat, CudaGenEffect}
 import scala.virtualization.lms.internal.{GenericFatCodegen}
+import scala.reflect.SourceContext
 
 trait DeliteCollectionOps extends Base {
-  implicit def dcToDcOps[A:Manifest](x: Rep[DeliteCollection[A]]) = new deliteCollectionOpsCls(x)
+  implicit def dcToDcOps[A:Manifest](x: Rep[DeliteCollection[A]])(implicit ctx: SourceContext) = new deliteCollectionOpsCls(x)
   
   class deliteCollectionOpsCls[A:Manifest](x: Rep[DeliteCollection[A]]) {
-    def size = dc_size(x)
-    def apply(n: Rep[Int]) = dc_apply(x,n)
-    def update(n: Rep[Int], y: Rep[A]) = dc_update(x,n,y)
+    def size(implicit ctx: SourceContext) = dc_size(x)
+    def apply(n: Rep[Int])(implicit ctx: SourceContext) = dc_apply(x,n)
+    def update(n: Rep[Int], y: Rep[A])(implicit ctx: SourceContext) = dc_update(x,n,y)
   }
   
-  def dc_size[A:Manifest](x: Rep[DeliteCollection[A]]): Rep[Int]
-  def dc_apply[A:Manifest](x: Rep[DeliteCollection[A]], n: Rep[Int]): Rep[A]
-  def dc_update[A:Manifest](x: Rep[DeliteCollection[A]], n: Rep[Int], y: Rep[A]): Rep[Unit]
+  def dc_size[A:Manifest](x: Rep[DeliteCollection[A]])(implicit ctx: SourceContext): Rep[Int]
+  def dc_apply[A:Manifest](x: Rep[DeliteCollection[A]], n: Rep[Int])(implicit ctx: SourceContext): Rep[A]
+  def dc_update[A:Manifest](x: Rep[DeliteCollection[A]], n: Rep[Int], y: Rep[A])(implicit ctx: SourceContext): Rep[Unit]
 }
 
 trait DeliteCollectionOpsExp extends DeliteCollectionOps with BaseFatExp with EffectExp { this: DeliteOpsExp =>
-  case class DeliteCollectionSize[A:Manifest](x: Exp[DeliteCollection[A]]) extends Def[Int]
-  case class DeliteCollectionApply[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int]) extends Def[A]
-  case class DeliteCollectionUpdate[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int], y: Exp[A]) extends Def[Unit]
+  case class DeliteCollectionSize[A:Manifest](x: Exp[DeliteCollection[A]])(implicit ctx: SourceContext) extends Def[Int]
+  case class DeliteCollectionApply[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int])(implicit ctx: SourceContext) extends Def[A]
+  case class DeliteCollectionUpdate[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int], y: Exp[A])(implicit ctx: SourceContext) extends Def[Unit]
 
-  def dc_size[A:Manifest](x: Exp[DeliteCollection[A]]) = x match { // TODO: move to Opt trait ?
+  def dc_size[A:Manifest](x: Exp[DeliteCollection[A]])(implicit ctx: SourceContext) = x match { // TODO: move to Opt trait ?
     case Def(e: DeliteOpMap[_,_,_]) => e.size
     case Def(e: DeliteOpZipWith[_,_,_,_]) => e.size
     //case Def(Reflect(e: DeliteOpMap[_,_,_], _,_)) => e.size // reasonable?
     //case Def(Reflect(e: DeliteOpZipWith[_,_,_,_], _,_)) => e.size // reasonable?
     case _ => reflectPure(DeliteCollectionSize(x))
   }
-  def dc_apply[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int]) = reflectPure(DeliteCollectionApply(x,n))
-  def dc_update[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int], y: Exp[A]) = reflectWrite(x)(DeliteCollectionUpdate(x,n,y))
+  def dc_apply[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int])(implicit ctx: SourceContext) = reflectPure(DeliteCollectionApply(x,n))
+  def dc_update[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int], y: Exp[A])(implicit ctx: SourceContext) = reflectWrite(x)(DeliteCollectionUpdate(x,n,y))
 
   //////////////
   // mirroring
 
-  override def mirror[A:Manifest](e: Def[A], f: Transformer): Exp[A] = (e match {
+  override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit ctx: SourceContext): Exp[A] = (e match {
     case DeliteCollectionApply(x, n) => dc_apply(f(x), f(n))
     case DeliteCollectionSize(x) => dc_size(f(x))
     case Reflect(DeliteCollectionApply(l,r), u, es) => reflectMirrored(Reflect(DeliteCollectionApply(f(l),f(r)), mapOver(f,u), f(es)))(mtype(manifest[A]))

@@ -5,7 +5,7 @@ package ppl.delite.runtime.profiler
  * 
  * @author Philipp Haller
  */
-class Timing(val threadName: String, val startTime: Long) {
+class Timing(val threadName: String, val startTime: Long, val component: String) {
   private var _endTime: Long = 0L
   private var done = false
   
@@ -19,6 +19,12 @@ class Timing(val threadName: String, val startTime: Long) {
   
   def isDone: Boolean =
     done
+    
+  def elapsedMicros: Long =
+    ((endTime - startTime) / 1000)
+  
+  override def toString =
+    /*"Timing for " + component + " (" +*/ elapsedMicros + "us"
 }
 
 /**
@@ -28,7 +34,7 @@ class Timing(val threadName: String, val startTime: Long) {
  * 
  * @author Philipp Haller
  */
-class MultiTiming(thread: String, start: Long, val numChunks: Int) extends Timing(thread, start) {
+class MultiTiming(thread: String, start: Long, val numChunks: Int, component: String) extends Timing(thread, start, component) {
   val timings = Array.ofDim[Timing](numChunks)
   
   def apply(i: Int): Timing =
@@ -41,8 +47,8 @@ class MultiTiming(thread: String, start: Long, val numChunks: Int) extends Timin
    * @param threadName the name of the thread running the chunk
    */
   def start(chunk: Int, threadName: String) {
-    val time = System.currentTimeMillis()
-    timings(chunk) = new Timing(threadName, time)
+    val time = System.nanoTime()
+    timings(chunk) = new Timing(threadName, time, component)
   }
   
   /**
@@ -52,10 +58,22 @@ class MultiTiming(thread: String, start: Long, val numChunks: Int) extends Timin
    * @param chunk  the index of the chunk
    */
   def stop(chunk: Int) {
-    val time = System.currentTimeMillis()
+    val time = System.nanoTime()
     timings(chunk).endTime = time
     // if all chunks are done, this compound timing is done
     if (timings.forall(t => (t != null && t.isDone)))
       this.endTime = time
   }
+  
+  def loadImbalance: Double = {
+    val totalTime = timings.foldLeft(0L)((elapsed: Long, t: Timing) => elapsed + t.elapsedMicros)
+    val idealPerThread = totalTime / numChunks
+    val shortest = timings.map(t => t.elapsedMicros).min
+    val imbalance = (idealPerThread - shortest).toDouble / idealPerThread.toDouble
+    imbalance
+  }
+  
+  /*override def toString =
+    "MultiTiming for " + component
+   */
 }
