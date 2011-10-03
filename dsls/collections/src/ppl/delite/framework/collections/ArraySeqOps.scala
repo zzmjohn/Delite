@@ -27,3 +27,11 @@ trait ArraySeqOps extends SeqOps {
   
 }
 
+
+trait ArraySeqOpsExp extends SeqOpsExp {
+  
+  
+  
+}
+
+
