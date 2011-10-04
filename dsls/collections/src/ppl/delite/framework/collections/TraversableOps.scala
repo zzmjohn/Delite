@@ -23,6 +23,11 @@ trait GenericCollectionsOps extends DSLType with Variables {
 
 trait TraversableOps extends GenericCollectionsOps {
   
+  /* ctors */
+  object Traversable {
+  }
+  
+  /* lifting */
   // TODO: possibly have to isolate this into a supertrait hierarchy (with self types) to ensure proper implicit resolution
   implicit def travrep2traversableops[T: Manifest](t: Rep[Traversable[T]]) = new TraversableClsOps[T, Traversable[T]](t)
   
@@ -36,6 +41,8 @@ trait TraversableOps extends GenericCollectionsOps {
   def traversable_size[T: Manifest, Coll <: Traversable[T]: Manifest](t: Rep[Coll]): Rep[Int]
   def traversable_foreach[T: Manifest, Coll <: Traversable[T]: Manifest](t: Rep[Coll], block: Rep[T] => Rep[Unit]): Rep[Unit]
   def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Rep[Coll], f: Rep[T] => Rep[S], cbf: CanBuild[Coll, S, Target]): Rep[Target]
+  
+  /* implicit rules */
   
 }
 
@@ -62,6 +69,8 @@ trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp
   def traversable_size[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll]) = reflectPure(TraversableSize[T, Coll](t))
   def traversable_foreach[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll], block: Exp[T] => Rep[Unit]) = reflectEffect(TraversableForeach[T, Coll](t, block))
   def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Exp[Coll], f: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target]): Exp[Target] = reflectPure(TraversableMap[T, S, Coll, Target](t, f, cbf))
+  
+  /* implicit rules */
   
 }
 

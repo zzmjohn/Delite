@@ -12,10 +12,12 @@ import java.io.PrintWriter
 
 trait ArraySeqOps extends SeqOps {
   
+  /* ctors */
   object ArraySeq {
     def apply[T: Manifest](length: Rep[Int]) = arrayseq_obj_new(length)
   }
   
+  /* lifting */
   implicit def arrayseqrep2traversableops[T: Manifest](t: Rep[ArraySeq[T]]): TraversableClsOps[T, ArraySeq[T]] = new TraversableClsOps[T, ArraySeq[T]](t)
   implicit def arrayseqrep2arrayseqops[T: Manifest](arrseq: Rep[ArraySeq[T]]) = new ArraySeqOpsCls(arrseq)
   

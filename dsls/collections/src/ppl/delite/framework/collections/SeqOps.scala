@@ -11,14 +11,27 @@ import java.io.PrintWriter
 
 trait SeqOps extends TraversableOps {
   
+  /* ctors */
+  object Seq {
+  }
+  
+  /* lifting */
   implicit def seqrep2traversableops[T: Manifest](t: Rep[Seq[T]]) = new TraversableClsOps[T, Seq[T]](t)
+  
+  /* class defs */
+  
+  /* implicit rules */
   
 }
 
 
 trait SeqOpsExp extends TraversableOpsExp {
   
+  /* nodes */
   
+  /* class interface */
+  
+  /* implicit rules */
   
 }
 
