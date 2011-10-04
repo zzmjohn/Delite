@@ -14,7 +14,7 @@ trait HelloCollections extends CollectionsApplication {
     println("Now printing in foreach.")
     for (x <- xs) println(x)
     println("Now mapping and printing in foreach.")
-    val ys = xs.map[Int, ArraySeq[Int]](_ + 1)(manifest[Int], manifest[ArraySeq[Int]], arraySeqCanBuild)
+    val ys = xs.map(_ + 1)
     for (y <- ys) println(y)
   }
 }

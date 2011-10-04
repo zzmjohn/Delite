@@ -14,7 +14,7 @@ import ppl.delite.framework.ops.DeliteOpsExp
 trait GenericCollectionsOps extends DSLType with Variables {
   
   /* definition of the CanBuild evidence */
-  trait CanBuild[Coll, S, Target] {
+  trait CanBuild[-Coll, -S, +Target] {
     def alloc(source: Rep[Coll]): Rep[Target]
   }
   
@@ -29,7 +29,7 @@ trait TraversableOps extends GenericCollectionsOps {
   class TraversableClsOps[T: Manifest, Coll <: Traversable[T]: Manifest](t: Rep[Coll]) {
     def size: Rep[Int] = traversable_size[T, Coll](t)
     def foreach(block: Rep[T] => Rep[Unit]) = traversable_foreach(t, block)
-    def map[S: Manifest, Target <: DeliteCollection[S]: Manifest](f: Rep[T] => Rep[S])(implicit cbf: CanBuild[Coll, S, Target]) = traversable_map[T, S, Coll, Target](t, f, cbf)
+    def map[S, Target <: DeliteCollection[S]](f: Rep[T] => Rep[S])(implicit cbf: CanBuild[Coll, S, Target], ms: Manifest[S], mt: Manifest[Target]) = traversable_map[T, S, Coll, Target](t, f, cbf)
   }
   
   /* class defs */
