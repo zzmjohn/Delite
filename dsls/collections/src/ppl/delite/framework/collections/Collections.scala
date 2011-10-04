@@ -13,13 +13,23 @@ import java.io.File
 
 
 
-trait CollectionsOps extends SeqOps
+trait CollectionsOps
+extends TraversableOps
+with SeqOps
+with ArraySeqOps
 
 
-trait CollectionsOpsExp extends SeqOpsExp
+trait CollectionsOpsExp
+extends TraversableOpsExp
+with SeqOpsExp
+with ArraySeqOpsExp
 
 
-trait ScalaGenCollectionsOps extends ScalaGenSeqOps {
+trait ScalaGenCollectionsOps
+extends ScalaGenTraversableOps
+with ScalaGenSeqOps
+with ScalaGenArraySeqOps
+{
   val IR: CollectionsOpsExp
 }
 

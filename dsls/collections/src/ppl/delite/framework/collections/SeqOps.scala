@@ -11,7 +11,7 @@ import java.io.PrintWriter
 
 trait SeqOps extends TraversableOps {
   
-  
+  implicit def seqrep2traversableops[T: Manifest](t: Rep[Seq[T]]) = new TraversableClsOps[T, Seq[T]](t)
   
 }
 
