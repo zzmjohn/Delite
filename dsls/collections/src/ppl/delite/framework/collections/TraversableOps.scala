@@ -43,11 +43,13 @@ trait TraversableOps extends GenericCollectionsOps {
   def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Rep[Coll], f: Rep[T] => Rep[S], cbf: CanBuild[Coll, S, Target]): Rep[Target]
   
   /* implicit rules */
+  implicit def traversableCanBuild[T: Manifest, S: Manifest, Target <: DeliteCollection[S]: Manifest]: CanBuild[Traversable[T], S, Traversable[S]]
   
 }
 
 
 trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp with DeliteOpsExp {
+self: ArraySeqOpsExp =>
   
   /* nodes */
   case class TraversableSize[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll]) extends Def[Int]
@@ -71,6 +73,9 @@ trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp
   def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Exp[Coll], f: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target]): Exp[Target] = reflectPure(TraversableMap[T, S, Coll, Target](t, f, cbf))
   
   /* implicit rules */
+  implicit def traversableCanBuild[T: Manifest, S: Manifest, Target <: DeliteCollection[S]: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
+    def alloc(source: Exp[Traversable[T]]) = ArraySeq.apply[S](travrep2traversableops(source).size)
+  }
   
 }
 

@@ -5,6 +5,7 @@ package ppl.delite.framework.collections
 import ppl.delite.framework.{DeliteApplication, DSLType}
 import scala.virtualization.lms.common._
 import ppl.delite.framework.collections.datastruct.scala._
+import ppl.delite.framework.datastruct.scala.DeliteCollection
 import java.io.PrintWriter
 
 
@@ -12,7 +13,8 @@ import java.io.PrintWriter
 trait SeqOps extends TraversableOps {
   
   /* ctors */
-  object Seq {
+  // TODO: rename to Seq
+  object Sequence {
   }
   
   /* lifting */
@@ -21,17 +23,22 @@ trait SeqOps extends TraversableOps {
   /* class defs */
   
   /* implicit rules */
+  implicit def seqCanBuild[T: Manifest, S: Manifest, Target <: DeliteCollection[S]: Manifest]: CanBuild[Seq[T], S, Seq[S]]
   
 }
 
 
 trait SeqOpsExp extends TraversableOpsExp {
+self: ArraySeqOpsExp =>
   
   /* nodes */
   
   /* class interface */
   
   /* implicit rules */
+  implicit def seqCanBuild[T: Manifest, S: Manifest, Target <: DeliteCollection[S]: Manifest]: CanBuild[Seq[T], S, Seq[S]] = new CanBuild[Seq[T], S, Seq[S]] {
+    def alloc(source: Exp[Seq[T]]) = ArraySeq.apply[S](seqrep2traversableops(source).size)
+  }
   
 }
 

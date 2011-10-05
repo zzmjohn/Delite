@@ -28,6 +28,4 @@ trait ArraySeq[@specialized T] extends Seq[T] {
 }
 
 
-object ArraySeq {
-  
-}
+
