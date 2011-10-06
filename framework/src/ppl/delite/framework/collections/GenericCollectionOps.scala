@@ -17,7 +17,7 @@ trait GenericCollectionOps extends DSLType with Variables {
   trait CanBuild[-Coll, -S, +Target] {
     def alloc(source: Rep[Coll]): Rep[Target]
     def emptyAlloc(source: Rep[Coll]): Rep[Target]
-    def emitterProvider(source: Rep[Coll]): EmitterProvider
+    def emitter(source: Rep[Coll]): Emitter
   }
   
 }

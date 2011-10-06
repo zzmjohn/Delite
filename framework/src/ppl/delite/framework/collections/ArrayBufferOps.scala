@@ -15,23 +15,23 @@ trait ArrayBufferOps extends SeqOps {
   /* ctors */
   // TODO - array buffer
   object Buffer {
-    def apply[T: Manifest](length: Rep[Int]) = arrayseq_obj_new(length)
+    def apply[T: Manifest](length: Rep[Int]) = arraybuffer_obj_new(length)
   }
   
   /* lifting */
-  implicit def arrayseqrep2traversableops[T: Manifest](t: Rep[ArrayBuffer[T]]): TraversableClsOps[T, ArrayBuffer[T]] = new TraversableClsOps[T, ArrayBuffer[T]](t)
-  implicit def arrayseqrep2arrayseqops[T: Manifest](arrseq: Rep[ArrayBuffer[T]]) = new ArrayBufferOpsCls(arrseq)
+  implicit def arraybufferrep2traversableops[T: Manifest](t: Rep[ArrayBuffer[T]]): TraversableClsOps[T, ArrayBuffer[T]] = new TraversableClsOps[T, ArrayBuffer[T]](t)
+  implicit def arraybufferrep2arraybufferops[T: Manifest](arrseq: Rep[ArrayBuffer[T]]) = new ArrayBufferOpsCls(arrseq)
   
   class ArrayBufferOpsCls[T: Manifest](arrseq: Rep[ArrayBuffer[T]]) {
   }
   
   /* object defs */
-  def arrayseq_obj_new[T: Manifest](length: Rep[Int]): Rep[ArrayBuffer[T]]
+  def arraybuffer_obj_new[T: Manifest](length: Rep[Int]): Rep[ArrayBuffer[T]]
   
   /* class interface defs */
   
   /* implicit rules */
-  implicit def arraySeqCanBuild[T: Manifest, S: Manifest]: CanBuild[ArrayBuffer[T], S, ArrayBuffer[S]]
+  implicit def arrayBufferCanBuild[T: Manifest, S: Manifest]: CanBuild[ArrayBuffer[T], S, ArrayBuffer[S]]
   
 }
 
@@ -39,22 +39,33 @@ trait ArrayBufferOps extends SeqOps {
 trait ArrayBufferOpsExp extends SeqOpsExp with ArrayBufferOps {
   
   // TODO: remove later, but - the implicit conversion below _is_ resolved, unlike the one in the supertrait - why?
-  //implicit def arrayseqrep2traversableops2[T: Manifest](t: Rep[ArrayBuffer[T]]): TraversableClsOps[T, ArrayBuffer[T]] = new TraversableClsOps[T, ArrayBuffer[T]](t)
+  //implicit def arraybufferrep2traversableops2[T: Manifest](t: Rep[ArrayBuffer[T]]): TraversableClsOps[T, ArrayBuffer[T]] = new TraversableClsOps[T, ArrayBuffer[T]](t)
   
   /* node defs */
   case class BufferNew[T](len: Exp[Int])(val mV: Manifest[ArrayBufferImpl[T]]) extends Def[ArrayBuffer[T]]
   
   /* class interface */
-  def arrayseq_obj_new[T: Manifest](length: Exp[Int]) = reflectPure(BufferNew[T](length)(manifest[ArrayBufferImpl[T]]))
+  def arraybuffer_obj_new[T: Manifest](length: Exp[Int]) = reflectPure(BufferNew[T](length)(manifest[ArrayBufferImpl[T]]))
+  
+}
+
+
+trait ScalaGenArrayBufferOps extends ScalaGenSeqOps {
+  val IR: ArrayBufferOpsExp
+  import IR._
+  
+  override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = rhs match {
+    // these are the ops that call through to the underlying real data structure
+    case v @ BufferNew(length) => emitValDef(sym, "new " + remap(v.mV) + "(" + quote(length) + ")")
+    case _ => super.emitNode(sym, rhs)
+  }
   
   /* can-build rules */
-  implicit def arraySeqCanBuild[T: Manifest, S: Manifest] = new CanBuild[ArrayBuffer[T], S, ArrayBuffer[S]] {
-    def alloc(source: Exp[ArrayBuffer[T]]) = Buffer[S](arrayseqrep2traversableops(source).size)
-    def emptyAlloc(source: Exp[ArrayBuffer[T]]) = Buffer[S](Const(0))
+  implicit def arrayBufferCanBuild[T: Manifest, S: Manifest] = new CanBuild[ArrayBuffer[T], S, ArrayBuffer[S]] {
     // TODO: why doesn't this implicit conversion get resolved automatically? It is available in the current scope without a prefix.
-    def emitterProvider(source: Exp[ArrayBuffer[T]]) = new EmitterProvider {
-      def emitterScala = scalaArrayBufferEmitter[S]
-    }
+    def alloc(source: Exp[ArrayBuffer[T]]) = Buffer[S](arraybufferrep2traversableops(source).size)
+    def emptyAlloc(source: Exp[ArrayBuffer[T]]) = Buffer[S](Const(0))
+    def emitter(source: Exp[ArrayBuffer[T]]): Emitter = scalaArrayBufferEmitter[T]
   }
   
   def scalaArrayBufferEmitter[T] = new Emitter {
@@ -97,19 +108,6 @@ trait ArrayBufferOpsExp extends SeqOpsExp with ArrayBufferOps {
       stream.println("System.arraycopy(" + activname + "." + basename + "_buf, 0, " + activname + "." + basename + ".unsafeData, " + activname + "." + basename + "_offset, " + activname + "." + basename + "_size)")
       stream.println("" + activname + "." + basename + "_buf = null")
     }
-  }
-  
-}
-
-
-trait ScalaGenArrayBufferOps extends ScalaGenSeqOps {
-  val IR: ArrayBufferOpsExp
-  import IR._
-  
-  override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = rhs match {
-    // these are the ops that call through to the underlying real data structure
-    case v @ BufferNew(length) => emitValDef(sym, "new " + remap(v.mV) + "(" + quote(length) + ")")
-    case _ => super.emitNode(sym, rhs)
   }
   
 }
