@@ -11,17 +11,7 @@ import ppl.delite.framework.ops.DeliteOpsExp
 
 
 
-trait GenericCollectionsOps extends DSLType with Variables {
-  
-  /* definition of the CanBuild evidence */
-  trait CanBuild[-Coll, -S, +Target] {
-    def alloc(source: Rep[Coll]): Rep[Target]
-  }
-  
-}
-
-
-trait TraversableOps extends GenericCollectionsOps {
+trait TraversableOps extends GenericCollectionOps {
   
   /* ctors */
   object Traversable {
@@ -35,15 +25,17 @@ trait TraversableOps extends GenericCollectionsOps {
     def size: Rep[Int] = traversable_size[T, Coll](t)
     def foreach(block: Rep[T] => Rep[Unit]) = traversable_foreach(t, block)
     def map[S, Target <: DeliteCollection[S]](f: Rep[T] => Rep[S])(implicit cbf: CanBuild[Coll, S, Target], ms: Manifest[S], mt: Manifest[Target]) = traversable_map[T, S, Coll, Target](t, f, cbf)
+    def filter[Target <: DeliteCollection[T]](p: Rep[T] => Rep[Boolean])(implicit cbf: CanBuild[Coll, T, Target], ms: Manifest[Target]) = traversable_filter[T, Coll, Target](t, p, cbf)
   }
   
-  /* class defs */
+  /* class interface defs */
   def traversable_size[T: Manifest, Coll <: Traversable[T]: Manifest](t: Rep[Coll]): Rep[Int]
   def traversable_foreach[T: Manifest, Coll <: Traversable[T]: Manifest](t: Rep[Coll], block: Rep[T] => Rep[Unit]): Rep[Unit]
   def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Rep[Coll], f: Rep[T] => Rep[S], cbf: CanBuild[Coll, S, Target]): Rep[Target]
+  def traversable_filter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Rep[Coll], p: Rep[T] => Rep[Boolean], cbf: CanBuild[Coll, T, Target]): Rep[Target]
   
   /* implicit rules */
-  implicit def traversableCanBuild[T: Manifest, S: Manifest, Target <: DeliteCollection[S]: Manifest]: CanBuild[Traversable[T], S, Traversable[S]]
+  implicit def traversableCanBuild[T: Manifest, S: Manifest]: CanBuild[Traversable[T], S, Traversable[S]]
   
 }
 
@@ -66,21 +58,32 @@ self: ArraySeqOpsExp =>
     val mA = manifest[T]
     val mB = manifest[S]
   }
+  case class TraversableFilter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](in: Exp[Coll], pred: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target])
+  extends DeliteOpFilter[T, T, Target] {
+    def alloc = cbf.alloc(in)
+    def func = e => e
+    def cond = pred
+    val size = in.size
+    
+    def m = manifest[T]
+  }
   
   /* class interface */
   def traversable_size[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll]) = reflectPure(TraversableSize[T, Coll](t))
   def traversable_foreach[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll], block: Exp[T] => Rep[Unit]) = reflectEffect(TraversableForeach[T, Coll](t, block))
   def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Exp[Coll], f: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target]): Exp[Target] = reflectPure(TraversableMap[T, S, Coll, Target](t, f, cbf))
+  def traversable_filter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Exp[Coll], p: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target]): Exp[Target] = reflectPure(TraversableFilter[T, Coll, Target](t, p, cbf))
   
   /* implicit rules */
-  implicit def traversableCanBuild[T: Manifest, S: Manifest, Target <: DeliteCollection[S]: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
+  implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
     def alloc(source: Exp[Traversable[T]]) = ArraySeq.apply[S](travrep2traversableops(source).size)
+    def emitter(source: Exp[Traversable[T]]): Emitter[Traversable[S]] = null
   }
   
 }
 
 
-trait ScalaGenTraversableOps extends ScalaGenFat {
+trait ScalaGenTraversableOps extends ScalaGenFat with GenericCollectionGen {
   val IR: TraversableOpsExp
   import IR._
   

@@ -16,6 +16,9 @@ trait HelloCollections extends CollectionsApplication {
     println("Now mapping and printing in foreach.")
     val ys = xs.map(_ + 1)
     for (y <- ys) println(y)
+    println("Now some filtering.")
+    val zs = ys.filter(_ % 2 == 0)
+    for (z <- zs) println(z)
   }
 }
 

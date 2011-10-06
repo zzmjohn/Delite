@@ -20,7 +20,7 @@ trait SeqOps extends TraversableOps {
   /* lifting */
   implicit def seqrep2traversableops[T: Manifest](t: Rep[Seq[T]]) = new TraversableClsOps[T, Seq[T]](t)
   
-  /* class defs */
+  /* class interface defs */
   
   /* implicit rules */
   implicit def seqCanBuild[T: Manifest, S: Manifest, Target <: DeliteCollection[S]: Manifest]: CanBuild[Seq[T], S, Seq[S]]
@@ -36,8 +36,9 @@ self: ArraySeqOpsExp =>
   /* class interface */
   
   /* implicit rules */
-  implicit def seqCanBuild[T: Manifest, S: Manifest, Target <: DeliteCollection[S]: Manifest]: CanBuild[Seq[T], S, Seq[S]] = new CanBuild[Seq[T], S, Seq[S]] {
+  implicit def seqCanBuild[T: Manifest, S: Manifest]: CanBuild[Seq[T], S, Seq[S]] = new CanBuild[Seq[T], S, Seq[S]] {
     def alloc(source: Exp[Seq[T]]) = ArraySeq.apply[S](seqrep2traversableops(source).size)
+    def emitter(source: Exp[Seq[T]]): Emitter[Seq[S]] = null
   }
   
 }

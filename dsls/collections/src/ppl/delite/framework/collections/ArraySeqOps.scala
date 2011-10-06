@@ -27,10 +27,10 @@ trait ArraySeqOps extends SeqOps {
   /* object defs */
   def arrayseq_obj_new[T: Manifest](length: Rep[Int]): Rep[ArraySeq[T]]
   
-  /* class defs */
+  /* class interface defs */
   
   /* implicit rules */
-  implicit def arraySeqCanBuild[T: Manifest, S: Manifest, Target <: DeliteCollection[S]: Manifest]: CanBuild[ArraySeq[T], S, ArraySeq[S]]
+  implicit def arraySeqCanBuild[T: Manifest, S: Manifest]: CanBuild[ArraySeq[T], S, ArraySeq[S]]
   
 }
 
@@ -47,9 +47,10 @@ trait ArraySeqOpsExp extends SeqOpsExp with ArraySeqOps {
   def arrayseq_obj_new[T: Manifest](length: Exp[Int]) = reflectPure(ArraySeqNew[T](length)(manifest[ArraySeqImpl[T]]))
   
   /* can-build rules */
-  implicit def arraySeqCanBuild[T: Manifest, S: Manifest, Target <: DeliteCollection[S]: Manifest] = new CanBuild[ArraySeq[T], S, ArraySeq[S]] {
+  implicit def arraySeqCanBuild[T: Manifest, S: Manifest] = new CanBuild[ArraySeq[T], S, ArraySeq[S]] {
     def alloc(source: Exp[ArraySeq[T]]) = ArraySeq[S](arrayseqrep2traversableops(source).size)
     // TODO: why doesn't this implicit conversion get resolved automatically? It is available in the current scope without a prefix.
+    def emitter(source: Exp[ArraySeq[T]]): Emitter[ArraySeq[S]] = null
   }
   
 }
@@ -65,5 +66,24 @@ trait ScalaGenArraySeqOps extends ScalaGenSeqOps {
     case _ => super.emitNode(sym, rhs)
   }
   
+  implicit def canEmitScalaArraySeq[T] = new CanEmit[ArraySeq[T], ScalaTarget] {
+    def emitBufferDefs(basename: String)(implicit stream: PrintWriter) {
+    }
+    def emitInitSubActivation(basename: String, activname: String)(implicit stream: PrintWriter) {
+    }
+    def emitAddToBuffer(basename: String, activname: String)(implicit stream: PrintWriter) {
+    }
+    def emitPostCombine(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {
+    }
+    def emitPostProcInit(basename: String, activname: String)(implicit stream: PrintWriter) {
+    }
+    def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter) {
+    }
+  }
 }
+
+
+
+
+
 
