@@ -4,7 +4,7 @@ package ppl.delite.framework.collections
 
 import ppl.delite.framework.{DeliteApplication, DSLType}
 import scala.virtualization.lms.common._
-import ppl.delite.framework.collections.datastruct.scala._
+import ppl.delite.framework.datastruct.scala._
 import ppl.delite.framework.datastruct.scala.DeliteCollection
 import java.io.PrintWriter
 
@@ -23,13 +23,13 @@ trait SeqOps extends TraversableOps {
   /* class interface defs */
   
   /* implicit rules */
-  implicit def seqCanBuild[T: Manifest, S: Manifest, Target <: DeliteCollection[S]: Manifest]: CanBuild[Seq[T], S, Seq[S]]
+  implicit def seqCanBuild[T: Manifest, S: Manifest]: CanBuild[Seq[T], S, Seq[S]]
   
 }
 
 
 trait SeqOpsExp extends TraversableOpsExp {
-self: ArraySeqOpsExp =>
+self: ArrayBufferOpsExp =>
   
   /* nodes */
   
@@ -37,8 +37,10 @@ self: ArraySeqOpsExp =>
   
   /* implicit rules */
   implicit def seqCanBuild[T: Manifest, S: Manifest]: CanBuild[Seq[T], S, Seq[S]] = new CanBuild[Seq[T], S, Seq[S]] {
-    def alloc(source: Exp[Seq[T]]) = ArraySeq.apply[S](seqrep2traversableops(source).size)
-    def emitter(source: Exp[Seq[T]]): Emitter[Seq[S]] = null
+    def alloc(source: Exp[Seq[T]]) = Buffer.apply[S](seqrep2traversableops(source).size)
+    def emitterProvider(source: Exp[Seq[T]]) = new EmitterProvider {
+      def emitterScala = scalaArrayBufferEmitter[S]
+    }
   }
   
 }

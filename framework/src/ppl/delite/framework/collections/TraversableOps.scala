@@ -6,7 +6,7 @@ import java.io.PrintWriter
 import ppl.delite.framework.{DeliteApplication, DSLType}
 import ppl.delite.framework.datastruct.scala.DeliteCollection
 import scala.virtualization.lms.common._
-import ppl.delite.framework.collections.datastruct.scala._
+import ppl.delite.framework.datastruct.scala._
 import ppl.delite.framework.ops.DeliteOpsExp
 
 
@@ -41,7 +41,7 @@ trait TraversableOps extends GenericCollectionOps {
 
 
 trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp with DeliteOpsExp {
-self: ArraySeqOpsExp =>
+self: ArrayBufferOpsExp =>
   
   /* nodes */
   case class TraversableSize[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll]) extends Def[Int]
@@ -64,6 +64,7 @@ self: ArraySeqOpsExp =>
     def func = e => e
     def cond = pred
     val size = in.size
+    override def emitterProvider = Some(cbf.emitterProvider(in))
     
     def m = manifest[T]
   }
@@ -76,8 +77,10 @@ self: ArraySeqOpsExp =>
   
   /* implicit rules */
   implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
-    def alloc(source: Exp[Traversable[T]]) = ArraySeq.apply[S](travrep2traversableops(source).size)
-    def emitter(source: Exp[Traversable[T]]): Emitter[Traversable[S]] = null
+    def alloc(source: Exp[Traversable[T]]) = Buffer.apply[S](travrep2traversableops(source).size)
+    def emitterProvider(source: Exp[Traversable[T]]) = new EmitterProvider {
+      def emitterScala = scalaArrayBufferEmitter[S]
+    }
   }
   
 }

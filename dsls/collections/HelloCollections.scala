@@ -9,7 +9,7 @@ import ppl.delite.framework.collections.datastruct.scala._
 
 trait HelloCollections extends CollectionsApplication {
   def main() {
-    val xs = ArraySeq[Int](5)
+    val xs = Buffer[Int](5)
     println("hello array: " + xs.size)
     println("Now printing in foreach.")
     for (x <- xs) println(x)

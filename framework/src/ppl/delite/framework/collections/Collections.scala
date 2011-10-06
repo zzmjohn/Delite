@@ -16,19 +16,19 @@ import java.io.File
 trait CollectionsOps
 extends TraversableOps
 with SeqOps
-with ArraySeqOps
+with ArrayBufferOps
 
 
 trait CollectionsOpsExp
 extends TraversableOpsExp
 with SeqOpsExp
-with ArraySeqOpsExp
+with ArrayBufferOpsExp
 
 
 trait ScalaGenCollectionsOps
 extends ScalaGenTraversableOps
 with ScalaGenSeqOps
-with ScalaGenArraySeqOps
+with ScalaGenArrayBufferOps
 {
   val IR: CollectionsOpsExp
 }
@@ -63,7 +63,7 @@ trait CollectionsCodeGenBase extends GenericFatCodegen with codegen.Utils {
   
   override def initialDefs = IR.deliteGenerator.availableDefs
   
-  def dsmap(s: String) = s
+  def dsmap(s: String) = s.replaceAll("ppl.delite.framework.datastruct.scala", "generated.scala")
   
   override def remap[A](m: Manifest[A]) = dsmap(super.remap(m))
   

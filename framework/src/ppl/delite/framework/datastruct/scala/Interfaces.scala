@@ -1,8 +1,7 @@
-package ppl.delite.framework.collections.datastruct.scala
+package ppl.delite.framework.datastruct.scala
 
 
 
-import ppl.delite.framework.datastruct.scala.DeliteCollection
 
 
 
@@ -24,7 +23,10 @@ trait Seq[@specialized T] extends Traversable[T] {
 }
 
 
-trait ArraySeq[@specialized T] extends Seq[T] {
+trait ArrayBuffer[@specialized T] extends Seq[T] {
+  def unsafeData: Array[T]
+  def unsafeLength: Int
+  def unsafeSetData(arr: Array[T], len: Int)
 }
 
 
