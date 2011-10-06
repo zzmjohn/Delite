@@ -246,7 +246,8 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
     // emit task graph node
     rhs match {
       case op: AbstractFatLoop => 
-        emitMultiLoop(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, op.size, op.body.exists (loopBodyNeedsCombine _), op.body.exists (loopBodyNeedsPostProcess _), op.sourceContext)
+        val optContext = sym.find(!_.sourceContext.isEmpty).map(_.sourceContext.get)
+        emitMultiLoop(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, op.size, op.body.exists (loopBodyNeedsCombine _), op.body.exists (loopBodyNeedsPostProcess _), optContext)
       case ThinDef(z) =>
         z match {
           case op:AbstractLoop[_] => emitMultiLoop(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, op.size, loopBodyNeedsCombine(op.body), loopBodyNeedsPostProcess(op.body), op.sourceContext)

@@ -1136,11 +1136,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
     val actType = "activation_"+kernelName
     //deliteKernel = false
     scala.reflect.SourceContext.debug = true
-    stream.println("val " + kernelName + " = new generated.scala.DeliteOpMultiLoop[" + actType + "]"+
-      (if (!op.sourceContext.isEmpty)
-        " /* "+op.sourceContext.get+" */ {"
-      else
-        " {"/*}*/))
+    stream.println("val " + kernelName + " = new generated.scala.DeliteOpMultiLoop[" + actType + "] {")
     // TODO: if there are conditions, the output size is not known (but for now it is known to be smaller than the input size)
     // two options:
     // - combine (reduce step) using concat <-- simpler to implement but slow
