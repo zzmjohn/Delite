@@ -50,6 +50,7 @@ trait ArrayBufferOpsExp extends SeqOpsExp with ArrayBufferOps {
   /* can-build rules */
   implicit def arraySeqCanBuild[T: Manifest, S: Manifest] = new CanBuild[ArrayBuffer[T], S, ArrayBuffer[S]] {
     def alloc(source: Exp[ArrayBuffer[T]]) = Buffer[S](arrayseqrep2traversableops(source).size)
+    def emptyAlloc(source: Exp[ArrayBuffer[T]]) = Buffer[S](Const(0))
     // TODO: why doesn't this implicit conversion get resolved automatically? It is available in the current scope without a prefix.
     def emitterProvider(source: Exp[ArrayBuffer[T]]) = new EmitterProvider {
       def emitterScala = scalaArrayBufferEmitter[S]

@@ -78,6 +78,7 @@ self: ArrayBufferOpsExp =>
   /* implicit rules */
   implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
     def alloc(source: Exp[Traversable[T]]) = Buffer.apply[S](travrep2traversableops(source).size)
+    def emptyAlloc(source: Exp[Traversable[T]]) = Buffer[S](Const(0))
     def emitterProvider(source: Exp[Traversable[T]]) = new EmitterProvider {
       def emitterScala = scalaArrayBufferEmitter[S]
     }

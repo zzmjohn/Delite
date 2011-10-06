@@ -38,6 +38,7 @@ self: ArrayBufferOpsExp =>
   /* implicit rules */
   implicit def seqCanBuild[T: Manifest, S: Manifest]: CanBuild[Seq[T], S, Seq[S]] = new CanBuild[Seq[T], S, Seq[S]] {
     def alloc(source: Exp[Seq[T]]) = Buffer.apply[S](seqrep2traversableops(source).size)
+    def emptyAlloc(source: Exp[Seq[T]]) = Buffer[S](Const(0))
     def emitterProvider(source: Exp[Seq[T]]) = new EmitterProvider {
       def emitterScala = scalaArrayBufferEmitter[S]
     }

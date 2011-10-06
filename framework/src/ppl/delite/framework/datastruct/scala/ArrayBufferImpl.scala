@@ -24,4 +24,6 @@ final class ArrayBufferImpl[@specialized T: Manifest](__length: Int) extends Arr
     _length = len
   }
   
+  override def toString = "ArrayBufferImpl(sz: %d; %s)".format(_length, _data.mkString(", "))
+  
 }
