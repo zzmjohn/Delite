@@ -3,7 +3,6 @@
 
 
 import ppl.delite.framework.collections._
-import ppl.delite.framework.collections.datastruct.scala._
 
 
 

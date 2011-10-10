@@ -23,6 +23,7 @@ trait CollectionsOpsExp
 extends TraversableOpsExp
 with SeqOpsExp
 with ArrayBufferOpsExp
+with ArrayBufferEmitting
 
 
 trait ScalaGenCollectionsOps

@@ -41,7 +41,7 @@ trait TraversableOps extends GenericCollectionOps {
 
 
 trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp with DeliteOpsExp {
-self: ArrayBufferOpsExp =>
+self: ArrayBufferOpsExp with ArrayBufferEmitting =>
   
   /* nodes */
   case class TraversableSize[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll]) extends Def[Int]
@@ -58,12 +58,13 @@ self: ArrayBufferOpsExp =>
     val mA = manifest[T]
     val mB = manifest[S]
   }
-  case class TraversableFilter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](in: Exp[Coll], pred: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target], emitter: Option[Emitter] = None)
+  case class TraversableFilter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](in: Exp[Coll], pred: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target])
   extends DeliteOpFilter[T, T, Target] {
     def alloc = cbf.alloc(in)
     def func = e => e
     def cond = pred
     val size = in.size
+    override def emitterScala = Some(cbf.emitterScala(in))
     
     def m = manifest[T]
   }
@@ -71,8 +72,15 @@ self: ArrayBufferOpsExp =>
   /* class interface */
   def traversable_size[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll]) = reflectPure(TraversableSize[T, Coll](t))
   def traversable_foreach[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll], block: Exp[T] => Rep[Unit]) = reflectEffect(TraversableForeach[T, Coll](t, block))
-  def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Exp[Coll], f: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target]): Exp[Target] = reflectPure(TraversableMap[T, S, Coll, Target](t, f, cbf))
-  def traversable_filter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Exp[Coll], p: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target]): Exp[Target] = reflectPure(TraversableFilter[T, Coll, Target](t, p, cbf))
+  def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Exp[Coll], f: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target]): Exp[Target] = reflectEffect(TraversableMap[T, S, Coll, Target](t, f, cbf))
+  def traversable_filter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Exp[Coll], p: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target]): Exp[Target] = reflectEffect(TraversableFilter[T, Coll, Target](t, p, cbf))
+  
+  /* implicit rules */
+  implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
+    def alloc(source: Exp[Traversable[T]]) = Buffer.apply[S](travrep2traversableops(source).size)
+    def emptyAlloc(source: Exp[Traversable[T]]) = Buffer[S](Const(0))
+    def emitterScala(source: Exp[Traversable[T]]) = scalaArrayBufferEmitter[T]
+  }
   
 }
 
@@ -80,23 +88,16 @@ self: ArrayBufferOpsExp =>
 trait ScalaGenTraversableOps extends ScalaGenFat with GenericCollectionGen {
 self: ScalaGenArrayBufferOps =>
   
-  val IR: TraversableOpsExp with ArrayBufferOpsExp
+  val IR: TraversableOpsExp
   import IR._
   
-  override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = rhs match {
-    // these are the ops that call through to the underlying real data structure
-    case TraversableSize(t) => emitValDef(sym, quote(t) + ".size")
-    // case t @ TraversableFilter(in, _, cbf, None) =>
-    //   val em = cbf.emitterProvider(in).emitterScala
-    //   super.emitNode(sym, t.copy(emitter = Some(em)))
-    case _ => super.emitNode(sym, rhs)
-  }
-  
-  /* implicit rules */
-  implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
-    def alloc(source: Exp[Traversable[T]]) = Buffer.apply[S](travrep2traversableops(source).size)
-    def emptyAlloc(source: Exp[Traversable[T]]) = Buffer[S](Const(0))
-    def emitter(source: Exp[Traversable[T]]) = scalaArrayBufferEmitter[T]
+  override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = {
+    rhs match {
+      // these are the ops that call through to the underlying real data structure
+      case TraversableSize(t) => emitValDef(sym, quote(t) + ".size")
+      case _ =>
+        super.emitNode(sym, rhs)
+    }
   }
   
 }
