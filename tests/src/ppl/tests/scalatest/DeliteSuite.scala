@@ -2,9 +2,10 @@ package ppl.tests.scalatest
 
 import org.scalatest._
 import ppl.delite.framework.DeliteApplication
+import ppl.delite.framework.Config
 import scala.virtualization.lms.common._
 import scala.collection.mutable.ArrayBuffer
-import java.io.{Console => _, _}
+import java.io.{File, Console => _, _}
 
 trait DeliteTestConfig {
   // something arbitrary that we should never see in any test's output
@@ -17,19 +18,24 @@ trait DeliteTestConfig {
 
   // test parameters
   val verbose = props.getProperty("tests.verbose", "false").toBoolean
-  val s = File.separator
-  // handle paths that may or may not end in a / by always removing it if it exists and then adding a '/' back
-  val javaHome = props.getProperty("java.home", "") stripSuffix(s) + s replaceAll (s, s+s)
-  val scalaHome = props.getProperty("scala.vanilla.home", "") stripSuffix(s) + s replaceAll (s, s+s)
-  val runtimeClasses = props.getProperty("runtime.classes", "") stripSuffix(s) + s replaceAll (s, s+s)
+  val verboseDefs = props.getProperty("tests.verboseDefs", "false").toBoolean
+  val threads = props.getProperty("tests.threads", "1")
+  val javaHome = new File(props.getProperty("java.home", ""))
+  val scalaHome = new File(props.getProperty("scala.vanilla.home", ""))
+  val runtimeClasses = new File(props.getProperty("runtime.classes", ""))
 }
 
 trait DeliteSuite extends Suite with DeliteTestConfig {
+  val javaBin = new File(javaHome, "bin/java")
+  val scalaCompiler = new File(scalaHome, "lib/scala-compiler.jar")
+  val scalaLibrary = new File(scalaHome, "lib/scala-library.jar")
 
   def validateParameters() {
-    if (javaHome == "") throw new TestFailedException("java.home must be specified in delite.properties", 3)
-    else if (scalaHome == "") throw new TestFailedException("scala.vanilla.home must be specified in delite.proeprties", 3)
-    else if (runtimeClasses == "") throw new TestFailedException("runtime.classes must be specified in delite.properties", 3)
+    if (!javaHome.exists) throw new TestFailedException("java.home must be a valid path in delite.properties", 3)
+    else if (!javaBin.exists) throw new TestFailedException("Could not find valid java installation in " + javaHome, 3)
+    else if (!scalaHome.exists) throw new TestFailedException("scala.vanilla.home must be a valid path in delite.proeprties", 3)
+    else if (!scalaCompiler.exists || !scalaLibrary.exists) throw new TestFailedException("Could not find valid scala installation in " + scalaHome, 3)
+    else if (!runtimeClasses.exists) throw new TestFailedException("runtime.classes must be a valid path in delite.properties", 3)
   }
 
   def compileAndTest(app: DeliteTestRunner) {
@@ -46,11 +52,22 @@ trait DeliteSuite extends Suite with DeliteTestConfig {
 
   private def stageTest(app: DeliteTestRunner, degName: String) = {
     println("STAGING...")
-    System.setProperty("delite.deg.filename", degName)
-    val screenOrVoid = if (verbose) System.out else new PrintStream(new ByteArrayOutputStream())
-    Console.withOut(screenOrVoid) {
-      app.main(Array())
-    }
+    val save = Config.degFilename
+    try {
+      Config.degFilename = degName      
+      val screenOrVoid = if (verbose) System.out else new PrintStream(new ByteArrayOutputStream())
+      Console.withOut(screenOrVoid) {
+        app.main(Array())
+        if (verboseDefs) app.globalDefs.foreach { d => //TR print all defs
+          println(d)
+          val info = d.sym.sourceInfo.drop(3).takeWhile(_.getMethodName!="main")
+          println(info.map(s=>s.getFileName+":"+s.getLineNumber).distinct.mkString(","))
+        }
+        //assert(!app.hadErrors) //TR should enable this check at some time ...
+      }
+    } finally {
+      Config.degFilename = save
+    }      
   }
 
   private def execTest(args: Array[String]) = {
@@ -60,8 +77,8 @@ trait DeliteSuite extends Suite with DeliteTestConfig {
     var p: Process = null
     val output = new File("test.tmp")
     try{
-      val javaProc = javaHome + "bin"+s+"java"
-      val javaArgs = "-server -d64 -XX:+UseCompressedOops -XX:+DoEscapeAnalysis -Xmx16g -cp " + runtimeClasses + ":" + scalaHome + "lib"+s+"scala-library.jar:" + scalaHome + "lib"+s+"scala-compiler.jar"
+      val javaProc = javaBin.toString
+      val javaArgs = "-server -d64 -XX:+UseCompressedOops -XX:+DoEscapeAnalysis -Xmx16g -Ddelite.threads=" + threads + " -cp " + runtimeClasses + ":" + scalaLibrary + ":" + scalaCompiler
       val cmd = Array(javaProc) ++ javaArgs.split(" ") ++ Array("ppl.delite.runtime.Delite") ++ args
       val pb = new ProcessBuilder(java.util.Arrays.asList(cmd: _*))
       p = pb.start()
@@ -115,11 +132,11 @@ trait DeliteSuite extends Suite with DeliteTestConfig {
 // how do we add our code generators? right now we expect a single codegen package being supplied by the dsl.
 // the workaround for now is that the dsl under test must include ArrayBuffer in its code gen
 trait DeliteTestRunner extends DeliteTestModule with DeliteApplication
-  with MiscOpsExp with ArrayBufferOpsExp with StringOpsExp
+  with MiscOpsExp with SynchronizedArrayBufferOpsExp with StringOpsExp
 
 // it is not ideal that the test module imports these things into the application under test
 trait DeliteTestModule extends DeliteTestConfig
-  with MiscOps with ArrayBufferOps with StringOps {
+  with MiscOps with SynchronizedArrayBufferOps with StringOps {
 
   var args: Rep[Array[String]]
   def main(): Unit

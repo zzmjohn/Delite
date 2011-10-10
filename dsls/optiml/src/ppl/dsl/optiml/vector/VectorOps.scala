@@ -5,7 +5,8 @@ import ppl.dsl.optiml.datastruct.scala._
 import java.io.{PrintWriter}
 
 import ppl.delite.framework.{DeliteApplication, DSLType}
-import ppl.delite.framework.ops.DeliteOpsExp
+import ppl.delite.framework.ops.{DeliteOpsExp, DeliteCollectionOpsExp}
+import ppl.delite.framework.datastruct.scala.DeliteCollection
 import reflect.Manifest
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal.{GenerationFailedException, GenericFatCodegen}
@@ -27,7 +28,7 @@ trait VectorOps extends DSLType with Variables {
       val out = vector_obj_new[A](unit(0),unit(true))
       // interpreted (not lifted)
       xs.foreach { out += _ }
-      out.cloneL // return immutable object
+      out.unsafeImmutable // return immutable object
     }
 
     def flatten[A:Manifest](pieces: Rep[Vector[Vector[A]]]) = vector_obj_flatten(pieces)
@@ -104,10 +105,10 @@ trait VectorOps extends DSLType with Variables {
     // arithmetic operations
     def +(y: Rep[Vector[A]])(implicit a: Arith[A]) = vector_plus(x,y)
     def +(y: Rep[A])(implicit a: Arith[A], o: Overloaded1) = vector_plus_scalar(x,y)
-    def +=(y: Rep[Vector[A]])(implicit a: Arith[A]) = vector_plusequals(x,y)
+    def +=(y: Rep[Vector[A]])(implicit a: Arith[A]) = { vector_plusequals(x,y); x }
     def -(y: Rep[Vector[A]])(implicit a: Arith[A]) = vector_minus(x,y)
     def -(y: Rep[A])(implicit a: Arith[A], o: Overloaded1) = vector_minus_scalar(x,y)
-    def -=(y: Rep[Vector[A]])(implicit a: Arith[A]) = vector_minusequals(x,y)
+    def -=(y: Rep[Vector[A]])(implicit a: Arith[A]) = { vector_minusequals(x,y); x }
     def *(y: Rep[Vector[A]])(implicit a: Arith[A]) = vector_times(x,y)
     def *[B](y: Rep[Vector[B]])(implicit mB: Manifest[B], a: Arith[A], conv: Rep[B] => Rep[A]) = vector_times_withconvert(x,y,conv)
     //def *[B](y: Rep[Vector[B]])(implicit mB: Manifest[B], aB: Arith[B], conv: Rep[A] => Rep[B], o: Overloaded1) = vector_times_withconvertright(x,y,conv)
@@ -125,27 +126,27 @@ trait VectorOps extends DSLType with Variables {
 
     // ordering operations
     def sort(implicit o: Ordering[A]) = vector_sort(x)
-    def min(implicit o: Ordering[A]) = vector_min(x)
-    def minIndex(implicit o: Ordering[A]) = vector_minindex(x)
-    def max(implicit o: Ordering[A]) = vector_max(x)
-    def max[B](key: Rep[A] => Rep[B])(implicit o: Ordering[B], mB: Manifest[B]) = vector_max_key(x, key)
-    def maxIndex(implicit o: Ordering[A]) = vector_maxindex(x)
+    def min(implicit o: Ordering[A], mx: HasMinMax[A]) = vector_min(x)
+    def minIndex(implicit o: Ordering[A], mx: HasMinMax[A]) = vector_minindex(x)
+    def max(implicit o: Ordering[A], mx: HasMinMax[A]) = vector_max(x)
+    def maxIndex(implicit o: Ordering[A], mx: HasMinMax[A]) = vector_maxindex(x)
     def median(implicit o: Ordering[A]) = vector_median(x)
     def :>(y: Rep[Vector[A]])(implicit o: Ordering[A]) = zip(y) { (a,b) => a > b }
     def :<(y: Rep[Vector[A]])(implicit o: Ordering[A]) = zip(y) { (a,b) => a < b }
 
     // bulk operations
     def map[B:Manifest](f: Rep[A] => Rep[B]) = vector_map(x,f)
-    def mmap(f: Rep[A] => Rep[A]) = vector_mmap(x,f)
+    def mmap(f: Rep[A] => Rep[A]) = { vector_mmap(x,f); x }
     def foreach(block: Rep[A] => Rep[Unit]) = vector_foreach(x, block)
     def zip[B:Manifest,R:Manifest](y: Rep[Vector[B]])(f: (Rep[A],Rep[B]) => Rep[R]) = vector_zipwith(x,y,f)
     def mzip[B:Manifest](y: Rep[Vector[B]])(f: (Rep[A],Rep[B]) => Rep[A]) = vector_mzipwith(x,y,f)
-    def reduce(f: (Rep[A],Rep[A]) => Rep[A]) = vector_reduce(x,f)
+    def reduce(f: (Rep[A],Rep[A]) => Rep[A])(implicit a: Arith[A]) = vector_reduce(x,f)
     def filter(pred: Rep[A] => Rep[Boolean]) = vector_filter(x,pred)
     def find(pred: Rep[A] => Rep[Boolean]) = vector_find(x,pred)
     def count(pred: Rep[A] => Rep[Boolean]) = vector_count(x, pred)
     def flatMap[B:Manifest](f: Rep[A] => Rep[Vector[B]]) = vector_flatmap(x,f)
     def partition(pred: Rep[A] => Rep[Boolean]) = vector_partition(x,pred)
+    def groupBy[K:Manifest](pred: Rep[A] => Rep[K]) = vector_groupby(x,pred)
   }
 
   def __equal[A](a: Rep[Vector[A]], b: Rep[Vector[A]])(implicit o: Overloaded1, mA: Manifest[A]): Rep[Boolean] = vector_equals(a,b)
@@ -159,19 +160,21 @@ trait VectorOps extends DSLType with Variables {
   }
 */  
 
-  def NilV[A](implicit mA: Manifest[A]): Rep[Vector[A]] = mA match {
-    case Manifest.Double => vector_nil_double.asInstanceOfL[Vector[A]]
-    case Manifest.Float => vector_nil_float.asInstanceOfL[Vector[A]]
-    case Manifest.Int => vector_nil_int.asInstanceOfL[Vector[A]]
-    case _ => throw new IllegalArgumentException("No NilVector exists of type " + mA)
-  }
+  def EmptyVector[A](implicit mA: Manifest[A]): Rep[Vector[A]] = (mA match {
+    // these don't allocate any memory
+    case Manifest.Double => vector_empty_double
+    case Manifest.Float => vector_empty_float
+    case Manifest.Int => vector_empty_int
+    // allocates a dummy polymorphic class
+    case _ => vector_empty[A]
+  }).asInstanceOf[Rep[Vector[A]]]
 
-  def ZeroV[A](length: Rep[Int], isRow: Rep[Boolean] = unit(true))(implicit mA: Manifest[A]): Rep[Vector[A]] = mA match {
-    case Manifest.Double => vector_zero_double(length, isRow).asInstanceOfL[Vector[A]]
-    case Manifest.Float => vector_zero_float(length, isRow).asInstanceOfL[Vector[A]]
-    case Manifest.Int => vector_zero_int(length, isRow).asInstanceOfL[Vector[A]]
+  def ZeroVector[A](length: Rep[Int], isRow: Rep[Boolean] = unit(true))(implicit mA: Manifest[A]): Rep[Vector[A]] = (mA match {
+    case Manifest.Double => vector_zero_double(length, isRow)
+    case Manifest.Float => vector_zero_float(length, isRow)
+    case Manifest.Int => vector_zero_int(length, isRow)
     case _ => throw new IllegalArgumentException("No ZeroVector exists of type " + mA)
-  }
+  }).asInstanceOf[Rep[Vector[A]]]
 
   // object defs
   def vector_obj_new[A:Manifest](len: Rep[Int], isRow: Rep[Boolean]): Rep[Vector[A]]
@@ -216,10 +219,10 @@ trait VectorOps extends DSLType with Variables {
 
   def vector_plus[A:Manifest:Arith](x: Rep[Vector[A]], y: Rep[Vector[A]]): Rep[Vector[A]]
   def vector_plus_scalar[A:Manifest:Arith](x: Rep[Vector[A]], y: Rep[A]): Rep[Vector[A]]
-  def vector_plusequals[A:Manifest:Arith](x: Rep[Vector[A]], y: Rep[Vector[A]]): Rep[Vector[A]]
+  def vector_plusequals[A:Manifest:Arith](x: Rep[Vector[A]], y: Rep[Vector[A]]): Rep[Unit]
   def vector_minus[A:Manifest:Arith](x: Rep[Vector[A]], y: Rep[Vector[A]]): Rep[Vector[A]]
   def vector_minus_scalar[A:Manifest:Arith](x: Rep[Vector[A]], y: Rep[A]): Rep[Vector[A]]
-  def vector_minusequals[A:Manifest:Arith](x: Rep[Vector[A]], y: Rep[Vector[A]]): Rep[Vector[A]]
+  def vector_minusequals[A:Manifest:Arith](x: Rep[Vector[A]], y: Rep[Vector[A]]): Rep[Unit]
   def vector_times[A:Manifest:Arith](x: Rep[Vector[A]], y: Rep[Vector[A]]): Rep[Vector[A]]
   def vector_times_withconvert[A:Manifest:Arith,B:Manifest](x: Rep[Vector[A]], y: Rep[Vector[B]],  conv: Rep[B] => Rep[A]): Rep[Vector[A]]
   def vector_times_withconvertright[A:Manifest,B:Manifest:Arith](x: Rep[Vector[A]], y: Rep[Vector[B]], conv: Rep[A] => Rep[B]): Rep[Vector[B]]
@@ -234,50 +237,38 @@ trait VectorOps extends DSLType with Variables {
   def vector_exp[A:Manifest:Arith](x: Rep[Vector[A]]): Rep[Vector[A]]
 
   def vector_sort[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[Vector[A]]
-  def vector_min[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[A]
-  def vector_minindex[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[Int]
-  def vector_max[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[A]
-  def vector_max_key[A:Manifest,B:Manifest:Ordering](x: Rep[Vector[A]], key: Rep[A] => Rep[B]): Rep[A]
-  def vector_maxindex[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[Int]
+  def vector_min[A:Manifest:Ordering:HasMinMax](x: Rep[Vector[A]]): Rep[A]
+  def vector_minindex[A:Manifest:Ordering:HasMinMax](x: Rep[Vector[A]]): Rep[Int]
+  def vector_max[A:Manifest:Ordering:HasMinMax](x: Rep[Vector[A]]): Rep[A]
+  def vector_maxindex[A:Manifest:Ordering:HasMinMax](x: Rep[Vector[A]]): Rep[Int]
   def vector_median[A:Manifest:Ordering](x: Rep[Vector[A]]): Rep[A]
 
   def vector_map[A:Manifest,B:Manifest](x: Rep[Vector[A]], f: Rep[A] => Rep[B]): Rep[Vector[B]]
-  def vector_mmap[A:Manifest](x: Rep[Vector[A]], f: Rep[A] => Rep[A]): Rep[Vector[A]]
+  def vector_mmap[A:Manifest](x: Rep[Vector[A]], f: Rep[A] => Rep[A]): Rep[Unit]
   def vector_foreach[A:Manifest](x: Rep[Vector[A]], block: Rep[A] => Rep[Unit]): Rep[Unit]
   def vector_zipwith[A:Manifest,B:Manifest,R:Manifest](x: Rep[Vector[A]], y: Rep[Vector[B]], f: (Rep[A],Rep[B]) => Rep[R]): Rep[Vector[R]]
   def vector_mzipwith[A:Manifest,B:Manifest](x: Rep[Vector[A]], y: Rep[Vector[B]], f: (Rep[A],Rep[B]) => Rep[A]): Rep[Vector[A]]
-  def vector_reduce[A:Manifest](x: Rep[Vector[A]], f: (Rep[A],Rep[A]) => Rep[A]): Rep[A]
+  def vector_reduce[A:Manifest:Arith](x: Rep[Vector[A]], f: (Rep[A],Rep[A]) => Rep[A]): Rep[A]
   def vector_filter[A:Manifest](x: Rep[Vector[A]], pred: Rep[A] => Rep[Boolean]): Rep[Vector[A]]
   def vector_find[A:Manifest](x: Rep[Vector[A]], pred: Rep[A] => Rep[Boolean]): Rep[IndexVector]
   def vector_count[A:Manifest](x: Rep[Vector[A]], pred: Rep[A] => Rep[Boolean]): Rep[Int]
   def vector_flatmap[A:Manifest,B:Manifest](x: Rep[Vector[A]], f: Rep[A] => Rep[Vector[B]]): Rep[Vector[B]]
   def vector_partition[A:Manifest](x: Rep[Vector[A]], pred: Rep[A] => Rep[Boolean]): (Rep[Vector[A]], Rep[Vector[A]])
+  def vector_groupby[A:Manifest,K:Manifest](x: Rep[Vector[A]], pred: Rep[A] => Rep[K]): Rep[Vector[Vector[A]]] 
 
   // other defs
-  def vector_nil_double: Rep[Vector[Double]]
-  def vector_nil_float: Rep[Vector[Float]]
-  def vector_nil_int: Rep[Vector[Int]]
+  def vector_empty_double: Rep[Vector[Double]]
+  def vector_empty_float: Rep[Vector[Float]]
+  def vector_empty_int: Rep[Vector[Int]]
+  def vector_empty[A:Manifest]: Rep[Vector[A]]
   def vector_zero_double(length: Rep[Int], isRow: Rep[Boolean]): Rep[Vector[Double]]
   def vector_zero_float(length: Rep[Int], isRow: Rep[Boolean]): Rep[Vector[Float]]
   def vector_zero_int(length: Rep[Int], isRow: Rep[Boolean]): Rep[Vector[Int]]
 }
 
-trait CleanRoom {
-  var c = 0
-
-  def foobar(x: Any): Unit = {
-    Predef.println("readVar: " + x)
-    if (c > 10) throw new Exception
-    c += 1
-  }
-}
-
-
-trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with CleanRoom {
+trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
 
   this: VectorImplOps with OptiMLExp =>
-
-  def reflectPure[A:Manifest](x: Def[A]): Exp[A] = toAtom(x) // TODO: just to make refactoring easier in case we want to change to reflectSomething
 
 
   ///////////////////////////////////////////////////
@@ -285,19 +276,13 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
 
   case class VectorObjectRange(start: Exp[Int], end: Exp[Int], stride: Exp[Int], isRow: Exp[Boolean])
     extends Def[RangeVector]
-
-  case class VectorObjectNew[A:Manifest](len: Exp[Int], isRow: Exp[Boolean]) //TR GRAPH
-
   case class VectorNew[A](len: Exp[Int], isRow: Exp[Boolean])(val mV: Manifest[VectorImpl[A]]) extends Def[Vector[A]]
-/*
-  case class VectorNew[A:Manifest](len: Exp[Int], isRow: Exp[Boolean])
-    extends Def[Vector[A]] {
-    val mV = manifest[VectorImpl[A]]
+  case class VectorEmptyDouble() extends Def[Vector[Double]]
+  case class VectorEmptyFloat() extends Def[Vector[Float]]
+  case class VectorEmptyInt() extends Def[Vector[Int]]
+  case class VectorEmpty[A:Manifest]() extends Def[Vector[A]] {
+    val mA = manifest[A]
   }
-*/
-  case class VectorNilDouble() extends Def[Vector[Double]]
-  case class VectorNilFloat() extends Def[Vector[Float]]
-  case class VectorNilInt() extends Def[Vector[Int]]
   case class VectorZeroDouble(length: Exp[Int], isRow: Exp[Boolean]) extends Def[Vector[Double]]
   case class VectorZeroFloat(length: Exp[Int], isRow: Exp[Boolean]) extends Def[Vector[Float]]
   case class VectorZeroInt(length: Exp[Int], isRow: Exp[Boolean]) extends Def[Vector[Int]]
@@ -317,7 +302,7 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
   // fast parallel sort with delite ops
   case class VectorSort[A:Manifest:Ordering](x: Exp[Vector[A]]) extends Def[Vector[A]]
   case class VectorToList[A:Manifest](x: Exp[Vector[A]]) extends Def[List[A]]
-
+  case class VectorRawData[A:Manifest](x: Exp[Vector[A]]) extends Def[Array[A]]
 
   /////////////////////////////////////////////////
   // implemented via kernel embedding (sequential)
@@ -332,11 +317,11 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
     extends DeliteOpSingleTask(reifyEffectsHere(vector_obj_onesf_impl(len)))
 
   case class VectorObjectZeros(len: Exp[Int])
-    extends DeliteOpSingleTask(reifyEffectsHere(vector_obj_zeros_impl(len)))
+    extends DeliteOpSingleTask(reifyEffectsHere(reflectPure(VectorNew(len, Const(true))(manifest[VectorImpl[Double]])))) //vector_obj_zeros_impl(len)))
 
   case class VectorObjectZerosF(len: Exp[Int])
-    extends DeliteOpSingleTask(reifyEffectsHere(vector_obj_zerosf_impl(len)))
-
+    extends DeliteOpSingleTask(reifyEffectsHere(reflectPure(VectorNew(len, Const(true))(manifest[VectorImpl[Float]])))) //vector_obj_zerosf_impl(len)))
+    
   case class VectorObjectRand(len: Exp[Int])
     extends DeliteOpSingleTask(reifyEffectsHere(vector_obj_rand_impl(len)))
 
@@ -359,7 +344,11 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
     extends DeliteOpSingleTask(reifyEffectsHere(vector_times_matrix_impl[A](x,y)))
 
   case class VectorOuter[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]])
-    extends DeliteOpSingleTask(reifyEffectsHere(vector_outer_impl[A](x,y)))
+    extends DeliteOpSingleTask(reifyEffectsHere(vector_outer_impl[A](x,y))) {
+      //TODO: should mixin implicit accessors
+      def m = manifest[A]
+      def a = implicitly[Arith[A]]
+    }
 
   // this is a single task right now because of the likely early exit. should we have a delite op for this?
   case class VectorEquals[A:Manifest](x: Exp[Vector[A]], y: Exp[Vector[A]])
@@ -369,10 +358,8 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
     extends DeliteOpSingleTask(block)
     // reifyEffects(vector_pprint_impl[A](x))
 
-/*
-  case class VectorTrans[A:Manifest](x: Exp[Vector[A]])
-    extends DeliteOpSingleTask(reifyEffectsHere(vector_trans_impl[A](x)))
-*/
+//  case class VectorTrans[A:Manifest](x: Exp[Vector[A]])
+//    extends DeliteOpSingleTask(reifyEffectsHere(vector_trans_impl[A](x)))
 
   case class VectorRepmat[A:Manifest](x: Exp[Vector[A]], i: Exp[Int], j: Exp[Int])
     extends DeliteOpSingleTask(reifyEffectsHere(vector_repmat_impl[A](x,i,j)))
@@ -404,594 +391,339 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
 //  case class VectorFind[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean])
 //    extends DeliteOpSingleTask(reifyEffectsHere(vector_find_impl[A](x, pred)))
 
+  case class VectorGroupBy[A:Manifest,K:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[K])
+    extends DeliteOpSingleTask(reifyEffectsHere(vector_groupby_impl(x,pred)))
+
+
 
   ////////////////////////////////
   // implemented via delite ops
+  
+  abstract class VectorArithmeticMap[A:Manifest:Arith](in: Exp[Vector[A]]) extends DeliteOpMap[A,A,Vector[A]] {
+    def alloc = Vector[A](in.length, in.isRow)
+    val size = copyTransformedOrElse(_.size)(in.length)
+    
+    def m = manifest[A]
+    def a = implicitly[Arith[A]]
+  }
+  
+  abstract class VectorArithmeticZipWith[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]]) extends DeliteOpZipWith[A,A,A,Vector[A]] {
+    def alloc = Vector[A](inA.length, inA.isRow)
+    val size = copyTransformedOrElse(_.size)(inA.length)
+    
+    def m = manifest[A]
+    def a = implicitly[Arith[A]]
+  }
 
-/*
+  abstract class VectorArithmeticIndexedLoop[A:Manifest:Arith](in: Exp[Vector[A]]) extends DeliteOpIndexedLoop {
+    val size = copyTransformedOrElse(_.size)(in.length)
+
+    def m = manifest[A]
+    def a = implicitly[Arith[A]]
+  }
+
+  abstract class VectorArithmeticReduce[A:Manifest:Arith](in: Exp[Vector[A]]) extends DeliteOpReduce[A] {
+    val size = copyTransformedOrElse(_.size)(in.length)
+    
+    def m = manifest[A]
+    def a = implicitly[Arith[A]]
+  }
+    
+
+  
   case class VectorTrans[A:Manifest](in: Exp[Vector[A]])
-    extends DeliteOpMap[A,A,Vector] {
+    extends DeliteOpMap[A,A,Vector[A]] {
+    val size = copyTransformedOrElse(_.size)(in.length)
     
-    val alloc = reifyEffects(Vector[A](in.length, !in.isRow))
-    val v = fresh[A]
-    val func = v 
-  }
+    def alloc = Vector[A](in.length, !in.isRow)
+    def func = e => e 
 
-  case class VectorPlus[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
-    extends DeliteOpZipWith[A,A,A,Vector] {
-
-    val alloc = reifyEffects(Vector[A](inA.length, inA.isRow))
-    val v = (fresh[A],fresh[A])
-    val func = v._1 + v._2
+    def m = manifest[A]
   }
-*/
-
-  // contract: resulting vector has size equal to index range
-  abstract class DeliteOpVectorLoop[A] extends DeliteOpLoop[Vector[A]] {
-    val size: Exp[Int] //inherited
-    val isRow: Exp[Boolean]
-  }
-  
-  // it would be nice if these were traits but we could not pass the implicits
-  abstract class DeliteOpVectorLoopMA[A:Manifest:Arith] extends DeliteOpVectorLoop[A] {
-    def mev = manifest[A]
-    def aev = implicitly[Arith[A]]
-  }
-
-  abstract class DeliteOpLoopMA[A:Manifest:Arith] extends DeliteOpLoop[A] {
-    def mev = manifest[A]
-    def aev = implicitly[Arith[A]]
-  }
-  
-/* too bad traits have no constructors...
-  class DeliteOpVectorLoopMirrored[A](f: Transformer, o: DeliteOpVectorLoop[A])   // TODO!
-    extends DeliteOpVectorLoop[A] with DeliteOpLoopMirrored[Vector[A]](f, o) {
-    
-    val isRow = f(o.size)
-  }
-*/  
 
   case class VectorUpdateIndices[A:Manifest](x: Exp[Vector[A]], in: Exp[IndexVector], y: Exp[A])
-    extends DeliteOpForeach[Int,Vector] {
+    extends DeliteOpForeach[Int] {
 
-    val i = fresh[Int]
-    val sync = reifyEffects(List())
-
-    val v = fresh[Int]
-    val func = reifyEffects { x(v) = y }
-  }
-
-  case class VectorTrans[A:Manifest](in: Exp[Vector[A]])
-    extends DeliteOpVectorLoop[A] {
-
+    def sync = n => List()
+    def func = i => x(i) = y
     val size = in.length
-    val isRow = !in.isRow
-    val v = fresh[Int]
-    val body: Def[Vector[A]] = DeliteCollectElem[A,Vector[A]](
-      alloc = reifyEffects(Vector[A](size, isRow)),
-      func = reifyEffects(in(v))
-    )
+  } 
+
+  case class VectorPlus[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
+    extends VectorArithmeticZipWith[A](inA, inB) {
+
+    def func = (a,b) => a + b
   }
-
-  abstract case class VectorPlus[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
-    extends DeliteOpVectorLoopMA[A]
-
-  class VectorPlusFresh[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
-    extends VectorPlus(inA, inB) {
-
-    val size = inA.length
-    val isRow = inA.isRow
-    val v = fresh[Int]
-    val body: Def[Vector[A]] = DeliteCollectElem[A,Vector[A]](
-      alloc = reifyEffects(Vector[A](size, isRow)),
-      func = reifyEffects(inA(v) + inB(v))
-    )
-  }
-
-  //TR TODO
+  
   case class VectorPlusScalar[A:Manifest:Arith](in: Exp[Vector[A]], y: Exp[A])
-    extends DeliteOpMap[A,A,Vector] {
+    extends VectorArithmeticMap[A](in) {
 
-    val alloc = reifyEffects(Vector[A](in.length, in.isRow))
-    val v = fresh[A]
-    val func = reifyEffects(v + y)
+    def func = e => e + y
   }
 
   case class VectorPlusEquals[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
-    extends DeliteOpZipWith[A,A,A,Vector] { // stick to ZipWith for the moment TODO: try multi loop
+    extends VectorArithmeticIndexedLoop(inA) { 
 
-    val alloc = inA
-    val v = (fresh[A],fresh[A])
-    val func = reifyEffects(v._1 + v._2)
+    def func = i => { inA(i) = inA(i) + inB(i) } 
+  } 
+
+  case class VectorMinus[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
+    extends VectorArithmeticZipWith[A](inA, inB) {
+
+    def func = (a,b) => a - b
   }
 
-  abstract case class VectorMinus[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
-    extends DeliteOpVectorLoopMA[A] 
-  
-  class VectorMinusFresh[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
-    extends VectorMinus(inA, inB) {
-
-    val size = inA.length
-    val isRow = inA.isRow
-    val v = fresh[Int]
-    val body: Def[Vector[A]] = DeliteCollectElem[A,Vector[A]](
-      alloc = reifyEffects(Vector[A](size, isRow)),
-      func = reifyEffects(inA(v) - inB(v))
-    )
-  }
-
-  //TR TODO
   case class VectorMinusScalar[A:Manifest:Arith](in: Exp[Vector[A]], y: Exp[A])
-    extends DeliteOpMap[A,A,Vector] {
+    extends VectorArithmeticMap[A](in) {
 
-    val alloc = reifyEffects(Vector[A](in.length, in.isRow))
-    val v = fresh[A]
-    val func = reifyEffects(v - y)
+    def func = e => e - y
   }
   
   case class VectorMinusEquals[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
-    extends DeliteOpZipWith[A,A,A,Vector] {
+    extends VectorArithmeticIndexedLoop(inA) { 
 
-    val alloc = inA
-    val v = (fresh[A],fresh[A])
-    val func = reifyEffects(v._1 - v._2)
+    def func = i => { inA(i) = inA(i) - inB(i) } 
   }
+    
+  case class VectorTimes[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
+    extends VectorArithmeticZipWith[A](inA, inB) {
 
-  abstract case class VectorTimes[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]]) 
-    extends DeliteOpVectorLoopMA[A]
+    def func = (a,b) => a * b
+  }
   
-  class VectorTimesFresh[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]]) extends VectorTimes(inA, inB) {
-    val size = inA.length
-    val isRow = inA.isRow
-    val v = fresh[Int]
-    val body: Def[Vector[A]] = DeliteCollectElem[A,Vector[A]](
-      alloc = reifyEffects(Vector[A](size, isRow)),
-      func = reifyEffects(inA(v) * inB(v))
-    )
-  }
-
-  //TR TODO ?
   case class VectorTimesWithConvert[A:Manifest:Arith,B:Manifest](inA: Exp[Vector[A]], inB: Exp[Vector[B]], conv: Exp[B] => Exp[A])
-    extends DeliteOpZipWith[A,B,A,Vector] {
+    extends DeliteOpZipWith[A,B,A,Vector[A]] {
 
-    val alloc = reifyEffects(Vector[A](inA.length, inA.isRow))
-    val v = (fresh[A],fresh[B])
-    val func = reifyEffects(v._1 * conv(v._2))
+    def alloc = Vector[A](inA.length, inA.isRow)
+    def func = (a,b) => a * conv(b)
+    val size = inA.length
   }
 
   case class VectorTimesWithConvertRight[A:Manifest,B:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[B]], conv: Exp[A] => Exp[B])
-    extends DeliteOpZipWith[A,B,B,Vector] {
+    extends DeliteOpZipWith[A,B,B,Vector[B]] {
 
-    val alloc = reifyEffects(Vector[B](inB.length, inB.isRow))
-    val v = (fresh[A],fresh[B])
-    val func = reifyEffects(conv(v._1) * v._2)
-  }
-
-  abstract case class VectorTimesScalar[A:Manifest:Arith](in: Exp[Vector[A]], y: Exp[A]) 
-    extends DeliteOpVectorLoopMA[A]
-    
-  class VectorTimesScalarFresh[A:Manifest:Arith](in: Exp[Vector[A]], y: Exp[A]) extends VectorTimesScalar[A](in,y) {
-    val size = in.length
-    val isRow = in.isRow
-    val v = fresh[Int]
-    val body: Def[Vector[A]] = DeliteCollectElem[A,Vector[A]](
-      alloc = reifyEffects(Vector[A](size, isRow)),
-      func = reifyEffects(in(v) * y)
-    )
-  }
-
-  //TR TODO -- not used currently
-  case class VectorDotProduct[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
-    extends DeliteOpZipWithReduce[A,A,A,Vector] {
-
-    val zV = (fresh[A],fresh[A])
-    val zip = reifyEffects(zV._1 * zV._2)
-    val rV = (fresh[A],fresh[A])
-    val reduce = reifyEffects(rV._1 += rV._2)
-  }
-
-  case class VectorDivide[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
-    extends DeliteOpVectorLoop[A] {
-
+    def alloc = Vector[B](inB.length, inB.isRow)    
+    def func = (a,b) => conv(a) * b
     val size = inA.length
-    val isRow = inA.isRow
-    val v = fresh[Int]
-    val body: Def[Vector[A]] = new DeliteCollectElem[A,Vector[A]](
-      alloc = reifyEffects(Vector[A](size, isRow)),
-      func = reifyEffects(inA(v) / inB(v))
-    )
   }
 
+  case class VectorTimesScalar[A:Manifest:Arith](in: Exp[Vector[A]], y: Exp[A])
+    extends VectorArithmeticMap[A](in) {
+
+    def func = e => e * y
+  }
+  
+  case class VectorDotProduct[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
+    extends DeliteOpZipWithReduce[A,A,A] {
+
+    def zip = (a,b) => a*b
+    def reduce = (a,b) => a + b
+    val size = inA.length
+    val zero = implicitly[Arith[A]].empty
+  }
+  
+  
+  case class VectorDivide[A:Manifest:Arith](inA: Exp[Vector[A]], inB: Exp[Vector[A]])
+    extends VectorArithmeticZipWith[A](inA, inB) {
+
+    def func = (a,b) => a / b
+  }
+  
   case class VectorDivideScalar[A:Manifest:Arith](in: Exp[Vector[A]], y: Exp[A])
-    extends DeliteOpVectorLoop[A] {
+    extends VectorArithmeticMap[A](in) {
 
-    val size = in.length
-    val isRow = in.isRow
-    val v = fresh[Int]
-    val body: Def[Vector[A]] = new DeliteCollectElem[A,Vector[A]](
-      alloc = reifyEffects(Vector[A](size, isRow)),
-      func = reifyEffects(in(v) / y)
-    )
+    def func = e => e / y
   }
 
-  abstract case class VectorSum[A:Manifest:Arith](in: Exp[Vector[A]]) 
-    extends DeliteOpLoopMA[A]
+  case class VectorSum[A:Manifest:Arith](in: Exp[Vector[A]]) 
+    extends VectorArithmeticReduce[A](in) {
 
-  class VectorSumFresh[A:Manifest:Arith](in: Exp[Vector[A]]) 
-    extends VectorSum[A](in) {
-
-    val size = in.length
-    val v = fresh[Int]
-    private[this] val rV = (fresh[A],fresh[A])
-    val body: Def[A] = DeliteReduceElem[A](
-      func = reifyEffects(in(v)),
-      zero = unit(0.asInstanceOf[A]), // should get zero from Arith!
-      rV = rV,
-      rFunc = reifyEffects(rV._1 + rV._2)
-    )
+    val zero = a.empty 
+    def func = (a,b) => a + b
   }
-
-  abstract case class VectorAbs[A:Manifest:Arith](in: Exp[Vector[A]])
-    extends DeliteOpVectorLoopMA[A]
   
-  class VectorAbsFresh[A:Manifest:Arith](in: Exp[Vector[A]])
-    extends VectorAbs[A](in) {
+  case class VectorAbs[A:Manifest:Arith](in: Exp[Vector[A]])
+    extends VectorArithmeticMap[A](in) {
 
-    val size = in.length
-    val isRow = in.isRow
-    val v = fresh[Int]
-    val body: Def[Vector[A]] = new DeliteCollectElem[A,Vector[A]](
-      alloc = reifyEffects(Vector[A](size, isRow)),
-      func = reifyEffects(in(v).abs)
-    )
+    def func = e => e.abs
   }
 
-  abstract case class VectorExp[A:Manifest:Arith](in: Exp[Vector[A]])
-    extends DeliteOpVectorLoopMA[A]
+  case class VectorExp[A:Manifest:Arith](in: Exp[Vector[A]])
+    extends VectorArithmeticMap[A](in) {
+
+    def func = e => e.exp
+  }
+
+  case class VectorMin[A:Manifest:Ordering:HasMinMax](in: Exp[Vector[A]]) 
+    extends DeliteOpReduce[A] {
+
+    val size = in.length
+    val zero = implicitly[HasMinMax[A]].maxValue
+    def func = (a,b) => if (a < b) a else b
+  }
   
-  class VectorExpFresh[A:Manifest:Arith](in: Exp[Vector[A]])
-    extends VectorExp[A](in) {
+  case class VectorMax[A:Manifest:Ordering:HasMinMax](in: Exp[Vector[A]]) 
+    extends DeliteOpReduce[A] {
 
     val size = in.length
-    val isRow = in.isRow
-    val v = fresh[Int]
-    val body: Def[Vector[A]] = new DeliteCollectElem[A,Vector[A]](
-      alloc = reifyEffects(Vector[A](size, isRow)),
-      func = reifyEffects(in(v).exp)
-    )
+    val zero = implicitly[HasMinMax[A]].minValue
+    def func = (a,b) => if (a > b) a else b
+  }
+  
+  case class VectorMinIndex[A:Manifest:Ordering:HasMinMax](inB: Exp[Vector[A]]) 
+    extends DeliteOpZipWithReduceTuple[Int,A,Int,A] {
+
+    val inA = copyTransformedOrElse(_.inA)(0::inB.length)
+    val size = copyTransformedOrElse(_.size)(inB.length)
+    val zero = (copyTransformedOrElse(_.zero._1)(unit(0)),copyTransformedOrElse(_.zero._2)(implicitly[HasMinMax[A]].maxValue)) // 0 sensible? maybe -1?
+    def zip = (a,b) => (a,b)
+    def reduce = (a,b) => (if (a._2 < b._2) a._1 else b._1, if (a._2 < b._2) a._2 else b._2)
+    
+    val m = manifest[A]
+    val o = implicitly[Ordering[A]]
+    val p = implicitly[HasMinMax[A]]
   }
 
+/*
+  // TODO: need to get rid of tuple allocations for performance (if we're lucky HotSpot's scalar replacement does it for us)
+  case class VectorMinIndex[A:Manifest:Ordering:HasMinMax](inB: Exp[Vector[A]]) 
+    extends DeliteOpZipWithReduce[Int,A,(Int,A)] {
 
-  def getMaxValue[A:Manifest]: Exp[A] = manifest[A] match { // TODO: move somewhere else (Arith? Ordering?)
-    case Manifest.Double => unit(scala.Double.MaxValue).asInstanceOf[Exp[A]]
-    case Manifest.Int => unit(scala.Int.MaxValue).asInstanceOf[Exp[A]]
+    val inA = copyTransformedOrElse(_.inA)(0::inB.length)
+    val size = copyTransformedOrElse(_.size)(inB.length)
+    val zero = copyTransformedOrElse(_.zero)(make_tuple2(unit(0),implicitly[HasMinMax[A]].maxValue)) // 0 sensible? maybe -1?
+    def zip = (a,b) => (a,b)
+    def reduce = (a,b) => if (a._2 > b._2) a else b
+  
+    val m = manifest[A]
+    val o = implicitly[Ordering[A]]
+    val p = implicitly[HasMinMax[A]]
+  }
+*/
+  case class VectorMaxIndex[A:Manifest:Ordering:HasMinMax](inB: Exp[Vector[A]]) 
+    extends DeliteOpZipWithReduce[Int,A,(Int,A)] {
+
+    val inA = copyTransformedOrElse(_.inA)(0::inB.length)
+    val size = copyTransformedOrElse(_.size)(inB.length)
+    val zero = copyTransformedOrElse(_.zero)(make_tuple2(unit(0),implicitly[HasMinMax[A]].minValue)) // 0 sensible? maybe -1?
+    def zip = (a,b) => (a,b)
+    def reduce = (a,b) => if (a._2 > b._2) a else b
+    
+    val m = manifest[A]
+    val o = implicitly[Ordering[A]]
+    val p = implicitly[HasMinMax[A]]
+  }
+    
+  case class VectorMap[A:Manifest,B:Manifest](in: Exp[Vector[A]], func: Exp[A] => Exp[B])
+    extends DeliteOpMap[A,B,Vector[B]] {
+
+    val size = copyTransformedOrElse(_.size)(in.length)
+    def alloc = Vector[B](in.length, in.isRow)
+    
+    val mA = manifest[A]
+    val mB = manifest[B]
   }
 
-  def getMinValue[A:Manifest]: Exp[A] = manifest[A] match { // TODO: move somewhere else (Arith? Ordering?)
-    case Manifest.Double => unit(scala.Double.MinValue).asInstanceOf[Exp[A]]
-    case Manifest.Int => unit(scala.Int.MinValue).asInstanceOf[Exp[A]]
+  case class VectorMutableMap[A:Manifest](in: Exp[Vector[A]], block: Exp[A] => Exp[A])
+    extends DeliteOpIndexedLoop {
+
+    val size = copyTransformedOrElse(_.size)(in.length)
+    def func = i => in(i) = block(in(i))
+    
+    val m = manifest[A]
   }
 
+  case class VectorForeach[A:Manifest](in: Exp[Vector[A]], func: Exp[A] => Exp[Unit])
+    extends DeliteOpForeach[A] {
 
-  case class VectorMin[A:Manifest:Ordering](in: Exp[Vector[A]]) 
-    extends DeliteOpLoop[A] {
-
-    val size = in.length
-    val v = fresh[Int]
-    private[this] val rV = (fresh[A],fresh[A])
-    val body: Def[A] = DeliteReduceElem[A](
-      func = reifyEffects(in(v)),
-      zero = getMaxValue[A],
-      rV = rV,
-      rFunc = reifyEffects(if (rV._1 < rV._2) rV._1 else rV._2)
-    )
+    def sync = n => List()
+    val size = copyTransformedOrElse(_.size)(in.length)
   }
-
-  case class VectorMinIndex[A:Manifest:Ordering](in: Exp[Vector[A]])
-    extends DeliteOpLoop[Int] {
-
-    val size = in.length
-    val v = fresh[Int]
-    private[this] val rV = (fresh[Int],fresh[Int])
-    val body: Def[Int] = DeliteReduceElem[Int](
-      func = reifyEffects(v),
-      zero = 0, // sensible?
-      rV = rV,
-      rFunc = reifyEffects(if (in(rV._1) < in(rV._2)) rV._1 else rV._2)
-    )
-  }
-
-  case class VectorMax[A:Manifest:Ordering](in: Exp[Vector[A]]) 
-    extends DeliteOpLoop[A] {
-
-    val size = in.length
-    val v = fresh[Int]
-    private[this] val rV = (fresh[A],fresh[A])
-    val body: Def[A] = DeliteReduceElem[A](
-      func = reifyEffects(in(v)),
-      zero = getMinValue[A],
-      rV = rV,
-      rFunc = reifyEffects(if (rV._1 > rV._2) rV._1 else rV._2)
-    )
-  }
-
-  case class VectorMaxKey[A:Manifest,B:Manifest:Ordering](in: Exp[Vector[A]], key: Exp[A] => Exp[B])
-    extends DeliteOpLoop[A] {
-
-    val size = in.length
-    val v = fresh[Int]
-    private[this] val rV = (fresh[A],fresh[A])
-    val body: Def[A] = DeliteReduceElem[A](
-      func = reifyEffects(in(v)),
-      zero = getMinValue[A],
-      rV = rV,
-      rFunc = reifyEffects(if (key(rV._1) > key(rV._2)) rV._1 else rV._2)
-    )
-  }
-
-  case class VectorMaxIndex[A:Manifest:Ordering](in: Exp[Vector[A]])
-    extends DeliteOpLoop[Int] {
-
-    val size = in.length
-    val v = fresh[Int]
-    private[this] val rV = (fresh[Int],fresh[Int])
-    val body: Def[Int] = DeliteReduceElem[Int](
-      func = reifyEffects(v),
-      zero = 0, // sensible?
-      rV = rV,
-      rFunc = reifyEffects(if (in(rV._1) > in(rV._2)) rV._1 else rV._2)
-    )
-  }
-
-  case class VectorMap[A:Manifest,B:Manifest](in: Exp[Vector[A]], v: Sym[A], func: Exp[B])
-    extends DeliteOpMap[A,B,Vector] {
-
-    val alloc = reifyEffects(Vector[B](in.length, in.isRow))
-  }
-
-  case class VectorMutableMap[A:Manifest](in: Exp[Vector[A]], v: Sym[A], func: Exp[A])
-    extends DeliteOpMap[A,A,Vector] {
-
-    val alloc = in
-  }
-
-  case class VectorForeach[A:Manifest](in: Exp[Vector[A]], v: Sym[A], func: Exp[Unit])
-    extends DeliteOpForeach[A,Vector] {
-
-    val i = fresh[Int]
-    val sync = reifyEffects(List())
-    //val sync = reifyEffects(if ((i > 0) && (i < in.length)) List(in(i-1),in(i),in(i+1)) else List(in(i)))
-  }
-
+    
   case class VectorZipWith[A:Manifest,B:Manifest,R:Manifest](inA: Exp[Vector[A]], inB: Exp[Vector[B]],
-                                                             v: (Sym[A],Sym[B]), func: Exp[R])
-    extends DeliteOpZipWith[A,B,R,Vector] {
+                                                             func: (Exp[A], Exp[B]) => Exp[R])
+    extends DeliteOpZipWith[A,B,R,Vector[R]] {
 
-    val alloc = reifyEffects(Vector[R](inA.length, inA.isRow))
+    def alloc = Vector[R](inA.length, inA.isRow)
+    val size = inA.length
   }
   
   case class VectorMutableZipWith[A:Manifest,B:Manifest](inA: Exp[Vector[A]], inB: Exp[Vector[B]],
-                                                             v: (Sym[A],Sym[B]), func: Exp[A])
-    extends DeliteOpZipWith[A,B,A,Vector] {
+                                                         func: (Exp[A], Exp[B]) => Exp[A])
+    extends DeliteOpZipWith[A,B,A,Vector[A]] {
 
-    val alloc = inA
+    def alloc = inA
+    val size = inA.length
   }
-
-  case class VectorReduce[A:Manifest](in: Exp[Vector[A]], v: (Sym[A],Sym[A]), func: Exp[A])
-    extends DeliteOpReduce[A]
-
-
+  
+  // note: we may want to factor 'HasEmpty' out of 'Arith' to make this more general, if the need arises.
+  case class VectorReduce[A:Manifest:Arith](in: Exp[Vector[A]], func: (Exp[A], Exp[A]) => Exp[A])
+    extends DeliteOpReduce[A] {
+    
+    val size = in.length
+    val zero = implicitly[Arith[A]].empty
+  }
+  
   // TODO: this is an inefficient way to compute flatten (allocates a new buffer for every intermediate output)
   // should use a scan that allocates the output once (precumulate)
   case class VectorObjectFlatten[A:Manifest](in: Exp[Vector[Vector[A]]])
     extends DeliteOpReduce[Vector[A]] {
 
-    val v = (fresh[Vector[A]], fresh[Vector[A]])
-    val func = reifyEffects(v._1 ++ v._2)
-  }
-
-  case class VectorFlatMap[A:Manifest,B:Manifest](in: Exp[Vector[A]], mV: Sym[A], map: Exp[Vector[B]])
-    extends DeliteOpMapReduce[A,Vector[B],Vector] {
-
-    val rV = (fresh[Vector[B]],fresh[Vector[B]])
-    val reduce = reifyEffects(rV._1 ++ rV._2)
-  }
-
-  // TODO: need to either use scan or express this more efficiently
-  // could be expressed as a reduce of (A,B) with a function from (A,B) => A;
-  // in this case, it's (Vector[A],A) => Vector[A]. this is a more general form of reduction than we can express currently.
-  // reduction function should be: if (pred(b)) a += b else a
-  /*
-  case class VectorFilter[A:Manifest](in: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean])
-    extends DeliteOpMapReduce[A,Vector[A],Vector] {
-
-    val mV = fresh[A]
-    val map = reifyEffects { if (pred(mV)) Vector[A](mV) else NilV[A] }
-    val rV = (fresh[Vector[A]],fresh[Vector[A]])
-    val reduce = reifyEffects(rV._1 ++ rV._2)
-  }
-  */
-  
-  /*  functional, but slow
-  case class VectorFind[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean])
-    extends DeliteOpMapReduce[Int,Vector[Int],Vector] {
-
-    val in = (0::x.length)
-    val mV = fresh[Int]
-    val map = reifyEffects { if (pred(x(mV))) Vector[Int](mV) else NilV[Int] }
-    val rV = (fresh[Vector[Int]],fresh[Vector[Int]])
-    val reduce = reifyEffects(rV._1 ++ rV._2)
-  }
-  */
-  
-  /*
-  case class VectorCount[A:Manifest](in: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean])
-    extends DeliteOpMapReduce[A,Int,Vector] {
-
-    val mV = fresh[A]
-    val map = reifyEffects { if (pred(mV)) 1 else 0 }
-    val rV = (fresh[Int],fresh[Int])
-    val reduce = reifyEffects(rV._1 + rV._2)
-  }
-  */
-
-  abstract case class VectorFilter[A:Manifest](in: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) extends DeliteOpLoop[Vector[A]] {
-    // does not extend DeliteOpVectorLoop because result size is not known
-    def mev = manifest[A]
-    val isRow: Exp[Boolean]
-  }
-  
-  class VectorFilterFresh[A:Manifest](in: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) extends VectorFilter[A](in, pred) {
     val size = in.length
-    val isRow = in.isRow
-    val v = fresh[Int]
-    val body: Def[Vector[A]] = new DeliteCollectElem[A,Vector[A]](
-      alloc = reifyEffects(Vector(0,isRow)),
-      func = reifyEffects(in(v)),
-      cond = reifyEffects(pred(in(v)))::Nil
-    )
-  }
+    val zero = EmptyVector[A]
+    def func = (a,b) => a ++ b    
+  } 
 
-  abstract case class VectorFind[A:Manifest](in: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) extends DeliteOpLoop[IndexVector] {
-    def mev = manifest[A]
-  }
+  case class VectorFlatMap[A:Manifest,B:Manifest](in: Exp[Vector[A]], map: Exp[A] => Exp[Vector[B]])
+    extends DeliteOpMapReduce[A,Vector[B]] {
 
-  class VectorFindFresh[A:Manifest](in: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) extends VectorFind[A](in, pred) {
     val size = in.length
-    val v = fresh[Int]
-    val body: Def[IndexVector] = new DeliteCollectElem[Int,IndexVector](
-      alloc = reifyEffects(IndexVector(0)),
-      func = reifyEffects(v),
-      cond = reifyEffects(pred(in(v)))::Nil
-    )
+    val zero = EmptyVector[B]
+    def reduce = (a,b) => a ++ b
   }
-
-  abstract case class VectorCount[A:Manifest](in: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) extends DeliteOpLoop[Int] {
-    def mev = manifest[A]
-  }
-
-  class VectorCountFresh[A:Manifest](in: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) extends VectorCount[A](in,pred) {
-    val size = in.length
-    val v = fresh[Int]
-    private[this] val rV = (fresh[Int],fresh[Int])
-    val body: Def[Int] = DeliteReduceElem[Int](
-      func = reifyEffects(unit(1)),
-      cond = reifyEffects(pred(in(v)))::Nil,
-      zero = unit(0),
-      rV = rV,
-      rFunc = reifyEffects(rV._1 + rV._2)
-    )
-  }
-
-
-
-
-  //////////////
-  // mirroring
-
-  override def mirror[A:Manifest](e: Def[A], f: Transformer): Exp[A] = (e match {
-    case VectorApply(x, n) => vector_apply(f(x), f(n))
-    case VectorLength(x) => vector_length(f(x))
-    case VectorIsRow(x) => vector_isRow(f(x))
-    case VectorTrans(x) => vector_trans(f(x))
-    // FIXME: VectorSum might not actually be triggered <-- still true??
-    case e@VectorPlus(x,y) => toAtom(new VectorPlus(f(x),f(y))(e.mev,e.aev) {
-      val size = f(e.size); val isRow = f(e.isRow); val v = f(e.v).asInstanceOf[Sym[Int]]; val body = mirrorLoopBody(e.body, f) })
-    case e@VectorMinus(x,y) => toAtom(new VectorMinus(f(x),f(y))(e.mev,e.aev) { 
-      val size = f(e.size); val isRow = f(e.isRow); val v = f(e.v).asInstanceOf[Sym[Int]]; val body = mirrorLoopBody(e.body, f) })
-    case e@VectorTimes(x,y) => toAtom(new VectorTimes(f(x),f(y))(e.mev,e.aev) { 
-      val size = f(e.size); val isRow = f(e.isRow); val v = f(e.v).asInstanceOf[Sym[Int]]; val body = mirrorLoopBody(e.body, f) })
-    case e@VectorTimesScalar(x,y) => toAtom(new VectorTimesScalar(f(x),f(y))(e.mev,e.aev) { 
-      val size = f(e.size); val isRow = f(e.isRow); val v = f(e.v).asInstanceOf[Sym[Int]]; val body = mirrorLoopBody(e.body, f) })
-    case e@VectorSum(x) => toAtom(new VectorSum(f(x))(e.mev,e.aev) { 
-      val size = f(e.size); val v = f(e.v).asInstanceOf[Sym[Int]]; val body = mirrorLoopBody(e.body, f) })
-    case e@VectorAbs(x) => toAtom(new VectorAbs(f(x))(e.mev,e.aev) { 
-      val size = f(e.size); val isRow = f(e.isRow); val v = f(e.v).asInstanceOf[Sym[Int]]; val body = mirrorLoopBody(e.body, f) })
-    case e@VectorExp(x) => toAtom(new VectorExp(f(x))(e.mev,e.aev) { 
-      val size = f(e.size); val isRow = f(e.isRow); val v = f(e.v).asInstanceOf[Sym[Int]]; val body = mirrorLoopBody(e.body, f) })
-    case e@VectorFilter(x,p) => toAtom(new VectorFilter(f(x),p)(e.mev) { 
-      val size = f(e.size); val isRow = f(e.isRow); val v = f(e.v).asInstanceOf[Sym[Int]]; val body = mirrorLoopBody(e.body, f) })
-    case e@VectorFind(x,p) => toAtom(new VectorFind(f(x),p)(e.mev) { 
-      val size = f(e.size); val v = f(e.v).asInstanceOf[Sym[Int]]; val body = mirrorLoopBody(e.body, f) })
-    case e@VectorCount(x,p) => toAtom(new VectorCount(f(x),p)(e.mev) { 
-      val size = f(e.size); val v = f(e.v).asInstanceOf[Sym[Int]]; val body = mirrorLoopBody(e.body, f) })
-    case Reflect(e@VectorPPrint(x), u, es) => reflectMirrored(Reflect(VectorPPrint(f(x))(f(e.block)), mapOver(f,u), f(es)))
-    // below are read/write effects TODO: find a general approach to treating them!!!!
-    case Reflect(VectorApply(l,r), u, es) => reflectMirrored(Reflect(VectorApply(f(l),f(r)), mapOver(f,u), f(es)))
-    case Reflect(VectorLength(x), u, es) => reflectMirrored(Reflect(VectorLength(f(x)), mapOver(f,u), f(es)))
-    case Reflect(VectorIsRow(x), u, es) => reflectMirrored(Reflect(VectorIsRow(f(x)), mapOver(f,u), f(es)))
-    case Reflect(VectorForeach(a,b,c), u, es) => reflectMirrored(Reflect(VectorForeach(f(a),f(b).asInstanceOf[Sym[Int]],f(c)), mapOver(f,u), f(es)))
-    // FIXME: problem with VectorTimes: it's actually a loop and if it is reflected it means a.length will also reflect and we have no context here!!!
-    case Reflect(e2@VectorTimes(a,b), u, es) => error(unit("we'd rather not mirror ") + unit(e)); //reflectMirrored(Reflect(VectorTimes(f(a),f(b))(e.mev,e.aev), Read(f onlySyms rs), f(es)))
-    case Reflect(VectorUpdate(l,i,r), u, es) => reflectMirrored(Reflect(VectorUpdate(f(l),f(i),f(r)), mapOver(f,u), f(es)))
-    // allocations TODO: generalize
-    case Reflect(VectorObjectZeros(x), u, es) => reflectMirrored(Reflect(VectorObjectZeros(f(x)), mapOver(f,u), f(es)))
-    case Reflect(VectorObjectRange(s,e,d,r), u, es) => reflectMirrored(Reflect(VectorObjectRange(f(s),f(e),f(d),f(r)), mapOver(f,u), f(es)))
-    case Reflect(e@VectorNew(l,r), u, es) => reflectMirrored(Reflect(VectorNew(f(l),f(r))(e.mV), mapOver(f,u), f(es)))
-    case _ => super.mirror(e, f)
-  }).asInstanceOf[Exp[A]] // why??
-
-
-
-  /////////////////////
-  // aliases and sharing
-
-  // TODO: precise sharing info for other IR types (default is conservative)
   
-  override def aliasSyms(e: Any): List[Sym[Any]] = e match {
-    case VectorApply(a,i) => Nil
-    case VectorUpdate(a,i,x) => Nil           // syms(a) <-- any use to return a?
-    case VectorUpdateIndices(a,is,x) => Nil   // syms(a) <-- any use to return a?
-    case VectorInsert(a,i,x) => Nil           // syms(a) <-- any use to return a?
-    case VectorRepmat(a,i,j) => Nil
-    case VectorClone(a) => Nil
-    case _ => super.aliasSyms(e)
+  case class VectorFilter[A:Manifest](in: Exp[Vector[A]], cond: Exp[A] => Exp[Boolean]) 
+    extends DeliteOpFilter[A,A,Vector[A]] {
+      
+    def alloc = Vector[A](0, in.isRow)
+    def func = e => e 
+    val size = in.length
+    
+    def m = manifest[A]  
   }
+  
+  case class VectorFind[A:Manifest](in: Exp[Vector[A]], cond: Exp[A] => Exp[Boolean])
+    extends DeliteOpFilter[A,Int,IndexVector] {
+      
+    def alloc = IndexVector(0)
+    def func = e => v // should we make available and use a helper function like index(e)?
+    val size = in.length
 
-  override def containSyms(e: Any): List[Sym[Any]] = e match {
-    case VectorApply(a,i) => Nil
-    case VectorUpdate(a,i,x) => syms(x)
-    case VectorUpdateIndices(a,is,x) => syms(x)
-    case VectorInsert(a,i,x) => syms(x)
-    case VectorRepmat(a,i,j) => Nil
-    case VectorClone(a) => Nil
-    case _ => super.containSyms(e)
+    def m = manifest[A]  
   }
+  
+  case class VectorCount[A:Manifest](in: Exp[Vector[A]], cond: Exp[A] => Exp[Boolean]) 
+    extends DeliteOpFilterReduce[A,Int] {
 
-  override def extractSyms(e: Any): List[Sym[Any]] = e match {
-    case VectorApply(a,i) => syms(a)
-    case VectorUpdate(a,i,x) => Nil
-    case VectorUpdateIndices(a,is,x) => Nil
-    case VectorInsert(a,i,x) => Nil
-    case VectorRepmat(a,i,j) => Nil
-    case VectorClone(a) => Nil
-    case _ => super.extractSyms(e)
+    val size = in.length
+    val zero = unit(0)
+    def func = e => unit(1)
+    def reduce = (a,b) => a + b   
+    
+    def m = manifest[A]
   }
-
-  override def copySyms(e: Any): List[Sym[Any]] = e match {
-    case VectorApply(a,i) => Nil
-    case VectorUpdate(a,i,x) => syms(a)
-    case VectorUpdateIndices(a,is,x) => syms(a)
-    case VectorInsert(a,i,x) => syms(a)
-    case VectorRepmat(a,i,j) => syms(a)
-    case VectorClone(a) => syms(a)
-    case _ => super.copySyms(e)
-  }
-
-
 
   /////////////////////
   // object interface
 
-//  def vector_obj_new[A:Manifest](len: Exp[Int], isRow: Exp[Boolean]) = reflectEffect(VectorObjectNew[A](len, isRow))
   def vector_obj_new[A:Manifest](len: Exp[Int], isRow: Exp[Boolean]) = reflectMutable(VectorNew[A](len, isRow)(manifest[VectorImpl[A]])) //XXX
   def vector_obj_fromseq[A:Manifest](xs: Exp[Seq[A]]) = reflectPure(VectorObjectFromSeq(xs)) //XXX
   def vector_obj_ones(len: Exp[Int]) = reflectPure(VectorObjectOnes(len))
   def vector_obj_onesf(len: Exp[Int]) = reflectPure(VectorObjectOnesF(len))
   def vector_obj_zeros(len: Exp[Int]) = reflectPure(VectorObjectZeros(len))
   def vector_obj_zerosf(len: Exp[Int]) = reflectPure(VectorObjectZerosF(len))
-  def vector_obj_rand(len: Exp[Int]) = reflectPure(VectorObjectRand(len))
-  def vector_obj_randf(len: Exp[Int]) = reflectPure(VectorObjectRandF(len))
+  def vector_obj_rand(len: Exp[Int]) = reflectEffect(VectorObjectRand(len))
+  def vector_obj_randf(len: Exp[Int]) = reflectEffect(VectorObjectRandF(len))
   def vector_obj_range(start: Exp[Int], end: Exp[Int], stride: Exp[Int], isRow: Exp[Boolean]) = reflectPure(VectorObjectRange(start, end, stride, isRow))
   def vector_obj_uniform(start: Exp[Double], step_size: Exp[Double], end: Exp[Double], isRow: Exp[Boolean]) = reflectPure(VectorObjectUniform(start, step_size, end, isRow))
   def vector_obj_flatten[A:Manifest](pieces: Exp[Vector[Vector[A]]]) = reflectPure(VectorObjectFlatten(pieces))
@@ -1002,10 +734,11 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
 
   def vector_length[A:Manifest](x: Exp[Vector[A]]) = reflectPure(VectorLength(x))
   def vector_isRow[A:Manifest](x: Exp[Vector[A]]) = reflectPure(VectorIsRow(x))
-  def vector_apply[A:Manifest](x: Exp[Vector[A]], n: Exp[Int]) = reflectPure(VectorApply(x, n))
+  def vector_apply[A:Manifest](x: Exp[Vector[A]], n: Exp[Int]) = dc_apply(x,n)//reflectPure(VectorApply(x, n))
   def vector_slice[A:Manifest](x: Exp[Vector[A]], start: Exp[Int], end: Exp[Int]) = reflectPure(VectorSlice(x, start, end))
   def vector_contains[A:Manifest](x: Exp[Vector[A]], y: Exp[A]) = reflectPure(VectorContains(x, y))
   def vector_distinct[A:Manifest](x: Exp[Vector[A]]) = reflectPure(VectorDistinct(x))
+  def vector_raw_data[A:Manifest](x: Exp[Vector[A]]) = reflectPure(VectorRawData(x))
 
   def vector_equals[A:Manifest](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectPure(VectorEquals(x,y))
   def vector_trans[A:Manifest](x: Exp[Vector[A]]) = reflectPure(VectorTrans(x))
@@ -1027,89 +760,167 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp with Clea
   def vector_trim[A:Manifest](x: Exp[Vector[A]]) = reflectWrite(x)(VectorTrim(x))
   def vector_clear[A:Manifest](x: Exp[Vector[A]]) = reflectWrite(x)(VectorClear(x))
 
-  def vector_plus[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectPure(new VectorPlusFresh(x,y))
+  def vector_plus[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectPure(VectorPlus(x,y))
   def vector_plus_scalar[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[A]) = reflectPure(VectorPlusScalar(x,y))
   def vector_plusequals[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectWrite(x)(VectorPlusEquals(x,y))
-  def vector_minus[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectPure(new VectorMinusFresh(x,y))
+  def vector_minus[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectPure(VectorMinus(x,y))
   def vector_minus_scalar[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[A]) = reflectPure(VectorMinusScalar(x,y))
   def vector_minusequals[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectWrite(x)(VectorMinusEquals(x, y))
-  def vector_times[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectPure(new VectorTimesFresh(x,y))
+  def vector_times[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectPure(VectorTimes(x,y))
   def vector_times_withconvert[A:Manifest:Arith,B:Manifest](x: Exp[Vector[A]], y: Exp[Vector[B]], conv: Exp[B] => Exp[A]) = reflectPure(VectorTimesWithConvert(x,y,conv)) // TODO: de-hoas
   def vector_times_withconvertright[A:Manifest,B:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[B]], conv: Exp[A] => Exp[B]) = reflectPure(VectorTimesWithConvertRight(x,y,conv))
-  def vector_times_scalar[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[A]) = reflectPure(new VectorTimesScalarFresh(x,y))
+  def vector_times_scalar[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[A]) = reflectPure(VectorTimesScalar(x,y))
   def vector_times_matrix[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Matrix[A]]) = reflectPure(VectorTimesMatrix(x,y))
   def vector_outer[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectPure(VectorOuter(x,y))
   def vector_dot_product[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectPure(VectorDotProduct(x,y))
   def vector_divide[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = reflectPure(VectorDivide(x,y))
   def vector_divide_scalar[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[A]) = reflectPure(VectorDivideScalar(x,y))
-  def vector_sum[A:Manifest:Arith](x: Exp[Vector[A]]) = reflectPure(new VectorSumFresh(x))
-  def vector_abs[A:Manifest:Arith](x: Exp[Vector[A]]) = reflectPure(new VectorAbsFresh(x))
-  def vector_exp[A:Manifest:Arith](x: Exp[Vector[A]]) = reflectPure(new VectorExpFresh(x))
+  def vector_sum[A:Manifest:Arith](x: Exp[Vector[A]]) = reflectPure(VectorSum(x))
+  def vector_abs[A:Manifest:Arith](x: Exp[Vector[A]]) = reflectPure(VectorAbs(x))
+  def vector_exp[A:Manifest:Arith](x: Exp[Vector[A]]) = reflectPure(VectorExp(x))
 
   def vector_sort[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorSort(x))
-  def vector_min[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorMin(x))
-  def vector_minindex[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorMinIndex(x))
-  def vector_max[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorMax(x))
-  def vector_maxindex[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorMaxIndex(x))
+  def vector_min[A:Manifest:Ordering:HasMinMax](x: Exp[Vector[A]]) = reflectPure(VectorMin(x))
+  def vector_minindex[A:Manifest:Ordering:HasMinMax](x: Exp[Vector[A]]) = /*tuple2_get1*/(reflectPure(VectorMinIndex(x)))
+  def vector_max[A:Manifest:Ordering:HasMinMax](x: Exp[Vector[A]]) = reflectPure(VectorMax(x))
+  def vector_maxindex[A:Manifest:Ordering:HasMinMax](x: Exp[Vector[A]]) = tuple2_get1(reflectPure(VectorMaxIndex(x)))
   def vector_median[A:Manifest:Ordering](x: Exp[Vector[A]]) = reflectPure(VectorMedian(x))
-  def vector_max_key[A:Manifest,B:Manifest:Ordering](x: Exp[Vector[A]], key: Exp[A] => Exp[B]) = reflectPure(VectorMaxKey(x, key))
 
-  def vector_map[A:Manifest,B:Manifest](x: Exp[Vector[A]], f: Exp[A] => Exp[B]) = {
-    val v = fresh[A]
-    val func = reifyEffects(f(v))
-    reflectPure(VectorMap(x, v, func)) // TODO: effect if func effectful!
-  }
-  def vector_mmap[A:Manifest](x: Exp[Vector[A]], f: Exp[A] => Exp[A]) = {
-    val v = fresh[A]
-    val func = reifyEffects(f(v))
-    reflectWrite(x)(VectorMutableMap(x, v, func))  // TODO: effect if func effectful!
-  }
+  def vector_map[A:Manifest,B:Manifest](x: Exp[Vector[A]], f: Exp[A] => Exp[B]) = reflectPure(VectorMap(x, f)) // TODO: effect if func effectful!
+  def vector_mmap[A:Manifest](x: Exp[Vector[A]], f: Exp[A] => Exp[A]) = reflectWrite(x)(VectorMutableMap(x, f)) // TODO: effect if func effectful!
   def vector_foreach[A:Manifest](x: Exp[Vector[A]], block: Exp[A] => Exp[Unit]) = {
-    val v = fresh[A]
-    val func = reifyEffects(block(v))
-    reflectEffect(VectorForeach(x, v, func))  // TODO: read sym??
+    reflectEffect(VectorForeach(x, block))
   }
   def vector_zipwith[A:Manifest,B:Manifest,R:Manifest](x: Exp[Vector[A]], y: Exp[Vector[B]], f: (Exp[A],Exp[B]) => Exp[R]) = {
-    val v = (fresh[A], fresh[B])
-    val func = reifyEffects(f(v._1,v._2))
-    reflectPure(VectorZipWith(x, y, v, func))
+    reflectPure(VectorZipWith(x, y, f))
   }
   def vector_mzipwith[A:Manifest,B:Manifest](x: Exp[Vector[A]], y: Exp[Vector[B]], f: (Exp[A],Exp[B]) => Exp[A]) = {
-    val v = (fresh[A], fresh[B])
-    val func = reifyEffects(f(v._1,v._2))
-    reflectWrite(x)(VectorMutableZipWith(x, y, v, func))
+    reflectWrite(x)(VectorMutableZipWith(x, y, f))
   }
-  def vector_reduce[A:Manifest](x: Exp[Vector[A]], f: (Exp[A],Exp[A]) => Exp[A]) = {
-    val v = (fresh[A],fresh[A])
-    val func = reifyEffects(f(v._1, v._2))
-    reflectPure(VectorReduce(x, v, func))
-  }
-
-  def vector_filter[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(new VectorFilterFresh(x, pred))
-  def vector_find[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(new VectorFindFresh(x, pred))//IndexVector(reflectPure(VectorFind(x, pred)))
-  def vector_count[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(new VectorCountFresh(x, pred))
-
-  def vector_flatmap[A:Manifest,B:Manifest](x: Exp[Vector[A]], f: Exp[A] => Exp[Vector[B]]) = {
-    val v = fresh[A]
-    val func = reifyEffects(f(v))
-    reflectPure(VectorFlatMap(x, v, func))
-  }
-
+  def vector_reduce[A:Manifest:Arith](x: Exp[Vector[A]], f: (Exp[A],Exp[A]) => Exp[A]) = reflectPure(VectorReduce(x, f))
+  def vector_filter[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(VectorFilter(x, pred))
+  def vector_find[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(VectorFind(x, pred))
+  def vector_count[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = reflectPure(VectorCount(x, pred))
+  def vector_flatmap[A:Manifest,B:Manifest](x: Exp[Vector[A]], f: Exp[A] => Exp[Vector[B]]) = reflectPure(VectorFlatMap(x, f))
   def vector_partition[A:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[Boolean]) = t2(reflectPure(VectorPartition(x, pred)))
+  def vector_groupby[A:Manifest,K:Manifest](x: Exp[Vector[A]], pred: Exp[A] => Exp[K]) = reflectPure(VectorGroupBy(x,pred))
 
-  def vector_nil_double = VectorNilDouble()
-  def vector_nil_float = VectorNilFloat()
-  def vector_nil_int = VectorNilInt()
+  def vector_empty_double = VectorEmptyDouble()
+  def vector_empty_float = VectorEmptyFloat()
+  def vector_empty_int = VectorEmptyInt()
+  def vector_empty[A:Manifest] = VectorEmpty[A]()
   def vector_zero_double(length: Exp[Int], isRow: Exp[Boolean]) = VectorZeroDouble(length, isRow)
   def vector_zero_float(length: Exp[Int], isRow: Exp[Boolean]) = VectorZeroFloat(length, isRow)
   def vector_zero_int(length: Exp[Int], isRow: Exp[Boolean]) = VectorZeroInt(length, isRow)
+
+
+  //////////////
+  // mirroring
+
+  override def mirror[A:Manifest](e: Def[A], f: Transformer): Exp[A] = (e match {
+    case VectorApply(x, n) => vector_apply(f(x), f(n))
+    case VectorLength(x) => vector_length(f(x))
+    case VectorIsRow(x) => vector_isRow(f(x))
+    // implemented as DeliteOpSingleTask and DeliteOpLoop
+    case e@VectorObjectOnes(x) => reflectPure(new { override val original = Some(f,e) } with VectorObjectOnes(f(x)))(mtype(manifest[A]))
+    case e@VectorObjectOnesF(x) => reflectPure(new { override val original = Some(f,e) } with VectorObjectOnesF(f(x)))(mtype(manifest[A]))
+    case e@VectorObjectUniform(x,y,z,w) => reflectPure(new { override val original = Some(f,e) } with VectorObjectUniform(f(x),f(y),f(z),f(w)))(mtype(manifest[A]))
+    case e@VectorTrans(x) => reflectPure(new { override val original = Some(f,e) } with VectorTrans(f(x))(e.m))(mtype(manifest[A]))
+    case e@VectorOuter(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorOuter(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
+    case e@VectorPlus(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorPlus(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
+    case e@VectorMinus(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorMinus(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
+    case e@VectorTimes(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorTimes(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
+    case e@VectorTimesScalar(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorTimesScalar(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
+    case e@VectorDivideScalar(x,y) => reflectPure(new { override val original = Some(f,e) } with VectorDivideScalar(f(x),f(y))(e.m, e.a))(mtype(manifest[A]))
+    case e@VectorSum(x) => reflectPure(new { override val original = Some(f,e) } with VectorSum(f(x))(e.m, e.a))(mtype(manifest[A]))
+    case e@VectorAbs(x) => reflectPure(new { override val original = Some(f,e) } with VectorAbs(f(x))(e.m, e.a))(mtype(manifest[A]))
+    case e@VectorExp(x) => reflectPure(new { override val original = Some(f,e) } with VectorExp(f(x))(e.m, e.a))(mtype(manifest[A]))
+    case e@VectorFilter(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorFilter(f(x),f(p))(e.m))(mtype(manifest[A]))
+    case e@VectorFind(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorFind(f(x),f(p))(e.m))(mtype(manifest[A]))
+    case e@VectorCount(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorCount(f(x),f(p))(e.m))(mtype(manifest[A]))
+    case e@VectorMinIndex(x) => reflectPure(new { override val original = Some(f,e) } with VectorMinIndex(f(x))(e.m,e.o,e.p))(mtype(manifest[A]))
+    case e@VectorMap(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorMap(f(x),f(p))(e.mA,e.mB))(mtype(manifest[A]))
+    // read/write effects
+    case Reflect(VectorApply(l,r), u, es) => reflectMirrored(Reflect(VectorApply(f(l),f(r)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(VectorLength(x), u, es) => reflectMirrored(Reflect(VectorLength(f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(VectorIsRow(x), u, es) => reflectMirrored(Reflect(VectorIsRow(f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(VectorUpdate(l,i,r), u, es) => reflectMirrored(Reflect(VectorUpdate(f(l),f(i),f(r)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(VectorInsert(l,i,r), u, es) => reflectMirrored(Reflect(VectorInsert(f(l),f(i),f(r)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    // implemented as DeliteOpSingleTask and DeliteOpLoop
+    case Reflect(e@VectorTimesScalar(x,y), u, es) => reflectMirrored(Reflect(new { override val original = Some(f,e) } with VectorTimesScalar(f(x),f(y))(e.m, e.a), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(e@VectorDivideScalar(x,y), u, es) => reflectMirrored(Reflect(new { override val original = Some(f,e) } with VectorDivideScalar(f(x),f(y))(e.m, e.a), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(e@VectorPlus(x,y), u, es) => reflectMirrored(Reflect(new { override val original = Some(f,e) } with VectorPlus(f(x),f(y))(e.m, e.a), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(e@VectorMinus(x,y), u, es) => reflectMirrored(Reflect(new { override val original = Some(f,e) } with VectorMinus(f(x),f(y))(e.m, e.a), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(e@VectorForeach(a,b), u, es) => reflectMirrored(Reflect(new { override val original = Some(f,e) } with VectorForeach(f(a),f(b)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(e@VectorPlusEquals(x,y), u, es) => reflectMirrored(Reflect(new { override val original = Some(f,e) } with VectorPlusEquals(f(x),f(y))(e.m, e.a), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(e@VectorMutableMap(x,g), u, es) => reflectMirrored(Reflect(new { override val original = Some(f,e) } with VectorMutableMap(f(x),f(g))(e.m), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(e@VectorUpdateIndices(x,i,y), u, es) => reflectMirrored(Reflect(new { override val original = Some(f,e) } with VectorUpdateIndices(f(x),f(i),f(y)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(e@VectorPPrint(x), u, es) => reflectMirrored(Reflect(new { override val original = Some(f,e) } with VectorPPrint(f(x))(f(e.block)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    // allocations
+    case Reflect(e@VectorObjectZeros(x), u, es) => reflectMirrored(Reflect(VectorObjectZeros(f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(e@VectorObjectRange(s,o,d,r), u, es) => reflectMirrored(Reflect(VectorObjectRange(f(s),f(o),f(d),f(r)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(e@VectorNew(l,r), u, es) => reflectMirrored(Reflect(VectorNew(f(l),f(r))(e.mV), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case _ => super.mirror(e, f)
+  }).asInstanceOf[Exp[A]] // why??
+
+
+
+  /////////////////////
+  // aliases and sharing
+
+  // TODO: precise sharing info for other IR types (default is conservative)
+  
+  override def aliasSyms(e: Any): List[Sym[Any]] = e match {
+    case VectorApply(a,i) => Nil
+    case VectorUpdate(a,i,x) => Nil           // syms(a) <-- any use to return a?
+    case VectorUpdateIndices(a,is,x) => Nil   // syms(a) <-- any use to return a?
+    case VectorInsert(a,i,x) => Nil           // syms(a) <-- any use to return a?
+    case VectorInsertAll(a,i,x) => Nil        // syms(a) <-- any use to return a?
+    case VectorRepmat(a,i,j) => Nil
+    case VectorClone(a) => Nil
+    case _ => super.aliasSyms(e)
+  }
+
+  override def containSyms(e: Any): List[Sym[Any]] = e match {
+    case VectorApply(a,i) => Nil
+    case VectorUpdate(a,i,x) => syms(x)
+    case VectorUpdateIndices(a,is,x) => syms(x)
+    case VectorInsert(a,i,x) => syms(x)
+    case VectorInsertAll(a,i,x) => Nil
+    case VectorRepmat(a,i,j) => Nil
+    case VectorClone(a) => Nil
+    case _ => super.containSyms(e)
+  }
+
+  override def extractSyms(e: Any): List[Sym[Any]] = e match {
+    case VectorApply(a,i) => syms(a)
+    case VectorUpdate(a,i,x) => Nil
+    case VectorUpdateIndices(a,is,x) => Nil
+    case VectorInsert(a,i,x) => Nil
+    case VectorInsertAll(a,i,x) => Nil
+    case VectorRepmat(a,i,j) => Nil
+    case VectorClone(a) => Nil
+    case _ => super.extractSyms(e)
+  }
+
+  override def copySyms(e: Any): List[Sym[Any]] = e match {
+    case VectorApply(a,i) => Nil
+    case VectorUpdate(a,i,x) => syms(a)
+    case VectorUpdateIndices(a,is,x) => syms(a)
+    case VectorInsert(a,i,x) => syms(a)
+    case VectorInsertAll(a,i,x) => syms(a) ++ syms(x)
+    case VectorRepmat(a,i,j) => syms(a)
+    case VectorClone(a) => syms(a)
+    case _ => super.copySyms(e)
+  }
 }
 
 /**
  * Optimizations for composite VectorOps operations.
  */
 
-trait VectorOpsExpOpt extends VectorOpsExp {
+// have to extend DeliteCollectionOps to override dc_apply...
+trait VectorOpsExpOpt extends VectorOpsExp with DeliteCollectionOpsExp {
   this: VectorImplOps with OptiMLExp =>
 
   override def vector_equals[A:Manifest](x: Exp[Vector[A]], y: Exp[Vector[A]]) = (x, y) match {
@@ -1126,7 +937,7 @@ trait VectorOpsExpOpt extends VectorOpsExp {
 
   override def vector_plusequals[A:Manifest:Arith](x: Exp[Vector[A]], y: Exp[Vector[A]]) = (x, y) match {
     // remove runtime check on zero vector being same length as argument
-    case (a, Def(VectorObjectZeros(len))) => a
+    case (a, Def(VectorObjectZeros(len))) => ()
     //case (Def(VectorObjectZeros(len)), b) => b  // this is unsafe because we lose the effectful operation (e.g. accumulation)
     case _ => super.vector_plusequals(x,y)
   }
@@ -1136,57 +947,99 @@ trait VectorOpsExpOpt extends VectorOpsExp {
   }
 
   override def vector_mutable_clone[A:Manifest](x: Exp[Vector[A]]) = x match {
-		case Def(d@VectorNew(len, isRow)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]])
-    case Def(d@VectorObjectFromSeq(xs)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]])		
+    // these are unsafe in general.. we can only short-circuit the clone if we know the allocation is dead
+    // except for the .mutable call
+    // e.g., val x = Vector(10, true)
+    //       val y = x.mutable // should clone!
+    //       val z = x + 5
+    // val x = Vector(10, true).mutable // should not clone!
+    case Def(d@VectorNew(len, isRow)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]])
+    case Def(d@VectorObjectFromSeq(xs)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]])   
     case Def(d@VectorObjectZeros(len)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]])
     case Def(d@VectorObjectZerosF(len)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]])
-    case Def(d@VectorObjectOnes(len)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]])
-    case Def(d@VectorObjectOnesF(len)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]])
+    //case Def(d@VectorObjectOnes(len)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]]) <--- actually a problem in testSumIf!
+    //case Def(d@VectorObjectOnesF(len)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]])
     case Def(d@VectorObjectRand(len)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]])
     case Def(d@VectorObjectRandF(len)) => reflectMutable(d.asInstanceOf[Def[Vector[A]]])
     case _ => super.vector_mutable_clone(x)
   }
 
-  // these are essential for fusing:
+  override def vector_slice[A:Manifest](x: Rep[Vector[A]], start: Rep[Int], end: Rep[Int]): Rep[Vector[A]] = x match {
+    case Def(IndexVectorRange(s,e)) => indexvector_range(s+start,s+end).asInstanceOf[Rep[Vector[A]]] // TODO: assert s+end < e!
+    case _ => super.vector_slice(x,start,end)
+  }
+
 
   override def vector_length[A:Manifest](x: Exp[Vector[A]]) = x match {
-    case Def(Reflect(e @ VectorTimes(_,_), _,_)) => e.asInstanceOf[DeliteOpVectorLoop[A]].size // FIXME: in general this is unsafe, but hey...
-    case Def(Reflect(e @ VectorObjectZeros(l), _,_)) => l // FIXME: in general this is unsafe, but hey...
-    case Def(Reflect(e @ VectorClone(a), _,_)) => vector_length(a) // FIXME: in general this is unsafe, but hey...
-    case Def(e: DeliteOpVectorLoop[A]) => e.size
+    /* these are essential for fusing:    */
+//    case Def(Reflect(e @ VectorTimes(_,_), _,_)) => e.asInstanceOf[DeliteOpVectorLoop[A]].size // FIXME: in general this is unsafe, but hey...
+    case Def(VectorNew(len, isRow)) => len
+    //case Def(Reflect(VectorNew(len, isRow), _,_)) => len // FIXME: in general this is unsafe, but hey...
+    //case Def(Reflect(e @ VectorObjectZeros(l), _,_)) => l // FIXME: in general this is unsafe, but hey...
+    //case Def(Reflect(e @ VectorClone(a), _,_)) => vector_length(a) // FIXME: in general this is unsafe, but hey...
     case Def(VectorObjectZeros(l)) => l
     case Def(VectorClone(a)) => vector_length(a)
     case Def(VectorObjectRange(s,e,d,r)) => (e - s + d - 1) / d
+    case Def(IndexVectorRange(s,e)) => e - s
     case Def(MatrixVView(x, start, stride, l, r)) => l
     case Def(MatrixGetRow(x,i)) => x.numCols
     case Def(StreamChunkRow(x, i, offset)) => x.numCols
     case Def(StreamChunkRowFusable(x, i, offset)) => x.numCols // necessary, it's not a DeliteVectorLoop
-    case _ => super.vector_length(x)
+
+    /* propagate output size information */
+    // some of this could be handled in DeliteCollectionOps, but we need a way to link length (for single tasks)
+    // and size (for data parallel tasks) together. Vector can override dc_size, but has to deal with erasure.    
+    case Def(e: DeliteOpMap[_,_,_]) => e.size
+    case Def(e: DeliteOpZipWith[_,_,_,_]) => e.size
+    //case Def(Reflect(e: DeliteOpMap[_,_,_], _,_)) => e.size // reasonable? mutable things may change size...
+    //case Def(Reflect(e: DeliteOpZipWith[_,_,_,_], _,_)) => e.size // reasonable?
+    //    case Def(e: DeliteOpVectorLoop[A]) => e.size
+    
+    case Def(VectorSlice(a, start, end)) => end - start
+    case Def(VectorMutableTrans(a)) => a.length
+    case Def(VectorConcatenate(a,b)) => a.length + b.length   
+    case Def(VectorSort(a)) => a.length
+      
+    case _ => 
+      //printerr("could not short-circuit call to " + x.toString + ".length")
+      //printerr(findDefinition(x.asInstanceOf[Sym[Vector[A]]]))
+      super.vector_length(x)
   }
 
   override def vector_isRow[A:Manifest](x: Exp[Vector[A]]) = x match {
-    case Def(e: DeliteOpVectorLoop[A]) => e.isRow
+    case Def(e: VectorArithmeticMap[A]) => e.in.asInstanceOf[Exp[Vector[A]]].isRow 
+    case Def(e: VectorArithmeticZipWith[A]) => e.inA.asInstanceOf[Exp[Vector[A]]].isRow 
+    //case Def(e: DeliteOpVectorLoop[A]) => e.isRow
+    //case Def(e: VectorDeliteOp[A] => e.isRow)
     //case Def(Reflect(VectorObjectZeros(l,r), _)) => r
     case Def(VectorClone(a)) => vector_isRow(a)
     case Def(VectorObjectRange(s,e,d,r)) => r
+    case Def(IndexVectorRange(s,e)) => Const(true)
     case Def(MatrixVView(x, start, stride, l, r)) => r
     case Def(MatrixGetRow(x,i)) => Const(true)
     case _ => super.vector_isRow(x)
   }
   
   // and this one also helps in the example:
-  
-  override def vector_apply[A:Manifest](x: Exp[Vector[A]], n: Exp[Int]) = x match {
-    case Def(VectorObjectZeros(l)) => unit(0).asInstanceOf[Exp[A]]
-    case Def(VectorObjectOnes(l)) => unit(1).asInstanceOf[Exp[A]]
-    case Def(VectorObjectRange(s,e,d,r)) => (s + n*d).asInstanceOf[Exp[A]]
-    case Def(VectorTrans(x)) => vector_apply(x,n)
-    case Def(MatrixGetRow(x, i)) => matrix_apply(x,i,n)
-    case Def(StreamChunkRow(x, i, offset)) => stream_chunk_elem(x,i,n)
-    //case Def(StreamChunkRowFusable(x, i, offset)) => stream_chunk_elem(x,i,n) <-- enabling this will remove the computation altogether
-    case _ => super.vector_apply(x,n)
+  def vector_optimize_apply[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int]): Option[Exp[A]] = x match {
+    case Def(VectorObjectZeros(l)) => Some(unit(0).asInstanceOf[Exp[A]])
+    case Def(VectorObjectOnes(l)) => Some(unit(1).asInstanceOf[Exp[A]])
+    case Def(VectorObjectRange(s,e,d,r)) => Some((s + n*d).asInstanceOf[Exp[A]])
+    case Def(IndexVectorRange(s,e)) => Some((s + n).asInstanceOf[Exp[A]])
+    case Def(VectorTrans(x)) => Some(vector_apply(x,n))
+    case Def(MatrixGetRow(x, i)) => Some(matrix_apply(x,i,n))
+    case Def(StreamChunkRow(x, i, offset)) => Some(stream_chunk_elem(x,i,n))
+    //case Def(StreamChunkRowFusable(x, i, offset)) => Some(stream_chunk_elem(x,i,n)) <-- enabling this will remove the computation altogether
+    case _ => None
   }
   
+  override def vector_apply[A:Manifest](x: Exp[Vector[A]], n: Exp[Int]) = {
+    vector_optimize_apply(x.asInstanceOf[Exp[DeliteCollection[A]]],n) getOrElse super.vector_apply(x,n)
+  }
+  
+  override def dc_apply[A:Manifest](x: Exp[DeliteCollection[A]], n: Exp[Int]) = {
+    vector_optimize_apply(x,n) getOrElse super.dc_apply(x,n)
+  }
 }
 
 trait BaseGenVectorOps extends GenericFatCodegen {
@@ -1220,15 +1073,16 @@ trait ScalaGenVectorOps extends BaseGenVectorOps with ScalaGenFat {
     case VectorTrim(x) => emitValDef(sym, quote(x) + ".trim")
     case VectorClear(x) => emitValDef(sym, quote(x) + ".clear()")
     case VectorClone(x) => emitValDef(sym, quote(x) + ".cloneL")
-//      case v@VectorObjectNew(length, isRow) => emitValDef(sym, "new " + remap(v.mV) + "(" + quote(length) + "," + quote(isRow) + ")")
     case v@VectorNew(length, isRow) => emitValDef(sym, "new " + remap(v.mV) + "(" + quote(length) + "," + quote(isRow) + ")")
     case VectorObjectRange(start, end, stride, isRow) => emitValDef(sym, "new " + remap(manifest[RangeVectorImpl]) + "(" + quote(start) + "," + quote(end) + "," + quote(stride) + "," + quote(isRow) + ")")
     case VectorZeroDouble(length, isRow) => emitValDef(sym, "new generated.scala.ZeroVectorDoubleImpl(" + quote(length) + ", " + quote(isRow) + ")")
     case VectorZeroFloat(length, isRow) => emitValDef(sym, "new generated.scala.ZeroVectorFloatImpl(" + quote(length) + ", " + quote(isRow) + ")")
     case VectorZeroInt(length, isRow) => emitValDef(sym, "new generated.scala.ZeroVectorIntImpl(" + quote(length) + ", " + quote(isRow) + ")")
-    case VectorNilDouble() => emitValDef(sym, "generated.scala.NilVectorDoubleImpl")
-    case VectorNilFloat() => emitValDef(sym, "generated.scala.NilVectorFloatImpl")
-    case VectorNilInt() => emitValDef(sym, "generated.scala.NilVectorIntImpl")
+    case VectorEmptyDouble() => emitValDef(sym, "generated.scala.EmptyVectorDoubleImpl")
+    case VectorEmptyFloat() => emitValDef(sym, "generated.scala.EmptyVectorFloatImpl")
+    case VectorEmptyInt() => emitValDef(sym, "generated.scala.EmptyVectorIntImpl")
+    case v@VectorEmpty() => emitValDef(sym, "new generated.scala.EmptyVectorImpl[" + remap(v.mA) + "]")
+    case VectorRawData(x) => emitValDef(sym, quote(getBlockResult(x)) + ".data")  
     case _ => super.emitNode(sym, rhs)
   }
 }
@@ -1244,7 +1098,7 @@ trait CudaGenVectorOps extends BaseGenVectorOps with CudaGenFat with CudaGenData
     case VectorNew(length, isRow) => {
       stream.println(addTab()+"%s *devPtr;".format(remap(sym.Type.typeArguments(0))))
       stream.println(addTab()+"DeliteCudaMalloc((void**)&devPtr,%s*sizeof(%s));".format(quote(length),remap(sym.Type.typeArguments(0))))
-      stream.println(addTab()+"%s *%s = new %s(%s,%s,devPtr);".format(remap(sym.Type),quote(sym),remap(sym.Type),quote(length),quote(isRow)))
+      stream.println(addTab()+"%s *%s_ptr = new %s(%s,%s,devPtr);".format(remap(sym.Type),quote(sym),remap(sym.Type),quote(length),quote(isRow)))
     }
 
     case VectorApply(x, n) =>
@@ -1279,18 +1133,21 @@ trait CudaGenVectorOps extends BaseGenVectorOps with CudaGenFat with CudaGenData
         currDim -= 1
     */
 
+	//case VectorPlusEquals(x,y) =>
+	//	throw new GenerationFailedException("CudaGen: No dimension specified for this kernel.")
+
     case VectorRepmat(x,i,j) =>
       currDim += 1
       val currDimStr = getCurrDimStr()
       setCurrDimLength("%s->length * %s * %s".format(quote(x),quote(i),quote(j)))
       stream.println(addTab()+"if( %s < %s.size() ) {".format(currDimStr,quote(sym)))
       tabWidth += 1
-	    stream.println(addTab()+"int i = %s / (%s.length * %s);".format(currDimStr,quote(x),quote(j)))
-	    stream.println(addTab()+"int j = " + currDimStr + " % " + "(%s.length * %s);".format(quote(x),quote(j)))
+      stream.println(addTab()+"int i = %s / (%s.length * %s);".format(currDimStr,quote(x),quote(j)))
+      stream.println(addTab()+"int j = " + currDimStr + " % " + "(%s.length * %s);".format(quote(x),quote(j)))
       stream.println(addTab()+"%s.update(i,j,%s.apply(%s));".format(quote(sym),quote(x),"j%"+quote(x)+".length"))
       tabWidth -= 1
       stream.println(addTab()+"}")
-      emitMatrixAlloc(sym,"%s".format(quote(i)),"%s->length*%s".format(quote(x),quote(j)),false)
+      emitMatrixAlloc(sym,"%s".format(quote(i)),"%s.length*%s".format(quote(x),quote(j)),false)
       currDim -= 1
     /*
     case VectorOuter(x,y) =>
@@ -1304,7 +1161,7 @@ trait CudaGenVectorOps extends BaseGenVectorOps with CudaGenFat with CudaGenData
       tabWidth -= 1; stream.println(addTab()+"}")
       tabWidth -= 1
       stream.println(addTab()+"}")
-      emitMatrixAlloc(sym,"%s->length".format(quote(x)),"%s->length".format(quote(x)),false)
+      emitMatrixAlloc(sym,"%s.length".format(quote(x)),"%s.length".format(quote(x)),false)
       currDim -= 1
     */
 
@@ -1320,7 +1177,7 @@ trait CudaGenVectorOps extends BaseGenVectorOps with CudaGenFat with CudaGenData
       stream.println(addTab()+"%s %s = %s.apply(%s) - %s.apply(%s);".format(remap(sym.Type.typeArguments(0)),outLocalVar,quote(x),inIndex,quote(y),inIndex))
       saveLocalVar(sym,outIndex,outLocalVar)
       currDim -= 1
-      emitVectorAlloc(sym,"%s->length".format(quote(x)),"true",false)
+      emitVectorAlloc(sym,"%s.length".format(quote(x)),"true",false)
 
     case VectorTrans(x) if(useLocalVar) =>
       currDim += 1
@@ -1345,7 +1202,7 @@ trait CudaGenVectorOps extends BaseGenVectorOps with CudaGenFat with CudaGenData
       }
       saveLocalVar(sym,outIndex,outLocalVar)
       currDim -= 1
-      emitVectorAlloc(sym,"%s->length".format(quote(x)),"true",false)
+      emitVectorAlloc(sym,"%s.length".format(quote(x)),"true",false)
 
     case VectorOuter(x,y) if(useLocalVar) =>
       currDim += 1
@@ -1375,7 +1232,7 @@ trait CudaGenVectorOps extends BaseGenVectorOps with CudaGenFat with CudaGenData
       stream.println(addTab()+"%s %s = %s * %s;".format(remap(sym.Type.typeArguments(0)),outLocalVar,varX,varY))
       saveLocalVar(sym,currDimStr,outLocalVar)
       currDim -= 1
-      emitMatrixAlloc(sym,"%s->length".format(quote(x)),"%s->length".format(quote(x)),false)
+      emitMatrixAlloc(sym,"%s.length".format(quote(x)),"%s.length".format(quote(x)),false)
 
     case _ => super.emitNode(sym, rhs)
   }
@@ -1394,7 +1251,6 @@ trait CGenVectorOps extends BaseGenVectorOps with CGenFat {
       stream.println("%s.isRow = true;".format(quote(sym)))
       stream.println("%s.data = %s_data;".format(quote(sym),quote(sym)))
     case VectorNew(len,isRow) =>
-//    case VectorObjectNew(len,isRow) =>
       stream.println("%s *%s_data = malloc(sizeof(%s)*%s);".format(remap(sym.Type.typeArguments(0)),quote(sym),remap(sym.Type.typeArguments(0)),quote(len)))
       stream.println("%s %s;".format(remap(sym.Type),quote(sym)))
       stream.println("%s.length = %s;".format(quote(sym),quote(len)))

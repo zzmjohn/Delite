@@ -31,6 +31,21 @@ object Config {
 
   val useFsc: Boolean = if (System.getProperty("delite.usefsc") == null) false else true
 
+  val noRegenerate: Boolean = if (System.getProperty("delite.debug.noregenerate") == null) false else true
+
+  /**
+   * DEG specific, set after its parsed
+   * TODO: handle this more rigorously
+   */
+  var deliteBuildHome: String = ""
+
+  /***********
+   *	Cost Modeling
+   */
+  
+	val whileCostThreshold: Int = System.getProperty("delite.while.threshold", "-1").toInt
+	val loopCostThreshold: Int = System.getProperty("delite.loop.threshold", "-1").toInt
+	 
   /***********
     * Statistics and Metrics Section
     */

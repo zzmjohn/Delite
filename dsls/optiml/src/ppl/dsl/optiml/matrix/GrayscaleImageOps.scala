@@ -65,19 +65,15 @@ trait GrayscaleImageOpsExp extends GrayscaleImageOps with VariablesExp {
   // implemented via delite ops
 
   case class GrayscaleImageObjectCartToPolarMagnitude(inA: Exp[Matrix[Float]], inB: Exp[Matrix[Float]])
-    extends DeliteOpZipWith[Float,Float,Float,Matrix] {
+    extends MatrixArithmeticZipWith(inA, inB) {
 
-    val alloc = reifyEffects(Matrix[Float](inA.numRows, inA.numCols))
-    val v = (fresh[Float],fresh[Float])
-    val func = Math.sqrt(v._1*v._1 + v._2*v._2).asInstanceOfL[Float]
+    def func = (a,b) => Math.sqrt(a*a + b*b).asInstanceOfL[Float]
   }
 
   case class GrayscaleImageObjectCartToPolarPhase(inA: Exp[Matrix[Float]], inB: Exp[Matrix[Float]])
-    extends DeliteOpZipWith[Float,Float,Float,Matrix] {
+    extends MatrixArithmeticZipWith(inA, inB) {
 
-    val alloc = reifyEffects(Matrix[Float](inA.numRows, inA.numCols))
-    val v = (fresh[Float],fresh[Float])
-    val func = (Math.atan2(v._2, v._1)*180/Math.Pi).asInstanceOfL[Float]
+    def func = (a,b) => (Math.atan2(b, a)*180/Math.Pi).asInstanceOfL[Float]
   }
 
   ////////////////////
@@ -86,10 +82,19 @@ trait GrayscaleImageOpsExp extends GrayscaleImageOps with VariablesExp {
   def grayscaleimage_obj_new(numRows: Exp[Int], numCols: Exp[Int]) = reflectEffect(GrayscaleImageObjectNew(numRows, numCols))
   def grayscaleimage_obj_frommat(x: Exp[Matrix[Int]]) = reflectEffect(GrayscaleImageObjectFromMat(x))
   def grayscaleimage_obj_carttopolar(x: Exp[Matrix[Float]], y: Exp[Matrix[Float]]) = {
-    val mag = GrayscaleImageObjectCartToPolarMagnitude(x,y)
-    val phase = toAtom(GrayscaleImageObjectCartToPolarPhase(x,y)) mmap { a => if (a < 0f) a + 360f else a } //TODO TR write non-mutable
+    val mag = reflectPure(GrayscaleImageObjectCartToPolarMagnitude(x,y))
+    val phase = reflectPure(GrayscaleImageObjectCartToPolarPhase(x,y)) map { a => if (a < 0f) a + 360f else a } 
     (mag,phase)
   }
+
+  //////////////
+  // mirroring
+
+  override def mirror[A:Manifest](e: Def[A], f: Transformer): Exp[A] = (e match {
+    case GrayscaleImageObjectCartToPolarPhase(a,b) => reflectPure(new { override val original = Some(f,e) } with GrayscaleImageObjectCartToPolarPhase(f(a),f(b)))(mtype(manifest[A]))
+    case Reflect(GrayscaleImageObjectFromMat(x), u, es) => reflectMirrored(Reflect(GrayscaleImageObjectFromMat(f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case _ => super.mirror(e, f)
+  }).asInstanceOf[Exp[A]] // why??
 }
 
 

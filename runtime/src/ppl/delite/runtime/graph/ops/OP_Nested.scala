@@ -33,19 +33,15 @@ abstract class OP_Nested extends DeliteOP {
       dep.addConsumer(this)
     }
     for (in <- inputs.reverse) {
-      this.addInput(in, in.id)
+      this.addInput(in, in.getOutputs.head)
     }
     scheduledResource = resource
 
     private[graph] val outputTypesMap = null
     def task = null
     def isDataParallel = false
-    def cost = 0
-    def size = 0
   }
 
   final def isDataParallel = false
-  final def size = 0
-  final def cost = 0
 
 }
