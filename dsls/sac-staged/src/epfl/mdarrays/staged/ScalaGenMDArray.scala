@@ -212,8 +212,8 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
   }
 
   // support for blocks
-  val BLOCKS = false
-  val BLOCK_SIZE = 32
+  val BLOCKS = System.getProperty("StagedSAC.blocks", "false").toLowerCase == "true"
+  val BLOCK_SIZE = 64
 
   def emitWithLoopNestedFor(index: Int, maxIndex: Int, withNodeSym: Sym[_], withLoop: WithNode[_],
                             emitAction: (String, String) => Unit, lastLevelForLoops: List[String] = Nil)
@@ -287,11 +287,14 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     // emit existing constraints
     stream.println("// with: " + withLoop.toString)
 
+
     // emit actual with loop
     getValueLength(withLoop.lb) match {
       case Some(size) =>
+        System.err.println("With loop modifier with blocks: " + BLOCKS)
         emitWithLoopNestedFor(0, size, withNodeSym, withLoop, emitAction)
       case _ =>
+        System.err.println("With loop with no specialization!")
         // emit loop
         stream.println("for (iv <- iterateWithStep(_lb=" + quote(withLoop.lb) + ", lbStrict=" + quote(withLoop.lbStrict) + ", ubStrict=" + quote(withLoop.ubStrict) + ", _ub=" + quote(withLoop.ub) + ", step=" + quote(withLoop.step) + ", width=" + quote(withLoop.width) + ", opName=opName)) {")
         // emit loop content

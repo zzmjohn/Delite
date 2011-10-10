@@ -226,7 +226,7 @@ trait MDArrayTypingUnifier extends MDArrayTypingPrimitives {
             Lst(l.list.take(p-1) ::: getNewUnknownElement :: l.list.drop(p))
         }
       }
-      (eef.d, eef.a, eef.d) match {
+      (eef.d, eef.a, eef.b) match {
         case (d: Lst, a: Lst, b: Var) if (countUnknowns(d) == 0) =>
           val bb = eliminatePosition(d, a, false, a, b)
           (true, new SubstituteVarToLst(b, bb)::Nil)
@@ -320,6 +320,8 @@ trait MDArrayTypingUnifier extends MDArrayTypingPrimitives {
             }
           } else
             (false, Nil) // sorry, can't unify that, I'm sound but not complete!
+        case _ =>
+          (false, Nil)
       }
     case el: EqualityToLengthOf =>
       (el.a, el.b) match {

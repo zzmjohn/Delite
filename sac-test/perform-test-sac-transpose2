@@ -1,0 +1,15 @@
+#!/bin/bash
+echo Set classpath...
+export CLASSPATH=$CLASSPATH:$DELITE/dsls/sac-staged/target/scala_2.9.x-virtualized-SNAPSHOT/classes/:$DELITE/framework/target/scala_2.9.x-virtualized-SNAPSHOT/classes:$LMS/target/scala_2.9.x-virtualized-SNAPSHOT/classes:.
+#echo Compile...
+#$SCALA_VIRTUALIZED/scalac Transpose2.scala
+echo Stage...
+$SCALA_VIRTUALIZED/scala -Ddelite.home.dir=$DELITE Transpose2Runner #-Dlms.verbosity=2
+echo Execute...
+java -Xmx2048M -Xss100M -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
+#java -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg
+#java -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg
+#java -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg
+#java -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg
+#java -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg
+#java -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg
