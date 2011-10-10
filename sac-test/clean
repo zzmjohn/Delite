@@ -1,0 +1,5 @@
+#!/bin/bash
+rm -rf out.*
+rm -rf *.class
+rm -rf generated
+rm -rf generatedCache

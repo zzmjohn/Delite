@@ -78,29 +78,26 @@ trait MDArrayTypingWithScope extends MDArrayTypingConstraints {
     val shapeVar: TypingVariable = ShapeVar(sym)
     val valueVar: TypingVariable = ValueVar(sym)
 
-    val result = if (currentScope ne null) {
-      val shapeVarValue: TypingVariable = currentScope.fullSubsts(shapeVar)
-      val valueVarValue: TypingVariable = currentScope.fullSubsts(valueVar)
+    assert(currentScope != null)
 
-      // need to limit the value size so we don't overcrowd the graph
-      var valueString = valueVarValue.toString
-      (valueString.length > 40) match {
-        case true =>
-          valueString = valueString.substring(0, 18) + " ... " + valueString.substring(valueString.length - 18)
-        case _ =>
-          ;
-      }
+    val shapeVarValue: TypingVariable = currentScope.fullSubsts(shapeVar)
+    val valueVarValue: TypingVariable = currentScope.fullSubsts(valueVar)
 
-      (valueVar != valueVarValue, shapeVar != shapeVarValue) match {
-        case (true, true) => valueVar.toString + "=" + valueString + " and " + shapeVar.toString + "=" + shapeVarValue.toString
-        case (true, false) => valueVar.toString + "=" + valueString
-        case (false, true) => shapeVar.toString + "=" + shapeVarValue.toString
-        case (false, false) => "?!?"
-      }
-    } else
-      "?!? (typing not performed)"
+    // need to limit the value size so we don't overcrowd the graph
+    var valueString = valueVarValue.toString
+    (valueString.length > 40) match {
+      case true =>
+        valueString = valueString.substring(0, 18) + " ... " + valueString.substring(valueString.length - 18)
+      case _ =>
+        ;
+    }
 
-    result
+    (valueVar != valueVarValue, shapeVar != shapeVarValue) match {
+      case (true, true) => valueVar.toString + "=" + valueString + " and " + shapeVar.toString + "=" + shapeVarValue.toString
+      case (true, false) => valueVar.toString + "=" + valueString
+      case (false, true) => shapeVar.toString + "=" + shapeVarValue.toString
+      case (false, false) => "?!?"
+    }
   }
 
 

@@ -64,6 +64,9 @@ trait DeliteCodegen extends GenericFatCodegen with ppl.delite.framework.codegen.
     val x = fresh[A]
     val y = reifyEffects(f(x))
 
+    performTyping(x, y)
+    // no emitImports necessary here!
+
     val sA = mA.toString
     val sB = mB.toString
 
