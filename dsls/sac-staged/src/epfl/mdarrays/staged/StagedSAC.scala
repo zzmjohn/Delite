@@ -27,9 +27,17 @@ trait StagedSACExp extends StagedSAC with MDArrayBaseExp with MiscOpsExp
 	
 	this: DeliteApplication with StagedSACApplication with StagedSACExp => 
 
+  /*
+    TODO: PROBLEM HERE: Typing can be done while generating the entire program and later be used with the
+     kernels, but the symbol mapping doesn't correspond anymore. Need a fix for this, as now the typer for
+     the entire program runs correctly but the one for kernels never runs.
+
+    // we want a single typer for both the sequential and parallel code
+    lazy val typer = new MDArrayTypingBubbleUp { val IR: StagedSACExp.this.type = StagedSACExp.this }
+   */
   def getCodeGenPkg(t: Target{val IR: StagedSACExp.this.type}) : GenericFatCodegen{val IR: StagedSACExp.this.type} = {
     t match {
-      case _:TargetScala => new StagedSACCodegenScala {  
+      case _:TargetScala => new StagedSACCodegenScala {
 															val IR: StagedSACExp.this.type = StagedSACExp.this
 															val TY = new MDArrayTypingBubbleUp { val IR: StagedSACExp.this.type = StagedSACExp.this }
 														}

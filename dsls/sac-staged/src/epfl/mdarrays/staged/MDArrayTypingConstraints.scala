@@ -176,6 +176,13 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with BaseGenIfThenElse wit
       Nil
     case ToString(x) =>
       Nil
+    case ReadMDArray(fileName, possibleShape) =>
+      Equality(ShapeVar(fileName), Lst(Nil), preReq, rhs)::(possibleShape match {
+        case Some(shape) => Equality(ShapeVar(sym), Lst(shape.map(toValue)), preReq, rhs)::Nil
+        case None => Nil
+      })
+    case WriteMDArray(fileName, array) =>
+      Equality(ShapeVar(fileName), Lst(Nil), preReq, rhs)::Nil
     case _ =>
       super.emitNode(sym, rhs)(null) // for Reify() - careful, if it outputs anything it will crash&burn!
       Nil

@@ -180,4 +180,8 @@ trait MDArrayBase extends Base with Arguments with IfThenElse {
 
   // Function wrapping for scalar elements to mdarrays
   def scalarOperationWrapper[A: Manifest, B: Manifest, C: Manifest](f: (A,B)=>C, operator: String): (Rep[MDArray[A]], Rep[MDArray[B]]) => Rep[MDArray[C]]
+
+  // The IO functions
+  def readMDArray[A: Manifest](fileName: Rep[MDArray[String]], jit: Boolean = true): Rep[MDArray[A]]
+  def writeMDArray[A: Manifest](fileName: Rep[MDArray[String]], array: Rep[MDArray[A]]): Rep[Unit]
 }

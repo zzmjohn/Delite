@@ -51,6 +51,8 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
   }
 
   override def remap[A](m: Manifest[A]) : String = {
+    // TODO: Fix broken remapping!
+    //System.err.println("remap: " + stripped + " of " + m.toString)
     if (m.erasure == classOf[MDArray[Any]])
       if (stripped)
         remap(m.typeArguments.head)
@@ -400,6 +402,12 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
       case st: ToString[_] =>
         emitSymDecl(sym)
         stream.println(quote(st.value) + ".toString")
+      case rd: ReadMDArray[_] =>
+        emitSymDecl(sym)
+        stream.println("readMDArray[" + rd.getManifest + "](" + quote(rd.fileName) + ".content()(0))")
+      case wr: WriteMDArray[_] =>
+        emitSymDecl(sym)
+        stream.println("writeMDArray[" + wr.getManifest + "](" + quote(wr.fileName) + ".content()(0), " + quote(wr.array) + ")")
       case _ =>
         super.emitNode(sym, rhs)
     }
@@ -410,6 +418,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     stream.println("import datastruct.scala.Conversions._;")
     stream.println("import datastruct.scala.Operations._;")
     stream.println("import datastruct.scala.SpecificOperations._;")
+    stream.println("import datastruct.scala.MDArrayIO._;")
   }
 
 }

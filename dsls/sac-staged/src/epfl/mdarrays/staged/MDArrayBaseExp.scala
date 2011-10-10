@@ -3,7 +3,8 @@ package epfl.mdarrays.staged
 import _root_.scala.virtualization.lms.common._
 import epfl.mdarrays.datastruct.scala._
 import epfl.mdarrays.datastruct.scala.Conversions._
-import epfl.mdarrays.datastruct.scala.Operations._
+import epfl.mdarrays.datastruct.scala.Operations
+import epfl.mdarrays.datastruct.scala.MDArrayIO
 
 trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with ArgumentsExp {
   // needed so that foldTerms are not collected by the CSE
@@ -96,6 +97,10 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
     def getMfC = manifest[C]
     override def toString() = "ScalarOperator " + a + " " + operator + " " + b
   }
+
+  // IO Nodes
+  case class ReadMDArray[A: Manifest](fileName: Rep[String], jitShape: Option[MDArray[Int]]) extends Def[MDArray[A]] { override def toString = "ReadMDArray(" + fileName + ")"; def getManifest = manifest[A] }
+  case class WriteMDArray[A: Manifest](fileName: Rep[String], array: Rep[MDArray[A]]) extends Def[Unit] { override def toString = "WriteMDArray(" + fileName + ", " + array + ")"; def getManifest = manifest[A] }
 
   /*
       Abstract function implementation
@@ -193,6 +198,42 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
 
   // Function wrapping for scalar elements to mdarrays
   def scalarOperationWrapper[A: Manifest, B: Manifest, C: Manifest](f: (A,B)=>C, operator: String): ((Exp[MDArray[A]], Exp[MDArray[B]]) => Exp[MDArray[C]]) = ScalarOperatorWrapper(f, operator)
+
+  // The IO functions
+  def readMDArray[A: Manifest](fileName: Exp[MDArray[String]], jit: Boolean = true): Exp[MDArray[A]] = jit match {
+    case true =>
+      var hint: MDArray[Int] = null
+
+      // TODO: If it's that complicated, it's broken! Fixme
+      if (fileName.isInstanceOf[Sym[_]])
+        findDefinition(fileName.asInstanceOf[Sym[_]]) match {
+          case Some(tp) =>
+            if (tp.rhs.isInstanceOf[KnownAtCompileTime[_]]) {
+              val kc = tp.rhs.asInstanceOf[KnownAtCompileTime[Any]]
+              val value = kc.value.asInstanceOf[MDArray[String]]
+              if (Operations.dim(value) == 0)
+                hint = MDArrayIO.readMDArray(value.content()(0)).shape
+            }
+          case None =>
+        }
+
+      hint match {
+        case null =>
+          val sym: Exp[MDArray[A]] = reflectEffect(ReadMDArray(fileName, None))
+          println("Warning: Using JIT compilation for " + sym + ": Cannot access file denoted by: " + findDefinition(fileName.asInstanceOf[Sym[_]]))
+          sym
+        case _ =>
+          val sym: Exp[MDArray[A]] = reflectEffect(ReadMDArray(fileName, Some(hint)))
+          println("Warning: Using JIT compilation for " + sym + " hint: " + hint)
+          sym
+      }
+    case _ =>
+      // the ahead-of-time case
+      reflectEffect(ReadMDArray(fileName, None))
+  }
+
+  def writeMDArray[A: Manifest](fileName: Exp[MDArray[String]], array: Exp[MDArray[A]]): Exp[Unit] =
+    reflectEffect(WriteMDArray(fileName, array))
 
   protected val nothing: Exp[MDArray[Int]] = Nothing
 }
