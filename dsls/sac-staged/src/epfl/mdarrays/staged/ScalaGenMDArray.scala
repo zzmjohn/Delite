@@ -112,8 +112,8 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
       stream.println("}")
       stream.println("// copy new content")
       stream.println("val mainIndex: Int = flatten(" + quote(shpSym) + " ::: rshape.toList, " + iv + " ::: zeros(rshape.length), opName)")
-      stream.println("for (innerIndex <- List.range(0, rshape.length)) {")
-      stream.println("result(mainIndex + innerIndex) = " + loopResult + "(innerIndex)")
+      stream.println("for (innerIndex <- List.range(0, " + loopResult + ".content().length)) {")
+      stream.println("result(mainIndex + innerIndex) = " + loopResult + ".content()(innerIndex)")
       stream.println("}")
     }
 
@@ -211,40 +211,86 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     stream.println("}")
   }
 
+  // support for blocks
+  val BLOCKS = false
+  val BLOCK_SIZE = 32
+
+  def emitWithLoopNestedFor(index: Int, maxIndex: Int, withNodeSym: Sym[_], withLoop: WithNode[_],
+                            emitAction: (String, String) => Unit, lastLevelForLoops: List[String] = Nil)
+                           (implicit stream: PrintWriter): Unit = {
+
+    def emitForRange(lower: String, upper: String) = {
+      // emit loop and filter
+      stream.println("for (iv" + index + " <- List.range(" + lower + ", " + upper + "); if ((iv" + index + " - lb" + index + ") % step" + index + " <= width" + index + ")) {")
+      // emit nested loops
+      emitWithLoopNestedFor(index+1, maxIndex, withNodeSym, withLoop, emitAction, lastLevelForLoops)
+      // emit loop and filter end
+      stream.println("} // for (iv" + index + " ...")
+    }
+
+    def emitForRangeBlock(lower: String, upper: String) = {
+      // emit loop and filter
+      stream.println("for (ivblock" + index + " <- List.range(" + lower + ", " + upper + ")) {")
+      // emit nested loops
+      val newfor = "for(iv" + index + " <- List.range(ivblock" + index + " * " + BLOCK_SIZE + ", (ivblock" + index + " + 1) * " + BLOCK_SIZE + "); if ((iv" + index + " - lb" + index + ") % step" + index + " <= width" + index + "))"
+      emitWithLoopNestedFor(index+1, maxIndex, withNodeSym, withLoop, emitAction, lastLevelForLoops ::: List(newfor))
+      // emit loop and filter end
+      stream.println("} // for (ivblock" + index + " ...")
+    }
+
+    if (index < maxIndex) {
+      // emit loop header
+      stream.println("val lb" + index + ": Int = " + quote(withLoop.lb) + ".content()(" + index + ")")
+      stream.println("val ub" + index + ": Int = " + quote(withLoop.ub) + ".content()(" + index + ")")
+      stream.println("val step" + index + ": Int = " + quote(withLoop.step) + ".content()(" + index + ")")
+      stream.println("val width" + index + ": Int = " + quote(withLoop.width) + ".content()(" + index + ")")
+      stream.println("val ll" + index + ": Int = if (" + quote(withLoop.lbStrict) + ") lb" + index + " + 1 else lb" + index + "")
+      stream.println("val ul" + index + ": Int = if (" + quote(withLoop.ubStrict) + ") ub" + index + " else ub" + index + " + 1")
+      if (BLOCKS) {
+        stream.println("if (ll" + index + " / " + BLOCK_SIZE + " == ul" + index + " / " + BLOCK_SIZE + ") {")
+          // same as before
+          emitForRange("ll" + index, "ul" + index)
+        stream.println("} else {")
+          // split into three cases:
+          // generating the iv in three steps
+          // lb           <= iv  < (lb/64 + 1) * 64
+          // (lb/64 + 1)  <= iv' < ub/64  [ 64 blocks ]
+          // (ub/64) * 64 <= iv  < ub
+          // attention: the case of lb/64 == ub/64 => lb <= iv < ub :)
+          emitForRange("ll" + index, "(ll" + index + " / " + BLOCK_SIZE + " + 1) * " + BLOCK_SIZE)
+          emitForRangeBlock("ll" + index + " / " + BLOCK_SIZE + " + 1", "ul" + index + " / " + BLOCK_SIZE)
+          emitForRange("(ul" + index + " / " + BLOCK_SIZE + ") * " + BLOCK_SIZE, "ul" + index)
+        stream.println("}")
+      } else
+        emitForRange("ll" + index, "ul" + index)
+    } else {
+      // emit blocks
+      for(loop <- lastLevelForLoops)
+        stream.println(loop + "{")
+      // emit loop content
+      stream.print("val " + quote(withLoop.sym) + ": " + remap(withLoop.sym.Type) + " = ")
+      stream.println(List.range(0, maxIndex).map(i => "iv" + i).mkString("", "::","::Nil"))
+      stream.println("val iv: " + remap(withLoop.sym.Type) + " = " + quote(withLoop.sym))
+      stream.println("val feval: " + remap(withNodeSym.Type) + " = {")
+      emitBlock(withLoop.expr)
+      stream.println(quote(getBlockResult(withLoop.expr)))
+      stream.println("}")
+      // emit loop action
+      stream.println("// the action of this loop:")
+      emitAction("iv", "feval")
+      for(loop <- lastLevelForLoops)
+        stream.println("} // " + loop.substring(0, 20) + " ... ")
+    }
+  }
+
   def emitWithLoopModifier(withNodeSym: Sym[_], withLoop: WithNode[_], emitAction: (String, String) => Unit)(implicit stream: PrintWriter) = {
     // emit existing constraints
     stream.println("// with: " + withLoop.toString)
 
     // emit actual with loop
     getValueLength(withLoop.lb) match {
-      case Some(l) =>
-        // emit loop
-        for (index <- List.range(0, l)) {
-          stream.println("val lb" + index + ": Int = " + quote(withLoop.lb) + ".content()(" + index + ")")
-          stream.println("val ub" + index + ": Int = " + quote(withLoop.ub) + ".content()(" + index + ")")
-          stream.println("val step" + index + ": Int = " + quote(withLoop.step) + ".content()(" + index + ")")
-          stream.println("val width" + index + ": Int = " + quote(withLoop.width) + ".content()(" + index + ")")
-          stream.println("val ll" + index + ": Int = if (" + quote(withLoop.lbStrict) + ") lb" + index + " + 1 else lb" + index + "")
-          stream.println("val ul" + index + ": Int = if (" + quote(withLoop.ubStrict) + ") ub" + index + " else ub" + index + " + 1")
-          stream.println("for (iv" + index + " <- List.range(ll" + index + ", ul" + index + ")) {")
-          stream.println("if ((iv" + index + " - lb" + index + ") % step" + index + " <= width" + index + ") {")
-        }
-        // emit loop content
-        stream.print("val " + quote(withLoop.sym) + ": " + remap(withLoop.sym.Type) + " = ")
-        stream.println(List.range(0, l).map(i => "iv" + i).mkString("", "::","::Nil"))
-        stream.println("val iv: " + remap(withLoop.sym.Type) + " = " + quote(withLoop.sym))
-        stream.println("val feval: " + remap(withNodeSym.Type) + " = {")
-        emitBlock(withLoop.expr)
-        stream.println(quote(getBlockResult(withLoop.expr)))
-        stream.println("}")
-        // emit loop action
-        stream.println("// the action of this loop:")
-        emitAction("iv", "feval")
-        // emit loop end
-        for (index <- List.range(0, l)) {
-          stream.println("} // if ((iv" + index + " ...")
-          stream.println("} // for (iv" + index + " ...")
-        }
+      case Some(size) =>
+        emitWithLoopNestedFor(0, size, withNodeSym, withLoop, emitAction)
       case _ =>
         // emit loop
         stream.println("for (iv <- iterateWithStep(_lb=" + quote(withLoop.lb) + ", lbStrict=" + quote(withLoop.lbStrict) + ", ubStrict=" + quote(withLoop.ubStrict) + ", _ub=" + quote(withLoop.ub) + ", step=" + quote(withLoop.step) + ", width=" + quote(withLoop.width) + ", opName=opName)) {")
@@ -273,7 +319,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     TY.doTyping(y, false)
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = {
-    emitChecks(sym, rhs)
+    //emitChecks(sym, rhs)
     emitShapeValue(sym)
 
     rhs match {
