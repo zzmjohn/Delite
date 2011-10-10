@@ -11,7 +11,9 @@ import ppl.delite.framework.codegen.delite.DeliteCodeGenPkg
 import ppl.delite.framework.{DeliteApplication, Config}
 
 // ex. object GDARunner extends OptiMLApplicationRunner with GDA
-trait StagedSACApplicationRunner extends StagedSACApplication with DeliteApplication with StagedSACExp
+trait StagedSACApplicationRunner extends StagedSACApplication with DeliteApplication with StagedSACExp {
+  override lazy val targets = List[DeliteApplicationTarget](scalaTarget)
+}
 
 // ex. trait GDA extends OptiMLApplication
 trait StagedSACApplication extends StagedSAC {
