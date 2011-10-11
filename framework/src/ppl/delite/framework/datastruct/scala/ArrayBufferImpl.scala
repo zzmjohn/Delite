@@ -15,6 +15,18 @@ final class ArrayBufferImpl[@specialized T: Manifest](__length: Int) extends Arr
   
   def update(idx: Int, elem: T) = _data(idx) = elem
   
+  def +=(elem: T) {
+    if (_length >= _data.length) grow()
+    _data(_length) = elem
+    _length += 1
+  }
+  
+  private def grow() {
+    val narr = new Array[T](_data.length * 2)
+    System.arraycopy(_data, 0, narr, 0, _length)
+    _data = narr
+  }
+  
   def unsafeData: Array[T] = _data
   
   def unsafeLength: Int = _length

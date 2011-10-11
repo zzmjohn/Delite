@@ -24,6 +24,8 @@ trait Seq[@specialized T] extends Traversable[T] {
 
 
 trait ArrayBuffer[@specialized T] extends Seq[T] {
+  def +=(elem: T): Unit
+  
   def unsafeData: Array[T]
   def unsafeLength: Int
   def unsafeSetData(arr: Array[T], len: Int)

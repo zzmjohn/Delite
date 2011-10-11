@@ -33,6 +33,7 @@ trait ScalaEmitter {
   def emitBufferDefs(basename: String, elemtype: String)(implicit stream: PrintWriter)
   def emitInitSubActivation(basename: String, activname: String)(implicit stream: PrintWriter)
   def emitAddToBuffer(basename: String, activname: String, elemname: String)(implicit stream: PrintWriter)
+  def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter)
   def emitPostCombine(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter)
   def emitPostProcInit(basename: String, activname: String)(implicit stream: PrintWriter)
   def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter)

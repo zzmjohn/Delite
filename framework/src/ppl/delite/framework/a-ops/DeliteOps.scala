@@ -912,7 +912,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
       if (deliteKernel)
         emitter.emitAddToBuffer(prefixSym, quote(sym), quote(getBlockResult(elem.func)))
       else
-        stream.println(prefixSym + quote(sym) + ".insert(" + prefixSym + quote(sym) + ".length, " + quote(getBlockResult(elem.func)) + ")")
+        emitter.emitAddToDataStructure(prefixSym, quote(sym), quote(getBlockResult(elem.func)))
     } else
       stream.println(prefixSym + quote(sym) + ".dcUpdate(" + quote(op.v) + ", " + quote(getBlockResult(elem.func)) + ")")
   }
@@ -1120,6 +1120,9 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
     }
     def emitAddToBuffer(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
       stream.println(prefixSym + basename + "_buf_append(" + elemname + ")")
+    }
+    def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
+      stream.println(prefixSym + basename + ".insert(" + prefixSym + basename + ".length, " + elemname + ")")
     }
     def emitPostCombine(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {
       stream.println(activname + "." + basename + "_offset = " + lhsname + "." + basename + "_offset + " + lhsname + "." + basename + "_size")

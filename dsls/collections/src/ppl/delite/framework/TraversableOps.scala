@@ -20,6 +20,7 @@ trait TraversableOps extends GenericCollectionOps {
   /* lifting */
   // TODO: possibly have to isolate this into a supertrait hierarchy (with self types) to ensure proper implicit resolution
   implicit def travrep2traversableops[T: Manifest](t: Rep[Traversable[T]]) = new TraversableClsOps[T, Traversable[T]](t)
+  implicit def liftUnit(u: Unit): Rep[Unit]
   
   class TraversableClsOps[T: Manifest, Coll <: Traversable[T]: Manifest](t: Rep[Coll]) {
     def size: Rep[Int] = traversable_size[T, Coll](t)
@@ -42,6 +43,9 @@ trait TraversableOps extends GenericCollectionOps {
 
 trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp with DeliteOpsExp {
 self: ArrayBufferOpsExp with ArrayBufferEmitting =>
+  
+  /* lifting */
+  implicit def liftUnit(u: Unit): Exp[Unit] = Const(())
   
   /* nodes */
   case class TraversableSize[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll]) extends Def[Int]
