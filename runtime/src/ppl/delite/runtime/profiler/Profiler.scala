@@ -19,7 +19,7 @@ object Profiler {
    * 
    *  Example: -Dstats.output.dir=profile -Dstats.output.filename=profile.txt
    */
-  def writeProfile(globalStart: Long, stats: Map[String, List[Timing]]) {
+  def writeProfile(globalStart: Long, globalStartNanos: Long, stats: Map[String, List[Timing]]) {
     val directory = getOrCreateOutputDirectory()
     val timesFile = new File(directory, Config.statsOutputFilename)
     // currently, the timesFile is overwritten for every run
@@ -27,7 +27,7 @@ object Profiler {
     // TODO: the visualization should be able to use such a series of files
     val fileWriter = new PrintWriter(new FileWriter(timesFile))
     //writeProfile(globalStart, stats, fileWriter)
-    Visualizer.writeHtmlProfile(globalStart, stats, fileWriter)
+    Visualizer.writeHtmlProfile(globalStart, globalStartNanos, stats, fileWriter)
   }
   
   def writeProfile(globalStart: Long, stats: Map[String, List[Timing]], writer: PrintWriter) {

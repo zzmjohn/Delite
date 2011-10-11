@@ -136,10 +136,10 @@ object PerformanceTimer
     }
   }
 
-  def print(component: String, globalStart: Long) {
+  def print(component: String, globalStart: Long, globalStartNanos: Long) {
     // special case for component == "prof"
     if (component == "prof") {
-      Profiler.writeProfile(globalStart, stats)
+      Profiler.writeProfile(globalStart, globalStartNanos, stats)
     } else {
       val timeStr = times.get(component) map { time =>
         "[METRICS]: Latest time for component " + component + ": " +  (time.last / 1000000).formatted("%.6f") + "s"

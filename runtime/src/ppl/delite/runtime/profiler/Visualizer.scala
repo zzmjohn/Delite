@@ -330,7 +330,7 @@ object Visualizer {
       <div id="kernels" class="hidden">{ table }</div>
   }
   
-  def generateHtmlProfile(globalStart: Long, stats: Map[String, List[Timing]]) = {
+  def generateHtmlProfile(globalStart: Long, globalStartNanos: Long, stats: Map[String, List[Timing]]) = {
     <html><head>
     <title>Delite Visual Profile</title>
     <link href="hover.css" rel="stylesheet" type="text/css"></link>
@@ -381,8 +381,8 @@ object Visualizer {
     </body></html>
   }
   
-  def writeHtmlProfile(globalStart: Long, stats: Map[String, List[Timing]], writer: PrintWriter) {
-    val htmlNodes = generateHtmlProfile(globalStart, stats)
+  def writeHtmlProfile(globalStart: Long, globalStartNanos: Long, stats: Map[String, List[Timing]], writer: PrintWriter) {
+    val htmlNodes = generateHtmlProfile(globalStart, globalStartNanos, stats)
     val htmlAsString = htmlNodes.toString()
     // post process to replace <br></br>
     val replaced = htmlAsString.replaceAll("<br></br>", "<br/>")
