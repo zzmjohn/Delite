@@ -1,0 +1,6 @@
+export DELITE=$HOME/Desktop/tmpstuff/delite-mdarrays/
+export LMS=$HOME/Desktop/tmpstuff/virtualization-lms-core/
+export SCALA_VIRTUALIZED=$HOME/scala-virtualized/build/pack/
+export SCALA_VIRTUALIZED=$HOME/scala-virtualized/build/pack/bin
+export SCALA_VANILLA=$HOME/scala-virtualized/build/pack/bin
+export VANILLA_VERSION=scala_2.9.x-virtualized-SNAPSHOT

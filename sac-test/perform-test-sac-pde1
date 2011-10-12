@@ -4,8 +4,8 @@ export CLASSPATH=$CLASSPATH:$DELITE/dsls/sac-staged/target/scala_2.9.x-virtualiz
 echo Stage...
 $SCALA_VIRTUALIZED/scala -cp $CLASSPATH -Ddelite.home.dir=$DELITE epfl.mdarrays.tests.pde1.PDE1BenchmarkStagedRunner
 echo Execute...
-java -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
-java -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
-java -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
-java -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
-java -cp $DELITE/runtime/target/scala_2.8.1/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
+java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
+java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
+java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
+java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
+java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg

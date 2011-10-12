@@ -10,6 +10,7 @@ class MDArray[A: ClassManifest](_shape: Array[Int], _content: Array[A]) extends 
   /* DeliteCollection */
   // does this make sense?
 	def size = _content.length
+	def dcSize = _content.length
   def dcApply(idx: Int) = _content(idx)
   def dcUpdate(idx: Int, value: A) { _content(idx) = value }
    

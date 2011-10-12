@@ -23,9 +23,8 @@ abstract class NestedGenerator(nested: OP_Nested, location: Int) extends Executa
 
   protected def kernelName = executableName + location
 
-  override protected def getSync(op: DeliteOP) = "Result_" + baseId + "_" + op.id
-
-  override protected def getSym(op: DeliteOP): String = "o" + baseId + "_" + op.id
+  override protected def getSym(op: DeliteOP, name: String) = NestedCommon.getSym(baseId, op, name)
+  override protected def getSync(op: DeliteOP, name: String) = NestedCommon.getSync(baseId, op, name)
 
   protected def writeHeader(location: Int, out: StringBuilder) {
     out.append("import java.util.concurrent.locks._\n") //locking primitives
@@ -48,7 +47,7 @@ abstract class NestedGenerator(nested: OP_Nested, location: Int) extends Executa
     for ((op,sym) <- nested.getInputs) {
       if (!first) out.append(", ")
       first = false
-      out.append(getSym(sym))
+      out.append(getSym(op, sym))
       out.append(": ")
       out.append(op.outputType(sym))
     }
@@ -64,6 +63,8 @@ abstract class GPUNestedGenerator(nested: OP_Nested, location: Int) extends GPUE
   }
 
   protected def kernelName = executableName + location
+
+  override protected def getScalaSym(op: DeliteOP, name: String) = NestedCommon.getSym(baseId, op, name)
 
   protected def writeFunctionHeader(out: StringBuilder) {
     out.append(nested.outputType(Targets.Cuda))
@@ -83,6 +84,12 @@ abstract class GPUNestedGenerator(nested: OP_Nested, location: Int) extends GPUE
         out.append(nested.cudaMetadata.inputs((in,sym)).resultType)
         out.append("* ")
         out.append(getSymGPU(sym))
+        if ((nested.getMutableInputs. contains (in,sym)) && (in.getConsumers.filter(_.scheduledResource!=in.scheduledResource).nonEmpty)) {
+          out.append(',')
+          out.append(getJNIType(in.outputType(sym)))
+          out.append(' ')
+          out.append(getSymCPU(sym))
+        }
       }
       else if (isPrimitiveType(in.outputType(sym))) {
         if (!first) out.append(',')
@@ -110,7 +117,8 @@ abstract class GPUScalaNestedGenerator(nested: OP_Nested, location: Int) extends
 
   protected def kernelName = executableName + location
 
-  override protected def getSync(op: DeliteOP) = "Result_" + baseId + "_" + op.id
+  override protected def getSym(op: DeliteOP, name: String) = NestedCommon.getSym(baseId, op, name)
+  override protected def getSync(op: DeliteOP, name: String) = NestedCommon.getSync(baseId, op, name)
 
   protected def writeHeader(location: Int, out: StringBuilder) {
     out.append("import java.util.concurrent.locks._\n") //locking primitives
@@ -119,4 +127,9 @@ abstract class GPUScalaNestedGenerator(nested: OP_Nested, location: Int) extends
     out.append(kernelName)
     out.append(" {\n")
   }
+}
+
+private [codegen] object NestedCommon { //TODO: traits?
+  def getSym(baseId: String, op: DeliteOP, name: String) = "x" + baseId + "_" + name
+  def getSync(baseId: String, op: DeliteOP, name: String) = "Result_" + baseId + "_" + name
 }
