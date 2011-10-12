@@ -8,7 +8,7 @@ import ppl.delite.framework.collections._
 
 trait HelloCollections extends CollectionsApplication {
   def main() {
-    val xs = Buffer[Int](6)
+    val xs = ArraySeq[Int](6)
     println("hello array: " + xs.size)
     println("Now printing in foreach.")
     for (x <- xs) println(x)
@@ -16,7 +16,7 @@ trait HelloCollections extends CollectionsApplication {
     val ys = xs.map(_ + 1)
     for (y <- ys) println(y)
     println("Now some filtering.")
-    val zs = ys.filter(_ % 2 == 0)
+    val zs = ys.filter(_ % 2 == 1)
     println("Elements left after filter: " + zs.size)
     for (z <- zs) println(z)
     println("Nested computation.")

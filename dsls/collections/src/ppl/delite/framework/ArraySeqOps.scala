@@ -14,7 +14,7 @@ trait ArraySeqOps extends SeqOps {
   
   /* ctors */
   // TODO - array buffer
-  object Buffer {
+  object ArraySeq {
     def apply[T: Manifest](length: Rep[Int]) = arraybuffer_obj_new(length)
   }
   
@@ -51,8 +51,8 @@ self: ArraySeqEmitting =>
   /* can-build rules */
   implicit def arrayBufferCanBuild[T: Manifest, S: Manifest] = new CanBuild[ArraySeq[T], S, ArraySeq[S]] {
     // TODO: why doesn't this implicit conversion get resolved automatically? It is available in the current scope without a prefix.
-    def alloc(source: Exp[ArraySeq[T]]) = Buffer[S](arraybufferrep2traversableops(source).size)
-    def emptyAlloc(source: Exp[ArraySeq[T]]) = Buffer[S](Const(0))
+    def alloc(source: Exp[ArraySeq[T]]) = ArraySeq[S](arraybufferrep2traversableops(source).size)
+    def emptyAlloc(source: Exp[ArraySeq[T]]) = ArraySeq[S](Const(0))
     def emitterScala(source: Exp[ArraySeq[T]]): ScalaEmitter = scalaArraySeqEmitter[T]
   }
   

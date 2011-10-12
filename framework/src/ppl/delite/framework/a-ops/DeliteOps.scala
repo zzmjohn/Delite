@@ -1210,7 +1210,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
     stream.println("__act")
     stream.println(/*{*/"}")
     // processRange
-    stream.println("def processRange(__act: " + actType + ", start: Int, end: Int): " + actType + " = {"/*}*/)
+    stream.println("def processRange(__act: " + actType + ", start: Int, end: Int, chunkIdx: Int, numChunks: Int): " + actType + " = {"/*}*/)
     stream.println("var idx = start")
     stream.println("val __act2 = init(__act,idx)")
     stream.println("idx += 1")
