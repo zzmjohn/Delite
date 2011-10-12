@@ -23,7 +23,7 @@ trait Seq[@specialized T] extends Traversable[T] {
 }
 
 
-trait ArrayBuffer[@specialized T] extends Seq[T] {
+trait ArraySeq[@specialized T] extends Seq[T] {
   def +=(elem: T): Unit
   
   def unsafeData: Array[T]

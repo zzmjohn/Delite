@@ -29,7 +29,7 @@ trait SeqOps extends TraversableOps {
 
 
 trait SeqOpsExp extends TraversableOpsExp {
-self: ArrayBufferOpsExp with ArrayBufferEmitting =>
+self: ArraySeqOpsExp with ArraySeqEmitting =>
   
   /* nodes */
   
@@ -39,14 +39,14 @@ self: ArrayBufferOpsExp with ArrayBufferEmitting =>
   implicit def seqCanBuild[T: Manifest, S: Manifest]: CanBuild[Seq[T], S, Seq[S]] = new CanBuild[Seq[T], S, Seq[S]] {
     def alloc(source: Exp[Seq[T]]) = Buffer.apply[S](seqrep2traversableops(source).size)
     def emptyAlloc(source: Exp[Seq[T]]) = Buffer[S](Const(0))
-    def emitterScala(source: Exp[Seq[T]]) = scalaArrayBufferEmitter[T]
+    def emitterScala(source: Exp[Seq[T]]) = scalaArraySeqEmitter[T]
   }
   
 }
 
 
 trait ScalaGenSeqOps extends ScalaGenTraversableOps {
-self: ScalaGenArrayBufferOps =>
+self: ScalaGenArraySeqOps =>
   
   val IR: SeqOpsExp
   import IR._

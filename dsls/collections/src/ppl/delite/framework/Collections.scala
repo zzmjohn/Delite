@@ -16,20 +16,20 @@ import java.io.File
 trait CollectionsOps
 extends TraversableOps
 with SeqOps
-with ArrayBufferOps
+with ArraySeqOps
 
 
 trait CollectionsOpsExp
 extends TraversableOpsExp
 with SeqOpsExp
-with ArrayBufferOpsExp
-with ArrayBufferEmitting
+with ArraySeqOpsExp
+with ArraySeqEmitting
 
 
 trait ScalaGenCollectionsOps
 extends ScalaGenTraversableOps
 with ScalaGenSeqOps
-with ScalaGenArrayBufferOps
+with ScalaGenArraySeqOps
 {
   val IR: CollectionsOpsExp
 }

@@ -42,7 +42,7 @@ trait TraversableOps extends GenericCollectionOps {
 
 
 trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp with DeliteOpsExp {
-self: ArrayBufferOpsExp with ArrayBufferEmitting =>
+self: ArraySeqOpsExp with ArraySeqEmitting =>
   
   /* lifting */
   implicit def liftUnit(u: Unit): Exp[Unit] = Const(())
@@ -83,14 +83,14 @@ self: ArrayBufferOpsExp with ArrayBufferEmitting =>
   implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
     def alloc(source: Exp[Traversable[T]]) = Buffer.apply[S](travrep2traversableops(source).size)
     def emptyAlloc(source: Exp[Traversable[T]]) = Buffer[S](Const(0))
-    def emitterScala(source: Exp[Traversable[T]]) = scalaArrayBufferEmitter[T]
+    def emitterScala(source: Exp[Traversable[T]]) = scalaArraySeqEmitter[T]
   }
   
 }
 
 
 trait ScalaGenTraversableOps extends ScalaGenFat with GenericCollectionGen {
-self: ScalaGenArrayBufferOps =>
+self: ScalaGenArraySeqOps =>
   
   val IR: TraversableOpsExp
   import IR._

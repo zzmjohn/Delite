@@ -5,7 +5,7 @@ package ppl.delite.framework.datastruct.scala
 
 
 
-final class ArrayBufferImpl[@specialized T: Manifest](__length: Int) extends ArrayBuffer[T] {
+final class ArraySeqImpl[@specialized T: Manifest](__length: Int) extends ArraySeq[T] {
   private var _length = __length
   private var _data = new Array[T](__length)
   
@@ -36,7 +36,7 @@ final class ArrayBufferImpl[@specialized T: Manifest](__length: Int) extends Arr
     _length = len
   }
   
-  override def toString = "ArrayBufferImpl(sz: %d; %s)".format(_length, _data.mkString(", "))
+  override def toString = "ArraySeqImpl(sz: %d; %s)".format(_length, _data.mkString(", "))
   
 }
 

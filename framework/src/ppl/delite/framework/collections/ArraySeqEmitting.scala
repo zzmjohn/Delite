@@ -10,9 +10,9 @@ import ppl.delite.framework.ops.DeliteOpsExp
 
 
 
-trait ArrayBufferEmitting {
+trait ArraySeqEmitting {
   
-  def scalaArrayBufferEmitter[T] = new ScalaEmitter {
+  def scalaArraySeqEmitter[T] = new ScalaEmitter {
     def emitBufferDefs(basename: String, elemtype: String)(implicit stream: PrintWriter) {
       stream.println("var " + basename + "_buf: Array[" + elemtype + "] = _")
       stream.println("var " + basename + "_size = 0")
