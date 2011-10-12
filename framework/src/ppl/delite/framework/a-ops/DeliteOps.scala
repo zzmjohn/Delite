@@ -10,7 +10,7 @@ import ppl.delite.framework.extern.lib._
 import ppl.delite.framework.collections.ScalaEmitter
 
 //trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with LoopsFatExp {
-trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with LoopsFatExp 
+trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with LoopsFatExp with IfThenElseFatExp
     with VariantsOpsExp with DeliteCollectionOpsExp
     with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp  {
   
