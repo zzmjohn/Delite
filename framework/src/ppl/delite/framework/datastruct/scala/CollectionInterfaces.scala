@@ -32,4 +32,11 @@ trait ArraySeq[@specialized T] extends Seq[T] {
 }
 
 
+trait Map[@specialized K, @specialized V] extends Traversable[(K, V)] {
+  def get(k: K): V
+  def put(k: K, v: V)
+}
 
+
+trait HashMap[@specialized K, @specialized V] extends Map[K, V] {
+}

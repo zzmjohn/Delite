@@ -20,7 +20,7 @@ trait HelloCollections extends CollectionsApplication {
     println("Elements left after filter: " + zs.size)
     for (z <- zs) println(z)
     
-    
+    val ms = HashMap[String, String]()
   }
 }
 

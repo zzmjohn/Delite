@@ -17,6 +17,8 @@ trait CollectionsOps
 extends TraversableOps
 with SeqOps
 with ArraySeqOps
+with MapOps
+with HashMapOps
 
 
 trait CollectionsOpsExp
@@ -24,12 +26,17 @@ extends TraversableOpsExp
 with SeqOpsExp
 with ArraySeqOpsExp
 with ArraySeqEmitting
+with MapOpsExp
+with HashMapOpsExp
+with HashMapEmitting
 
 
 trait ScalaGenCollectionsOps
 extends ScalaGenTraversableOps
 with ScalaGenSeqOps
 with ScalaGenArraySeqOps
+with ScalaGenMapOps
+with ScalaGenHashMapOps
 {
   val IR: CollectionsOpsExp
 }
