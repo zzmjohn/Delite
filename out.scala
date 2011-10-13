@@ -10,14 +10,14 @@ val x4 = println(x3)
 val x5 = println("Now printing in foreach.")
 // a *thin* loop follows: x6
 var x6: Unit = ()
-var x29 = 0
-while (x29 < x2) {  // begin fat loop x6
-val x30 = x1.dcApply(x29)
-val x31 = println(x30)
+var x27 = 0
+while (x27 < x2) {  // begin fat loop x6
+val x28 = x1.dcApply(x27)
+val x29 = println(x28)
 x6 = {
-x31
+x29
 }
-x29 += 1
+x27 += 1
 } // end fat loop x6
 val x7 = println("Now mapping and printing in foreach.")
 val x9 = new generated.scala.ArraySeqImpl[Int](x2)
@@ -35,14 +35,14 @@ x10 += 1
 val x13 = x8.size
 // a *thin* loop follows: x14
 var x14: Unit = ()
-var x34 = 0
-while (x34 < x13) {  // begin fat loop x14
-val x35 = x8.dcApply(x34)
-val x36 = println(x35)
+var x32 = 0
+while (x32 < x13) {  // begin fat loop x14
+val x33 = x8.dcApply(x32)
+val x34 = println(x33)
 x14 = {
-x36
+x34
 }
-x34 += 1
+x32 += 1
 } // end fat loop x14
 val x15 = println("Now some filtering.")
 val x17 = new generated.scala.ArraySeqImpl[Int](x13)
@@ -64,41 +64,15 @@ val x23 = "Elements left after filter: "+x22
 val x24 = println(x23)
 // a *thin* loop follows: x25
 var x25: Unit = ()
-var x39 = 0
-while (x39 < x22) {  // begin fat loop x25
-val x40 = x16.dcApply(x39)
-val x41 = println(x40)
+var x37 = 0
+while (x37 < x22) {  // begin fat loop x25
+val x38 = x16.dcApply(x37)
+val x39 = println(x38)
 x25 = {
-x41
+x39
 }
-x39 += 1
+x37 += 1
 } // end fat loop x25
-val x26 = println("Nested computation.")
-// a *thin* loop follows: x27
-var x27: Unit = ()
-var x44 = 0
-while (x44 < x2) {  // begin fat loop x27
-val x45 = x1.dcApply(x44)
-val x53 = x45 + 1
-// a *thin* loop follows: x46
-val x46 = {
-//TODO: buffer size might be wrong (loop has conditions)
-x17
-}
-var x50 = 0
-while (x50 < x13) {  // begin fat loop x46
-val x51 = x8.dcApply(x50)
-val x52 = x51 % 2
-val x54 = x52==x53
-if (x54) x46.+=(x51)
-x50 += 1
-} // end fat loop x46
-val x47 = println(x46)
-x27 = {
-x47
-}
-x44 += 1
-} // end fat loop x27
 ()
 }
 }

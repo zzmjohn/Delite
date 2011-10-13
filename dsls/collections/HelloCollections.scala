@@ -19,11 +19,8 @@ trait HelloCollections extends CollectionsApplication {
     val zs = ys.filter(_ % 2 == 1)
     println("Elements left after filter: " + zs.size)
     for (z <- zs) println(z)
-    println("Nested computation.")
-    for (x <- xs) {
-      val ts = ys.filter(_ % 2 == (x + 1))
-      println(ts)
-    }
+    
+    
   }
 }
 

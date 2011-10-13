@@ -104,7 +104,7 @@ val dsls = new Project(config.delite_home, "DSLs")
 val scala_apps = new Project(config.delite_home, "Scala Apps")
 val applications = new Project(config.delite_home, "Applications")
 val delite = new Project(config.delite_home, "Delite")
-val runtime = new Project(config.delite_home + File.separator + "runtime", "runtime")
+val runtime = new Project(config.delite_home, "runtime")
 
 configureScalapath("scala_virtualized", "scala virtualized", framework.scala)
 configureScalapath("scala_vanilla", "scala vanilla", runtime.scala)
