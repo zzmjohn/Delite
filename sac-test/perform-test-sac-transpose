@@ -1,15 +1,26 @@
 #!/bin/bash
+
+export HEAP_SIZE=2048m
+export JAVA_OPTS="-Xmx$HEAP_SIZE"
+
 echo Set classpath...
-export CLASSPATH=$CLASSPATH:$DELITE/dsls/sac-staged/target/scala_2.9.x-virtualized-SNAPSHOT/classes/:$DELITE/framework/target/scala_2.9.x-virtualized-SNAPSHOT/classes:$LMS/target/scala_2.9.x-virtualized-SNAPSHOT/classes:.
-#echo Compile...
+export CLASSPATH=$CLASSPATH:$DELITE/dsls/sac-staged/target/$VANILLA_VERSION/classes/:$DELITE/framework/target/$VANILLA_VERSION/classes:$LMS/target/$VANILLA_VERSION/classes:.
+echo Compile...
 $SCALA_VIRTUALIZED/scalac Transpose.scala
 
-echo Stage...
-$SCALA_VIRTUALIZED/scala -Ddelite.home.dir=$DELITE -DStagedSAC.blocks=true TransposeRunner #-Dlms.verbosity=2
-echo Execute...
-java -Xmx8g -server -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
+echo "Stage... (JIT/Blocks)"
+$SCALA_VIRTUALIZED/scala -Ddelite.home.dir=$DELITE -DStagedSAC.blocks=true -DTranspose.JIT=true TransposeRunner #-Dlms.verbosity=2
+echo "Execute... (JIT/Blocks)"
+java -Xmx$HEAP_SIZE -server -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
 
-echo Stage...
-$SCALA_VIRTUALIZED/scala -Ddelite.home.dir=$DELITE -DStagedSAC.blocks=false TransposeRunner #-Dlms.verbosity=2
-echo Execute...
-java -Xmx8g -server -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
+echo "Stage... (JIT/noBlocks)"
+$SCALA_VIRTUALIZED/scala -Ddelite.home.dir=$DELITE -DStagedSAC.blocks=false -DTranspose.JIT=true TransposeRunner #-Dlms.verbosity=2
+echo "Execute... (JIT/noBlocks)"
+java -Xmx$HEAP_SIZE -server -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
+
+echo "Stage... (noJIT/noBlocks)"
+$SCALA_VIRTUALIZED/scala -Ddelite.home.dir=$DELITE -DStagedSAC.blocks=true -DTranspose.JIT=false TransposeRunner #-Dlms.verbosity=2
+echo "Execute... (noJIT/noBlocks)"
+java -Xmx$HEAP_SIZE -server -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
+
+

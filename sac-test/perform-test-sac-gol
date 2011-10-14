@@ -1,7 +1,14 @@
 #!/bin/bash
+
+export HEAP_SIZE=2048m
+export JAVA_OPTS="-Xmx$STACK_SIZE"
+
 echo Set classpath...
-export CLASSPATH=$CLASSPATH:$DELITE/dsls/sac-staged/target/scala_2.9.x-virtualized-SNAPSHOT/classes/:$DELITE/framework/target/scala_2.9.x-virtualized-SNAPSHOT/classes:$LMS/target/scala_2.9.x-virtualized-SNAPSHOT/classes:.
+export CLASSPATH=$CLASSPATH:$DELITE/dsls/sac-staged/target/$VANILLA_VERSION/classes/:$DELITE/framework/target/$VANILLA_VERSION/classes:$LMS/target/$VANILLA_VERSION/classes:.
 echo Stage...
 $SCALA_VIRTUALIZED/scala -Ddelite.home.dir=$DELITE epfl.mdarrays.tests.gol.GameOfLifeStagedRunner
+
 echo Execute...
-java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg
+java -Xmx$HEAP_SIZE -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=1 -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
+echo Execute...
+java -Xmx$HEAP_SIZE -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
