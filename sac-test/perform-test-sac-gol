@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export HEAP_SIZE=2048m
-export JAVA_OPTS="-Xmx$STACK_SIZE"
+export JAVA_OPTS="-Xmx$HEAP_SIZE"
 
 echo Set classpath...
 export CLASSPATH=$CLASSPATH:$DELITE/dsls/sac-staged/target/$VANILLA_VERSION/classes/:$DELITE/framework/target/$VANILLA_VERSION/classes:$LMS/target/$VANILLA_VERSION/classes:.

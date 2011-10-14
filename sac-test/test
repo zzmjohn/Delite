@@ -5,5 +5,4 @@ do
     echo MATRIX SIZE: $a
     ./create_matrix.sh $a
     ./perform-test-sac-transpose
-    ./perform-test-sac-transpose2
 done
