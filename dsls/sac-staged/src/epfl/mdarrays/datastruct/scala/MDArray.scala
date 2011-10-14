@@ -5,7 +5,7 @@ import epfl.mdarrays.datastruct.scala.Operations._
 import epfl.mdarrays.datastruct.scala.SpecificOperations._
 import epfl.mdarrays.datastruct.scala.With._
 
-class MDArray[A: ClassManifest](_shape: Array[Int], _content: Array[A]) extends ppl.delite.framework.datastruct.scala.DeliteCollection[A] {
+class MDArray[@specialized(Int, Double, Boolean) A: ClassManifest](_shape: Array[Int], _content: Array[A]) extends ppl.delite.framework.datastruct.scala.DeliteCollection[A] {
   
   /* DeliteCollection */
   // does this make sense?

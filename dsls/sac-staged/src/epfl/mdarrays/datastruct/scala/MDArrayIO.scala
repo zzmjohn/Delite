@@ -11,16 +11,16 @@ object MDArrayIO {
     val lines: List[String] = source.getLines.toList
 
     // read dimension
-    if (lines.size < 1) error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain dimension!")
+    if (lines.size < 1) sys.error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain dimension!")
     val dimension = lines.head.toInt
 
     // read shape
-    if (lines.size < 1 + dimension) error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain the entire shape!")
+    if (lines.size < 1 + dimension) sys.error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain the entire shape!")
     val shape: List[Int] = readList[Int](lines.tail, dimension)
 
     // read contents
     val size = shape.foldLeft(1) {_*_}
-    if (lines.size < 1 + dimension + size) error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain the data!")
+    if (lines.size < 1 + dimension + size) sys.error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain the data!")
     val data: List[A] = readList[A](lines.drop(1 + dimension), size)
 
     // close file
@@ -61,6 +61,6 @@ object MDArrayIO {
     else if (mf.erasure == classOf[Float])
       line.toFloat.asInstanceOf[A]
     else
-      error("MDArrayIO.readData[" + mf.toString + "]: Unable to read this type of data")
+      sys.error("MDArrayIO.readData[" + mf.toString + "]: Unable to read this type of data")
   }
 }
