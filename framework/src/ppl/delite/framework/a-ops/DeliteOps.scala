@@ -219,7 +219,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
    */ 
   abstract class DeliteOpMap[A:Manifest,
                              B:Manifest, CB <: DeliteCollection[B]:Manifest]
-    extends DeliteOpLoop[CB] {
+  extends DeliteOpLoop[CB] {
     type OpType <: DeliteOpMap[A,B,CB]
 
     // supplied by subclass
@@ -227,12 +227,13 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     //val size: Exp[Int] // could be dc_size(in), but we want type-specific pattern matching to work
     def func: Exp[A] => Exp[B]
     def alloc: Exp[CB]
+    def emitterScala: Option[ScalaEmitter] = None
 
     // loop
     lazy val body: Def[CB] = copyBodyOrElse(DeliteCollectElem[B, CB](
       alloc = reifyEffects(this.alloc),
       func = reifyEffects(this.func(dc_apply(in,v))),
-      emitterScala = None
+      emitterScala = emitterScala
     ))
   }
 
@@ -1148,7 +1149,8 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
     (symList zip op.body) foreach {
       case (sym, elem: DeliteCollectElem[_,_]) => 
         stream.println("var " + quote(sym) + ": " + remap(sym.Type) + " = _")
-        if (elem.cond.nonEmpty) {
+        println("emitter: " + elem.emitterScala + ", " + elem)
+        if (elem.emitterScala.nonEmpty) {
           val emitter = elem.emitterScala.getOrElse(standardScalaEmitter)
           emitter.emitBufferDefs(quote(sym), remap(getBlockResult(elem.func).Type))
         }

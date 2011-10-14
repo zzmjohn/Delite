@@ -40,6 +40,7 @@ self: ArraySeqOpsExp with ArraySeqEmitting =>
     def alloc(source: Exp[Seq[T]]) = ArraySeq.apply[S](seqrep2traversableops(source).size)
     def emptyAlloc(source: Exp[Seq[T]]) = ArraySeq[S](Const(0))
     def emitterScala(source: Exp[Seq[T]]) = scalaArraySeqEmitter[T]
+    def noPrealloc = false
   }
   
 }

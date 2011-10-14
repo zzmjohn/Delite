@@ -11,11 +11,29 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
   private var data = _data
   private var sz = _sz
   
+  def this() = this(Array.fill(128)(-1), new Array(52), 0)
+  def this(indsz: Int, datasz: Int) = this(Array.fill(indsz)(-1), new Array(datasz), 0)
+  
+  private def nextPow2(x: Int) = {
+    var c = x - 1;
+    c |= c >>>  1;
+    c |= c >>>  2;
+    c |= c >>>  4;
+    c |= c >>>  8;
+    c |= c >>> 16;
+    c + 1;
+  }
+  
+  @inline private def absolute(hc: Int) = {
+    val mask = hc >> 31
+    (hc + mask) ^ mask
+  }
+  
   def size = sz
   
   def get(k: K): V = {
     val hc = k.##
-    var pos = (hc % (indices.length / 2)) * 2
+    var pos = (absolute(hc) % (indices.length / 2)) * 2
     var currelem = indices(pos)
     var currhash = indices(pos + 1)
     
@@ -31,7 +49,7 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
   
   def put(k: K, v: V) {
     val hc = k.##
-    var pos = (hc % (indices.length / 2)) * 2
+    var pos = (absolute(hc) % (indices.length / 2)) * 2
     var currelem = indices(pos)
     var currhash = indices(pos + 1)
     
@@ -44,6 +62,7 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
     if (currelem == -1) {
       val datapos = sz * 2
       indices(pos) = datapos
+      indices(pos + 1) = hc
       data(datapos) = k.asInstanceOf[AnyRef]
       data(datapos + 1) = v.asInstanceOf[AnyRef]
       sz += 1
@@ -56,8 +75,16 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
     }
   }
   
+  def statistics = {
+"""size: %d
+indices length: %d
+data length: %d
+growth threshold: %d
+""".format(sz, indices.length, data.length, (loadfactor_d2 * indices.length).toInt)
+  }
+  
   private def grow() = if (sz > (loadfactor_d2 * indices.length)) {
-    val nindices = new Array[Int](indices.length * 2)
+    val nindices = Array.fill[Int](indices.length * 2)(-1)
     val ndata = new Array[AnyRef](data.length * 2)
     
     // copy raw data
@@ -70,7 +97,7 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
       val elem = indices(i)
       if (elem != -1) {
         val hash = indices(i + 1)
-        var pos = (hash % totalnindices) * 2
+        var pos = (absolute(hash) % totalnindices) * 2
         
         // insert it into nindices
         var currelem = nindices(pos)

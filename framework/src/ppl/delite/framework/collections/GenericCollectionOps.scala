@@ -17,6 +17,7 @@ trait GenericCollectionOps extends DSLType with Variables {
     def alloc(source: Rep[Coll]): Rep[Target]
     def emptyAlloc(source: Rep[Coll]): Rep[Target]
     def emitterScala(source: Rep[Coll]): ScalaEmitter
+    def noPrealloc: Boolean
   }
   
 }

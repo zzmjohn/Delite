@@ -44,6 +44,7 @@ self: HashMapOpsExp with HashMapEmitting =>
     def alloc(source: Exp[HashMap[K, V]]) = HashMap.apply[P, Q]()
     def emptyAlloc(source: Exp[HashMap[K, V]]) = HashMap[P, Q]()
     def emitterScala(source: Exp[HashMap[K, V]]) = scalaHashMapEmitter[K, V]
+    def noPrealloc = true
   }
   
   def hashmap_obj_new[K: Manifest, V: Manifest](): Exp[HashMap[K, V]] = HashMapNew[K, V]()(manifest[HashMapImpl[K, V]])
