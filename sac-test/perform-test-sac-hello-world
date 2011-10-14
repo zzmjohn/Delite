@@ -7,7 +7,3 @@ echo Stage...
 $SCALA_VIRTUALIZED/scala -Ddelite.home.dir=$DELITE HelloWorldRunner #-Dlms.verbosity=2
 echo Execute...
 java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg
-#java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg
-#java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg
-#java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg
-#java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar ppl.delite.runtime.Delite out.deg

@@ -4,22 +4,22 @@ import epfl.mdarrays.datastruct.scala.Operations._
 import epfl.mdarrays.datastruct.scala.SpecificOperations._
 
 object Conversions {
-  implicit def convertFromList[A: ClassManifest](a: List[A]): MDArray[A] = new MDArray[A]((a.length::Nil).toArray, a.toArray)
-  implicit def convertToList[A](a: MDArray[A]): List[A] =
+  implicit def convertFromList[@specialized A: ClassManifest](a: List[A]): MDArray[A] = new MDArray[A]((a.length::Nil).toArray, a.toArray)
+  implicit def convertToList[@specialized A](a: MDArray[A]): List[A] =
     if (a.dim == 1)
       a.content().toList
     else
       throw new Exception("convertToList: The array cannot be converted to a list: "+a)
 
-  implicit def convertFromArray[A: ClassManifest](a: Array[A]): MDArray[A] = new MDArray[A]((a.length::Nil).toArray, a)
-  implicit def convertToArray[A](a: MDArray[A]): Array[A] =
+  implicit def convertFromArray[@specialized A: ClassManifest](a: Array[A]): MDArray[A] = new MDArray[A]((a.length::Nil).toArray, a)
+  implicit def convertToArray[@specialized A](a: MDArray[A]): Array[A] =
     if (a.dim == 1)
       a.content()
     else
       throw new Exception("convertToList: The array cannot be converted to a list: "+a)
 
-  implicit def convertFromValue[A: ClassManifest](a: A): MDArray[A] = new MDArray[A](new Array(0), Array(a))
-  implicit def convertToValue[A](a: MDArray[A]): A =
+  implicit def convertFromValue[@specialized A: ClassManifest](a: A): MDArray[A] = new MDArray[A](new Array(0), Array(a))
+  implicit def convertToValue[@specialized A](a: MDArray[A]): A =
     if (a.dim == 0)
       a.content()(0)
     else

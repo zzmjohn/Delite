@@ -13,7 +13,7 @@ object SpecificOperations {
 //  }
 
   /** Reshape implementation */
-  def internalReshape[A: ClassManifest](iv: MDArray[Int], a: Array[A], opName: String): MDArray[A] = {
+  def internalReshape[@specialized A: ClassManifest](iv: MDArray[Int], a: Array[A], opName: String): MDArray[A] = {
 
     if (iv.dim != 1)
       throw new Exception(opName + ": The shape vector (" + iv + ") must be one-dimensional")
@@ -59,7 +59,7 @@ object SpecificOperations {
   }
 
   /** where implementation */
-  def internalWhere[A: ClassManifest](p: MDArray[Boolean], a: MDArray[A], b: MDArray[A], opName: String): MDArray[A] = {
+  def internalWhere[@specialized A: ClassManifest](p: MDArray[Boolean], a: MDArray[A], b: MDArray[A], opName: String): MDArray[A] = {
     if (!shapeEqual(p.shape, a.shape) ||
         !shapeEqual(p.shape, b.shape))
       throw new Exception(opName + ": matrices of different shapes: p:" + p.shape + " a:" + a.shape + " b:" + b.shape)

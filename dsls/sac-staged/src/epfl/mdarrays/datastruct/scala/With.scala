@@ -4,7 +4,7 @@ import epfl.mdarrays.datastruct.scala.Operations._
 import epfl.mdarrays.datastruct.scala.Conversions._
 import epfl.mdarrays.datastruct.scala.SpecificOperations._
 
-class With[A: ClassManifest](
+class With[@specialized A: ClassManifest](
            lb: MDArray[Int] = null,
            lbStrict: Boolean = false,
            ubStrict: Boolean = false,
@@ -146,13 +146,13 @@ class With[A: ClassManifest](
 }
 
 object With {
-  def apply[A: ClassManifest](lb: MDArray[Int] = null,
-           lbStrict: Boolean = false,
-           ubStrict: Boolean = false,
-           ub: MDArray[Int] = null,
-           step: MDArray[Int] = null,
-           width: MDArray[Int] = null,
-           function: MDArray[Int] => MDArray[A]): With[A] = {
+  def apply[@specialized A: ClassManifest](lb: MDArray[Int] = null,
+                                                                 lbStrict: Boolean = false,
+                                                                 ubStrict: Boolean = false,
+                                                                 ub: MDArray[Int] = null,
+                                                                 step: MDArray[Int] = null,
+                                                                 width: MDArray[Int] = null,
+                                                                 function: MDArray[Int] => MDArray[A]): With[A] = {
     new With[A](lb, lbStrict, ubStrict, ub, step, width, function)
   }
 }

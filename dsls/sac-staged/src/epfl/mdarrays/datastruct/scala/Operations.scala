@@ -5,30 +5,30 @@ import epfl.mdarrays.datastruct.scala.SpecificOperations._
 
 object Operations {  
   // Element-Wise operations on matrices
-  def max[A: Ordering : ClassManifest](a: MDArray[A], b: MDArray[A]): MDArray[A] = internalWhere(a.>(b, "max"), a, b, "max")
-  def min[A: Ordering : ClassManifest](a: MDArray[A], b: MDArray[A]): MDArray[A] = internalWhere(a.>(b, "min"), b, a, "min")
-  def where[A: ClassManifest](p: MDArray[Boolean], a: MDArray[A], b: MDArray[A]): MDArray[A] = internalWhere(p, a, b, "where")
+  def max[@specialized A: Ordering : ClassManifest](a: MDArray[A], b: MDArray[A]): MDArray[A] = internalWhere(a.>(b, "max"), a, b, "max")
+  def min[@specialized A: Ordering : ClassManifest](a: MDArray[A], b: MDArray[A]): MDArray[A] = internalWhere(a.>(b, "min"), b, a, "min")
+  def where[@specialized A: ClassManifest](p: MDArray[Boolean], a: MDArray[A], b: MDArray[A]): MDArray[A] = internalWhere(p, a, b, "where")
   // note: the rest are defined in the MDArray class!
 
   // Basic operations
-  def dim[A: ClassManifest](a: MDArray[A]): Int = a.dim
-  def shape[A: ClassManifest](a: MDArray[A]): MDArray[Int] = a.shape
-  def sel[A: ClassManifest](iv: MDArray[Int], a: MDArray[A]): MDArray[A] = a.sel(iv)
-  def reshape[A: ClassManifest](iv: MDArray[Int], a: MDArray[A]): MDArray[A] = internalReshape(iv, a.content, "reshape")
-  def reshape[A: ClassManifest](iv: MDArray[Int], a: Array[A], opName: String): MDArray[A] = internalReshape(iv, a, opName)
+  def dim[@specialized A: ClassManifest](a: MDArray[A]): Int = a.dim
+  def shape[@specialized A: ClassManifest](a: MDArray[A]): MDArray[Int] = a.shape
+  def sel[@specialized A: ClassManifest](iv: MDArray[Int], a: MDArray[A]): MDArray[A] = a.sel(iv)
+  def reshape[@specialized A: ClassManifest](iv: MDArray[Int], a: MDArray[A]): MDArray[A] = internalReshape(iv, a.content, "reshape")
+  def reshape[@specialized A: ClassManifest](iv: MDArray[Int], a: Array[A], opName: String): MDArray[A] = internalReshape(iv, a, opName)
 
   // Reduction operations on matrices
-  def sum[A](a: MDArray[A])(implicit ev: Numeric[A], ev2: ClassManifest[A]): A = a.reduce(ev.zero)((a: A, b: A) => ev.plus(a, b))
-  def prod[A](a: MDArray[A])(implicit ev: Numeric[A], ev2: ClassManifest[A]): A = a.reduce(ev.one)((a: A, b: A) => ev.times(a, b))
+  def sum[@specialized A](a: MDArray[A])(implicit ev: Numeric[A], ev2: ClassManifest[A]): A = a.reduce(ev.zero)((a: A, b: A) => ev.plus(a, b))
+  def prod[@specialized A](a: MDArray[A])(implicit ev: Numeric[A], ev2: ClassManifest[A]): A = a.reduce(ev.one)((a: A, b: A) => ev.times(a, b))
   def all(a: MDArray[Boolean]): Boolean = a.reduce(true)((a, b) => a && b)
   def any(a: MDArray[Boolean]): Boolean = a.reduce(false)((a, b) => a || b)
-  def maxVal[A](a: MDArray[A])(implicit ev: Ordering[A], ev2: ClassManifest[A]): A = a.reduce(a.content()(0))((a, b) => if (ev.gt(a, b)) a else b)
-  def minVal[A](a: MDArray[A])(implicit ev: Ordering[A], ev2: ClassManifest[A]): A = a.reduce(a.content()(0))((a, b) => if (ev.lt(a, b)) a else b)
+  def maxVal[@specialized A](a: MDArray[A])(implicit ev: Ordering[A], ev2: ClassManifest[A]): A = a.reduce(a.content()(0))((a, b) => if (ev.gt(a, b)) a else b)
+  def minVal[@specialized A](a: MDArray[A])(implicit ev: Ordering[A], ev2: ClassManifest[A]): A = a.reduce(a.content()(0))((a, b) => if (ev.lt(a, b)) a else b)
   
   // Restructuring operations - implemented as with-loops
-  def genarray[A: ClassManifest](shp: MDArray[Int], value: MDArray[A]): MDArray[A] = With(function = iv => value).GenArray(shp)
-  def modarray[A: ClassManifest](a: MDArray[A], iv: MDArray[Int], value: MDArray[A]): MDArray[A] = With(iv, false, false, iv, function = iv => value).ModArray(a)
-  def take[A: ClassManifest](shp: MDArray[Int], a: MDArray[A]): MDArray[A] = {
+  def genarray[@specialized A: ClassManifest](shp: MDArray[Int], value: MDArray[A]): MDArray[A] = With(function = iv => value).GenArray(shp)
+  def modarray[@specialized A: ClassManifest](a: MDArray[A], iv: MDArray[Int], value: MDArray[A]): MDArray[A] = With(iv, false, false, iv, function = iv => value).ModArray(a)
+  def take[@specialized A: ClassManifest](shp: MDArray[Int], a: MDArray[A]): MDArray[A] = {
     val opName = "take"
 
     if (shp.dim != 1)
@@ -40,7 +40,7 @@ object Operations {
     With(function = iv => a(iv)).GenArray(shp)
   }
 
-  def drop[A: ClassManifest](shp: MDArray[Int], a: MDArray[A]): MDArray[A] = {
+  def drop[@specialized A: ClassManifest](shp: MDArray[Int], a: MDArray[A]): MDArray[A] = {
     val opName = "drop"
 
     if (shp.dim != 1)
@@ -52,7 +52,7 @@ object Operations {
     With(function = iv => a(shp + iv)).GenArray(a.shape - shp)
   }
 
-  def tile[A: ClassManifest](sv: MDArray[Int], ov: MDArray[Int], a:MDArray[A]): MDArray[A] = {
+  def tile[@specialized A: ClassManifest](sv: MDArray[Int], ov: MDArray[Int], a:MDArray[A]): MDArray[A] = {
     val opName = "tile"
 
     if (sv.dim != 1)
@@ -70,7 +70,7 @@ object Operations {
     With(function = iv => a(iv + ov +++ zeros(sv.shape.content()(0) - ov.shape.content()(0)))).GenArray(sv)
   }
 
-  def rotate[A: ClassManifest](ov: MDArray[Int], a:MDArray[A]): MDArray[A] = {
+  def rotate[@specialized A: ClassManifest](ov: MDArray[Int], a:MDArray[A]): MDArray[A] = {
     val opName = "rotate"
 
     if (ov.dim != 1)
@@ -82,7 +82,7 @@ object Operations {
     With(function = iv => a((iv - ov) remGtZero a.shape)).GenArray(a.shape)
   }
 
-  def shift[A: ClassManifest](ov: MDArray[Int], expr: A, a:MDArray[A]): MDArray[A] = {
+  def shift[@specialized A: ClassManifest](ov: MDArray[Int], expr: A, a:MDArray[A]): MDArray[A] = {
     val opName = "shift"
 
     if (ov.dim != 1)
@@ -94,7 +94,7 @@ object Operations {
     With(function = iv => if ((any((iv - ov) < zeros(a.dim))) || (any((iv - ov) >= a.shape))) expr else a(iv - ov)).GenArray(a.shape)
   }
 
-  def cat[A: ClassManifest](d: Int, one: MDArray[A], two: MDArray[A]): MDArray[A] = {
+  def cat[@specialized A: ClassManifest](d: Int, one: MDArray[A], two: MDArray[A]): MDArray[A] = {
     val opName = "cat"
     if ((d >= one.shape.content.length) || (d >= two.shape.content.length))
       throw new Exception(opName + ": The concatenation axis is outside the shapes of the two arrays")

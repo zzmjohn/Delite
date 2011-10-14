@@ -6,7 +6,7 @@ import epfl.mdarrays.datastruct.scala.SpecificOperations._
 import epfl.mdarrays.datastruct.scala.With._
 
 object MDArrayIO {
-  def readMDArray[A: Manifest](fileName: String): MDArray[A] = {
+  def readMDArray[@specialized A: Manifest](fileName: String): MDArray[A] = {
     val source = scala.io.Source.fromFile(fileName)(scala.io.Codec.default)
     val lines: List[String] = source.getLines.toList
 
@@ -29,7 +29,7 @@ object MDArrayIO {
     reshape(shape, data)
   }
 
-  def writeMDArray[A: Manifest](fileName: String, array: MDArray[A]) = {
+  def writeMDArray[@specialized A: Manifest](fileName: String, array: MDArray[A]) = {
 
     val output = new java.io.PrintStream(new java.io.FileOutputStream(fileName))
 
@@ -46,11 +46,11 @@ object MDArrayIO {
     output.close()
   }
 
-  private def readList[A: Manifest](lines: List[String], count: Int): List[A] = {
+  private def readList[@specialized A: Manifest](lines: List[String], count: Int): List[A] = {
     lines.take(count).map(readData[A])
   }
 
-  private def readData[A](line: String)(implicit mf: Manifest[A]): A = {
+  private def readData[@specialized A](line: String)(implicit mf: Manifest[A]): A = {
 
     if (mf.erasure == classOf[Int])
       line.toInt.asInstanceOf[A]
