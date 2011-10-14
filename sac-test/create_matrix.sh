@@ -15,7 +15,4 @@ echo $size >> matrix.txt
     
 maxelt=`expr $size \* $size` 
  
-for elt in `seq 1 $maxelt` 
-do 
-    echo $elt >> matrix.txt 
-done 
+seq 1 $maxelt >> matrix.txt 

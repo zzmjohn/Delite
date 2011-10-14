@@ -1,13 +1,6 @@
 #!/bin/bash
-for a in `seq 20 20 300`
-do
-    echo MATRIX SIZE: $a
-    ./create_matrix.sh $a
-    ./perform-test-sac-transpose
-    ./perform-test-sac-transpose2
-done
 
-for a in `seq 400 100 2000`
+for a in `seq 100 100 10000`
 do
     echo MATRIX SIZE: $a
     ./create_matrix.sh $a
