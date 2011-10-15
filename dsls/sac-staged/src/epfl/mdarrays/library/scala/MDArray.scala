@@ -1,9 +1,9 @@
-package epfl.mdarrays.datastruct.scala
+package epfl.mdarrays.library.scala
 
-import epfl.mdarrays.datastruct.scala.Conversions._
-import epfl.mdarrays.datastruct.scala.Operations._
-import epfl.mdarrays.datastruct.scala.SpecificOperations._
-import epfl.mdarrays.datastruct.scala.With._
+import epfl.mdarrays.library.scala.Conversions._
+import epfl.mdarrays.library.scala.Operations._
+import epfl.mdarrays.library.scala.SpecificOperations._
+import epfl.mdarrays.library.scala.With._
 
 class MDArray[@specialized A: ClassManifest](_shape: Array[Int], _content: Array[A]) extends ppl.delite.framework.datastruct.scala.DeliteCollection[A] {
   

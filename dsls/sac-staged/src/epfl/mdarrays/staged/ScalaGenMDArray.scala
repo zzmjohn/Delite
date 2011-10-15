@@ -3,7 +3,7 @@ package epfl.mdarrays.staged
 import _root_.scala.virtualization.lms.internal.GenericNestedCodegen
 import _root_.scala.virtualization.lms.common._
 import _root_.scala.virtualization.lms.internal._
-import epfl.mdarrays.datastruct.scala.MDArray
+import epfl.mdarrays.library.scala.MDArray
 import java.io.PrintWriter
 
 trait BaseGenMDArray extends GenericNestedCodegen {
@@ -29,8 +29,9 @@ trait TypedGenMDArray extends BaseGenMDArray {
     stream.println("// " + ctrType + ": " + expr.toString)
   }
 
-  def emitShapeValue(sym: Sym[_])(implicit stream: PrintWriter): Unit = {
-    stream.println("// Shape: " + TY.getTypingString(sym))
+  def emitShapeValue(sym: Sym[_], rhs: Def[_])(implicit stream: PrintWriter): Unit = {
+    stream.println("// " + sym + " <= " + rhs)
+    stream.println("//   ... " + TY.getTypingString(sym))
   }
 }
 
@@ -38,63 +39,60 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
 
   import IR._
   import TY.{getShapeLength, getValueLength, getShapeValue, getValueValue}
-  var stripped: Boolean = false
 
   // Generate unique identifiers
   var currentIndex = 0
   def getNewIndex = { currentIndex += 1; currentIndex}
 
   // This function stores the action of the innermost with loop
-  var withLoopAction: (String, String)=>Unit = (a, b)=> { sys.error("No with loop action set!") }
+  var withLoopAction: (String, String, String)=>Unit = (a, b, c)=> { sys.error("No with loop action set!") }
 
-  def strip[A](m: Manifest[A]) = {
-    stripped = true
-    val result = remap(m)
-    stripped = false
-    result
+  def strip[A](m: Manifest[A]) : String = {
+    if (m.erasure == classOf[MDArray[Any]])
+      remap(m.typeArguments.head)
+    else
+      sys.error("Stripping MDArray on a Symbol that is not an MDArray!")
   }
 
   override def remap[A](m: Manifest[A]) : String = {
-    // TODO: Fix broken remapping!
-    //System.err.println("remap: " + stripped + " of " + m.toString)
     if (m.erasure == classOf[MDArray[Any]])
-      if (stripped)
-        remap(m.typeArguments.head)
-      else
-        m.toString //"MDArray[" + remap(m.typeArguments.head) + "]"
-    else super.remap[A](m)
+      "(Array[Int], Array[" + remap(m.typeArguments.head) + "])"
+    else
+      super.remap(m).replace("java.lang.String", "String")
+      /*
+        for some reason java.lang.String is not parsed:
+          /mnt/local-data/Work/Workspace/Scala/Delite/sac-test/generatedCache/scala/src/kernels/x5.scala:5: error: ']' expected but '.' found.
+          val (x4_shape: Array[Int], x4_value: Array[java.lang.String]) = x4
+       */
+  }
+  
+  def quoteShape(e: Exp[Any]): String = quote(e) + "_shape"
+  def quoteValue(e: Exp[Any]): String = quote(e) + "_value"
+
+  def emitShapeDecl(sym: Sym[_], debug: Boolean = false)(implicit stream: PrintWriter) = {
+    stream.print("val " + quoteShape(sym) + ": Array[Int] = ")
   }
 
-  def emitSymDecl(sym: Sym[Any], debug: Boolean = false)(implicit stream: PrintWriter) = {
+  def emitValDecl(sym: Sym[_])(implicit stream: PrintWriter) = {
+    stream.print("val " + quoteValue(sym) + ": Array[" + strip(sym.Type) + "] = ")
+  }
 
-    // emit the debug info: shape, value and others
-    debug match {
-      case true =>
-        stream.println()
-        emitShapeValue(sym)
-      case _ =>
-        ;
-    }
-
-    // emit the definition
-    stripped = getShapeLength(sym) match {
-      case Some(0) => true
-      case _ => false
-    }
-    stream.print("val " + quote(sym) + ": " + remap(sym.Type) + " = ")
-    stripped = false
+  def emitSymDecl(sym: Sym[_], debug: Boolean = false)(implicit stream: PrintWriter) = {
+    stream.print("val " + quote(sym) + " = ")
   }
 
   def emitOperationPrologue(sym: Sym[Any], exp: Exp[Any], index: Int)(implicit stream: PrintWriter) = {
-    stream.println("val result = new Array[" + strip(sym.Type) + "](shape(" + quote(exp) + ").content().foldLeft(1)((a,b) => a*b))")
+    emitShapeDecl(sym)
+    stream.println(quoteShape(exp))
+    emitValDecl(sym)
+    stream.println("new Array[" + strip(sym.Type) + "](prod(" + quoteShape(sym) + "))")
     stream.println("var i_" + index + ": Int = 0")
-    stream.println("while (i_" + index + " < result.length) {")
+    stream.println("while (i_" + index + " < " + quoteValue(sym) + ".length) {")
   }
 
-  def emitOperationEpilogue(sym: Sym[Any], exp: Exp[Any], index: Int, opName: String)(implicit stream: PrintWriter) = {
+  def emitOperationEpilogue(sym: Sym[Any], exp: Exp[Any], index: Int)(implicit stream: PrintWriter) = {
     stream.println("i_" + index + " += 1")
-    stream.println("} // while (i_" + index + " < result.length)")
-    stream.println("internalReshape(shape(" + quote(exp) + "), result, \"" + opName + "\")")
+    stream.println("} // while (i_" + index + " < ...)")
   }
 
   // This makes it easy to get the elements we need
@@ -108,28 +106,23 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
 
     val shpSym: Sym[_] = shp.asInstanceOf[Sym[_]]
 
-    def emitGenArrayAction(iv: String, loopResult: String) = {
+    def emitGenArrayAction(iv: String, resultShape: String, resultValue: String) = {
       stream.println("if (result == null) {")
       stream.println("// create the array and shape")
-      stream.println("result = new Array[" + strip(sym.Type) + "](" + quote(shp) + ".content().foldLeft(1)((a,b) => a*b) * " + loopResult + ".content().length)")
-      stream.println("rshape = shape(" + loopResult + ").content()")
-      stream.println("} else {")
-      stream.println("// check shape -- this WILL be redundant due to runtime checks")
-      stream.println("if (shape(" + loopResult + ").content().toList != rshape.toList) throw new Exception(opName + \": Incompatible shapes:\" + rshape.toList.toString + \" vs \" + shape(" + loopResult + ").content().toList.toString)")
+      stream.println("result = new Array[" + strip(sym.Type) + "](prod(" + quoteValue(shpSym) + ") * " + resultValue + ".length)")
+      stream.println("rshape = " + resultShape)
       stream.println("}")
       stream.println("// copy new content")
-      stream.println("val mainIndex: Int = flatten(" + quote(shpSym) + " ::: rshape.toList, " + iv + " ::: zeros(rshape.length), opName)")
+      stream.println("val mainIndex: Int = flattenGenArray(" + quoteValue(shpSym) + ", rshape, " + iv + ")")
       val index = getNewIndex
       stream.println("var innerIndex_" + index + ": Int = 0")
-      stream.println("while (innerIndex_" + index + " < " + loopResult + ".content().length) {")
-      stream.println("result(mainIndex + innerIndex_" + index + ") = " + loopResult + ".content()(innerIndex_" + index + ")")
+      stream.println("while (innerIndex_" + index + " < " + resultValue + ".length) {")
+      stream.println("result(mainIndex + innerIndex_" + index + ") = " + resultValue + "(innerIndex_" + index + ")")
       stream.println("innerIndex_" + index + " += 1")
       stream.println("} // while (innerIndex_" + index + " ...")
     }
 
-    emitSymDecl(sym);
     stream.println("{")
-    stream.println("val opName: String = \"genarray\"")
     stream.println("var result: Array[" + strip(sym.Type) + "] = null")
     stream.println("var rshape: Array[Int] = null")
 
@@ -138,10 +131,21 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
 
     for (withNode <- wl)
       emitBlock(withNode)
-      // Let this fail quickly if it's not a WithNode
-      //emitWithLoopModifier(withNode.asInstanceOf[Sym[_]], findAndCast[WithNode[_]](withNode).get, emitGenArrayAction)
 
-    stream.println("internalReshape(" + quote(shpSym) + " ::: rshape.toList, result, opName)")
+    // compute the new shape
+    val index = getNewIndex
+    stream.println("// reconstructing the shape")
+    stream.println("val shape: Array[Int] = new Array(rshape.length + " + quoteValue(shpSym) + ".length)")
+    stream.println("var i_" + index + " = 0")
+    stream.println("while (i_" + index + " < " + quoteValue(shpSym) + ".length) {")
+    stream.println("shape(i_" + index + ") = " + quoteValue(shpSym) + "(i_" + index + ")")
+    stream.println("i_" + index + " += 1")
+    stream.println("}")
+    stream.println("while (i_" + index + " < shape.length) {")
+    stream.println("shape(i_" + index + ") = rshape(i_" + index + " - " + quoteValue(shpSym) + ".length)")
+    stream.println("i_" + index + " += 1")
+    stream.println("}")
+    stream.println("(shape, result)")
     stream.println("}")
 
     withLoopAction = savedLoopAction
@@ -151,80 +155,69 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
 
     val arraySym: Sym[_] = array.asInstanceOf[Sym[_]]
 
-    def emitModArrayAction(iv: String, loopResult: String) = {
-      stream.println("if (rshape == null) {")
-      stream.println("rshape = shape(" + quote(arraySym) + ").drop(" + iv + ".content().length)")
-      stream.println("}")
-      stream.println("val mainIndex: Int = flatten(shape(" + quote(arraySym) + "), " + iv + " ::: zeros(dim(" + quote(arraySym) + ") - " + iv + ".content().length), opName)")
-      stream.println("// check shape -- this WILL be redundant due to runtime checks")
-      stream.println("if (shape(" + loopResult + ").content().toList != rshape) throw new Exception(opName + \": Incompatible shapes:\" + rshape.toList.toString + \" vs \" + shape(" + loopResult + ").content().toList.toString)")
+    def emitModArrayAction(iv: String, resultShape: String, resultValue: String) = {
+      stream.println("val mainIndex: Int = flattenModArray(" + quoteShape(arraySym) + ", " + iv + ")")
       stream.println("// copy new content")
       val index = getNewIndex
       stream.println("var innerIndex_" + index + ": Int = 0 ")
-      stream.println("while (innerIndex_" + index + " < " + loopResult + ".content().length) {")
-      stream.println("result(mainIndex + innerIndex_" + index + ") = " + loopResult + ".content()(innerIndex_" + index + ")")
+      stream.println("while (innerIndex_" + index + " < " + resultValue + ".length) {")
+      stream.println("result(mainIndex + innerIndex_" + index + ") = " + resultValue + "(innerIndex_" + index + ")")
       stream.println("innerIndex_" + index + " += 1")
       stream.println("} // while (innerIndex_" + index + " ...")
     }
 
-    emitSymDecl(sym);
     stream.println("{")
-    stream.println("val opName: String = \"modarray\"")
-    stream.println("var result: Array[" + strip(sym.Type) + "] = new Array[" + strip(sym.Type) + "](shape(" + quote(arraySym) + ").content().foldLeft(1)((a,b) => a*b))")
+    stream.println("var result: Array[" + strip(sym.Type) + "] = new Array[" + strip(sym.Type) + "](" + quoteValue(arraySym) + ".length)")
     val index = getNewIndex
     stream.println("var i_" + index + ": Int = 0")
     stream.println("while (i_" + index + " < result.length) {")
-    stream.println("result(i_" + index + ") = " + quote(arraySym) + ".content()(i_" + index + ")")
+    stream.println("result(i_" + index + ") = " + quoteValue(arraySym) + "(i_" + index + ")")
     stream.println("i_" + index + " += 1")
     stream.println("}")
-    stream.println("var rshape: List[Int] = null")
 
     val savedLoopAction = withLoopAction
     withLoopAction = emitModArrayAction
 
     for (withNode <- wl)
       emitBlock(withNode)
-      // Let this fail quickly if it's not a WithNode
-      //emitWithLoopModifier(withNode.asInstanceOf[Sym[_]], findAndCast[WithNode[_]](withNode).get, emitModArrayAction)
 
     withLoopAction = savedLoopAction
 
-    stream.println("internalReshape(shape(" + quote(arraySym) + ") ::: rshape.toList, result, opName)")
+    stream.println("(" + quoteShape(arraySym) + ", " + quoteValue(arraySym) + ")")
     stream.println("}")
   }
 
-
   def emitFoldArray(sym: Sym[_], withNode: Exp[MDArray[_]], neutral: Exp[_], foldTerm1: Exp[_], foldTerm2: Exp[_], foldExpr: Exp[_])(implicit stream: PrintWriter) = {
 
-    val neutralSym = neutral.asInstanceOf[Sym[_]]
-    val foldTerm1Sym = foldTerm1.asInstanceOf[Sym[_]]
-    val foldTerm2Sym = foldTerm2.asInstanceOf[Sym[_]]
-    val foldExprSym = foldExpr.asInstanceOf[Sym[_]]
+    sys.error("NOT IMPLEMENTED YET!")
 
-    def emitFoldArrayAction(iv: String, loopElement: String) =
-      stream.println("result = foldFunction(result, " + loopElement + ")")
-
-    emitSymDecl(sym);
-    stream.println("{")
-    stream.println("val opName: String = \"fold\"")
-    stream.println("var result: " + remap(neutralSym.Type) + " = " + quote(neutralSym))
-    // Emit the fold expression
-    stream.println("val foldFunction: (" + remap(neutralSym.Type) + ", " + remap(neutralSym.Type)
-      + ") => " + remap(neutralSym.Type) + " = (" + quote(foldTerm1Sym) + ", " + quote(foldTerm2Sym) + ") => {")
-    emitBlock(foldExprSym)
-    stream.println(quote(getBlockResult(foldExprSym)))
-    stream.println("}")
-
-    // Emit the loop action
-    val savedLoopAction = withLoopAction
-    withLoopAction = emitFoldArrayAction
-    emitBlock(withNode)
-    withLoopAction = savedLoopAction
-    // inside the with loop
-    //emitWithLoopModifier(withNode.asInstanceOf[Sym[_]], findAndCast[WithNode[_]](withNode).get, emitFoldArrayAction)
-
-    stream.println("result")
-    stream.println("}")
+//    val neutralSym = neutral.asInstanceOf[Sym[_]]
+//    val foldTerm1Sym = foldTerm1.asInstanceOf[Sym[_]]
+//    val foldTerm2Sym = foldTerm2.asInstanceOf[Sym[_]]
+//    val foldExprSym = foldExpr.asInstanceOf[Sym[_]]
+//
+//    def emitFoldArrayAction(iv: String, resultShape: String, resultValue: String) =
+//      stream.println("result = foldFunction(result, " + loopElement + ")")
+//
+//    stream.println("{")
+//    stream.println("var result: " + remap(neutralSym.Type) + " = " + quote(neutralSym))
+//    // Emit the fold expression
+//    stream.println("val foldFunction: (" + remap(neutralSym.Type) + ", " + remap(neutralSym.Type)
+//      + ") => " + remap(neutralSym.Type) + " = (" + quote(foldTerm1Sym) + ", " + quote(foldTerm2Sym) + ") => {")
+//    emitBlock(foldExprSym)
+//    stream.println(quote(getBlockResult(foldExprSym)))
+//    stream.println("}")
+//
+//    // Emit the loop action
+//    val savedLoopAction = withLoopAction
+//    withLoopAction = emitFoldArrayAction
+//    emitBlock(withNode)
+//    withLoopAction = savedLoopAction
+//    // inside the with loop
+//    //emitWithLoopModifier(withNode.asInstanceOf[Sym[_]], findAndCast[WithNode[_]](withNode).get, emitFoldArrayAction)
+//
+//    stream.println("result")
+//    stream.println("}")
   }
 
   // support for blocks
@@ -232,56 +225,46 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
   val BLOCK_SIZE = 64
 
   def emitWithLoopNestedFor(index: Int, maxIndex: Int, withNodeSym: Sym[_], withLoop: WithNode[_],
-                            emitAction: (String, String) => Unit, lastLevelForLoops: List[(String, String)] = Nil,
-                            givenIndices: List[Int])
+                            emitAction: (String, String, String) => Unit, lastLevelForLoops: List[(String, String)] = Nil)
                            (implicit stream: PrintWriter): Unit = {
 
     def emitForRange(lower: String, upper: String) = {
       // emit loop and filter
-      val givenIndex = getNewIndex
-      stream.println("var iv" + index + "_" + givenIndex + ": Int = " + lower)
-      stream.println("while (iv" + index + "_" + givenIndex + " < " + upper + ") {")
-      stream.println("if ((iv" + index + "_" + givenIndex + " - lb" + index + ") % step" + index + " <= width" + index + ") {")
+      stream.println(quoteValue(withLoop.sym) + "(" + index + ") = " + lower)
+      stream.println("while (" + quoteValue(withLoop.sym) + "(" + index +") < " + upper + ") {")
+      stream.println("if ((" + quoteValue(withLoop.sym) + "(" + index +") - " + quoteValue(withLoop.lb) + "(" + index +")) % " + quoteValue(withLoop.step) + "(" + index +") <= " + quoteValue(withLoop.width) + "(" + index +")) {")
       // emit nested loops
-      emitWithLoopNestedFor(index+1, maxIndex, withNodeSym, withLoop, emitAction, lastLevelForLoops, givenIndex::givenIndices)
+      emitWithLoopNestedFor(index+1, maxIndex, withNodeSym, withLoop, emitAction, lastLevelForLoops)
       // emit loop and filter end
-      stream.println("} // if (iv" + index + "_" + givenIndex + " ...")
-      stream.println("iv" + index + "_" + givenIndex + " += 1")
-      stream.println("} // while (iv" + index + "_" + givenIndex + " ...")
+      stream.println("} // if (" + quoteValue(withLoop.sym) + "(" + index +") ...")
+      stream.println(quoteValue(withLoop.sym) + "(" + index +") += 1")
+      stream.println("} // while (" + quoteValue(withLoop.sym) + "(" + index +") ...")
     }
 
     def emitForRangeBlock(lower: String, upper: String) = {
       // emit loop and filter
       val givenIndex = getNewIndex
-      stream.println("var ivblock" + index + "_" + givenIndex + ": Int = " + lower)
-      stream.println("while (ivblock" + index + "_" + givenIndex + " < " + upper + ") {")
-      stream.println("if ((ivblock" + index + "_" + givenIndex + " - lb" + index + ") % step" + index + " <= width" + index + ") {")
+      stream.println(quoteValue(withLoop.sym) + "_block(" + index +") = " + lower)
+      stream.println("while (" + quoteValue(withLoop.sym) + "_block(" + index +") < " + upper + ") {")
       // emit nested loops
-      val newStart = "var iv" + index + "_" + givenIndex + ": Int = ivblock" + index + "_" + givenIndex + " * " + BLOCK_SIZE + "\n" +
-                     "while (iv" + index + "_" + givenIndex + " < (ivblock" + index + "_" + givenIndex + " + 1) * " + BLOCK_SIZE + ") {\n" +
-                     "if ((iv" + index + "_" + givenIndex + " - lb" + index + ") % step" + index + " <= width" + index + ") {\n"
-      val newFinish= "} // if ((iv" + index + "_" + givenIndex + "...\n" +
-                     "iv" + index + "_" + givenIndex + " += 1\n" +
-                     "} // while (iv" + index + "_" + givenIndex + "....\n"
-      emitWithLoopNestedFor(index+1, maxIndex, withNodeSym, withLoop, emitAction, lastLevelForLoops ::: List((newStart, newFinish)), givenIndex::givenIndices)
+      val newStart = quoteValue(withLoop.sym) + "(" + index +") = " + quoteValue(withLoop.sym) + "_block(" + index +") * " + BLOCK_SIZE + "\n" +
+                     "while (" + quoteValue(withLoop.sym) + "(" + index +") < (" + quoteValue(withLoop.sym) + "_block(" + index +") + 1) * " + BLOCK_SIZE + ") {\n" +
+                     "if ((" + quoteValue(withLoop.sym) + "(" + index +") - " + quoteValue(withLoop.lb) + "(" + index +")) % " + quoteValue(withLoop.step) + "(" + index +") <= " + quoteValue(withLoop.width) + "(" + index +")) {\n"
+      val newFinish= "} // if ((" + quoteValue(withLoop.sym) + "(" + index +") ...\n" +
+                     quoteValue(withLoop.sym) + "(" + index +") += 1\n" +
+                     "} // while (" + quoteValue(withLoop.sym) + "(" + index +") ...\n"
+      emitWithLoopNestedFor(index+1, maxIndex, withNodeSym, withLoop, emitAction, lastLevelForLoops ::: List((newStart, newFinish)))
       // emit loop and filter end
-      stream.println("} // if (ivblock" + index + "_" + givenIndex + " ...")
-      stream.println("ivblock" + index + "_" + givenIndex + " += 1")
-      stream.println("} // while (ivblock" + index + "_" + givenIndex + " ...")
+      stream.println(quoteValue(withLoop.sym) + "_block(" + index +") += 1")
+      stream.println("} // while (" + quoteValue(withLoop.sym) + "_block(" + index +") ...")
     }
 
     if (index < maxIndex) {
       // emit loop header
-      stream.println("val lb" + index + ": Int = " + quote(withLoop.lb) + ".content()(" + index + ")")
-      stream.println("val ub" + index + ": Int = " + quote(withLoop.ub) + ".content()(" + index + ")")
-      stream.println("val step" + index + ": Int = " + quote(withLoop.step) + ".content()(" + index + ")")
-      stream.println("val width" + index + ": Int = " + quote(withLoop.width) + ".content()(" + index + ")")
-      stream.println("val ll" + index + ": Int = if (" + quote(withLoop.lbStrict) + ") lb" + index + " + 1 else lb" + index + "")
-      stream.println("val ul" + index + ": Int = if (" + quote(withLoop.ubStrict) + ") ub" + index + " else ub" + index + " + 1")
       if (BLOCKS) {
-        stream.println("if (ll" + index + " / " + BLOCK_SIZE + " == ul" + index + " / " + BLOCK_SIZE + ") {")
+        stream.println("if (ll(" + index + ") / " + BLOCK_SIZE + " == ul(" + index + ") / " + BLOCK_SIZE + ") {")
           // same as before
-          emitForRange("ll" + index, "ul" + index)
+          emitForRange("ll(" + index + ")", "ul(" + index + ")")
         stream.println("} else {")
           // split into three cases:
           // generating the iv in three steps
@@ -289,57 +272,72 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
           // (lb/64 + 1)  <= iv' < ub/64  [ 64 blocks ]
           // (ub/64) * 64 <= iv  < ub
           // attention: the case of lb/64 == ub/64 => lb <= iv < ub :)
-          emitForRange("ll" + index, "(ll" + index + " / " + BLOCK_SIZE + " + 1) * " + BLOCK_SIZE)
-          emitForRangeBlock("ll" + index + " / " + BLOCK_SIZE + " + 1", "ul" + index + " / " + BLOCK_SIZE)
-          emitForRange("(ul" + index + " / " + BLOCK_SIZE + ") * " + BLOCK_SIZE, "ul" + index)
+          emitForRange("ll(" + index + ")", "(ll(" + index + ") / " + BLOCK_SIZE + " + 1) * " + BLOCK_SIZE)
+          emitForRangeBlock("ll(" + index + ") / " + BLOCK_SIZE + " + 1", "ul(" + index + ") / " + BLOCK_SIZE)
+          emitForRange("(ul(" + index + ") / " + BLOCK_SIZE + ") * " + BLOCK_SIZE, "ul(" + index + ")")
         stream.println("} // with loop range if")
       } else
-        emitForRange("ll" + index, "ul" + index)
+        emitForRange("ll(" + index + ")", "ul(" + index + ")")
     } else {
       // emit blocks
       for((start, finish) <- lastLevelForLoops)
         stream.println(start)
-      // emit loop content
-      stream.print("val " + quote(withLoop.sym) + ": " + remap(withLoop.sym.Type) + " = ")
-      stream.println(List.range(0, maxIndex).zip(givenIndices.reverse).map(pair => "iv" + pair._1 + "_" + pair._2).mkString("", "::","::Nil"))
-      stream.println("val iv: " + remap(withLoop.sym.Type) + " = " + quote(withLoop.sym))
-      stream.println("val feval: " + remap(withNodeSym.Type) + " = {")
-      emitBlock(withLoop.expr)
-      stream.println(quote(getBlockResult(withLoop.expr)))
-      stream.println("}")
-      // emit loop action
+
+      // perform the with loop action
       stream.println("// the action of this loop:")
-      emitAction("iv", "feval")
+      stream.println("withLoopAction()")
+
       for((start, finish) <- lastLevelForLoops.reverse)
         stream.println(finish)
     }
   }
 
-  def emitWithLoopModifier(withNodeSym: Sym[_], withLoop: WithNode[_], emitAction: (String, String) => Unit)(implicit stream: PrintWriter) = {
+  def emitWithLoopModifier(withNodeSym: Sym[_], withLoop: WithNode[_], emitAction: (String, String, String) => Unit)(implicit stream: PrintWriter) = {
     // emit existing constraints
     stream.println("// with: " + withLoop.toString)
 
+    // generate bounds
+    stream.println("val ll: Array[Int] = new Array(" + quoteValue(withLoop.lb) + ".length)")
+    stream.println("val ul: Array[Int] = new Array(" + quoteValue(withLoop.ub) + ".length)")
+    stream.println("var " + quoteValue(withLoop.sym) + ": Array[Int] = new Array(" + quoteValue(withLoop.ub) + ".length)")
+    stream.println("val " + quoteShape(withLoop.sym) + ": Array[Int] = Array(ll.length)")
+    stream.println("val " + quoteValue(withLoop.sym) + "_block: Array[Int] = new Array(ll.length)")
+    val index = getNewIndex
+    stream.println("var i_" + index + ": Int = 0")
+    stream.println("while (i_" + index + " < " + quoteValue(withLoop.ub) + ".length) {")
+    stream.println("ll(i_" + index + ") = if (" + quote(withLoop.lbStrict) + ") " + quoteValue(withLoop.lb) + "(i_" + index + ")" + " + 1 else " + quoteValue(withLoop.lb) + "(i_" + index + ")")
+    stream.println("ul(i_" + index + ") = if (" + quote(withLoop.ubStrict) + ") " + quoteValue(withLoop.ub) + "(i_" + index + ")" + " else " + quoteValue(withLoop.ub) + "(i_" + index + ") - 1")
+    stream.println(quoteValue(withLoop.sym) + "(i_" + index + ") = ll(i_" + index + ")")
+    stream.println("i_" + index + " += 1")
+    stream.println("} // while (i" + index + " ...")
+
+    stream.println("def withLoopAction() = {")
+    // emit loop content
+    emitBlock(withLoop.expr)
+    // emit loop action
+    emitAction(quoteValue(withLoop.sym), quoteShape(getBlockResult(withLoop.expr)), quoteValue(getBlockResult(withLoop.expr)))
+    stream.println("}")
 
     // emit actual with loop
     getValueLength(withLoop.lb) match {
       case Some(size) =>
-        System.err.println("With loop modifier with blocks: " + BLOCKS)
-        emitWithLoopNestedFor(0, size, withNodeSym, withLoop, emitAction, Nil, Nil)
+
+        System.err.println("With loop specialization to rank " + size + " with blocks=" + BLOCKS)
+        // emit with loop
+        emitWithLoopNestedFor(0, size, withNodeSym, withLoop, emitAction, Nil)
+
       case _ =>
+
         System.err.println("With loop with no specialization!")
-        // emit loop
-        stream.println("for (iv <- iterateWithStep(_lb=" + quote(withLoop.lb) + ", lbStrict=" + quote(withLoop.lbStrict) + ", ubStrict=" + quote(withLoop.ubStrict) + ", _ub=" + quote(withLoop.ub) + ", step=" + quote(withLoop.step) + ", width=" + quote(withLoop.width) + ", opName=opName)) {")
-        // emit loop content
-        stream.println("val " + quote(withLoop.sym) + ": " + remap(withLoop.sym.Type) + " = iv")
-        stream.println("val feval: " + remap(withLoop.expr.asInstanceOf[Sym[_]].Type) + " = {")
-        emitBlock(withLoop.expr)
-        stream.println(quote(getBlockResult(withLoop.expr)))
-        stream.println("}")
-        // emit loop action
+
+        // start loop
+        stream.println("do {")
+        // perform the with loop action
         stream.println("// the action of this loop:")
-        emitAction("iv", "feval")
-        // emit loop end
-        stream.println("}")
+        stream.println("withLoopAction()")
+        // emit loop finish
+        stream.println(quoteValue(withLoop.sym) + " = nextInLine(" + quoteValue(withLoop.sym) + ", ll, ul, " + quoteValue(withLoop.lb) + ", " + quoteValue(withLoop.step) + ", " + quoteValue(withLoop.width) + ")")
+        stream.println("} while (" + quoteValue(withLoop.sym) + " ne null)")
     }
   }
 
@@ -355,158 +353,292 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = {
     //emitChecks(sym, rhs)
-    emitShapeValue(sym)
+    emitShapeValue(sym, rhs)
 
     rhs match {
-
       case kc: KnownAtCompileTime[_] =>
-        emitSymDecl(sym)
-        stream.println("internalReshape(" + (kc.value.shape.content.map(t => t.toString).toList ::: ("Nil"::Nil)).mkString("::") + ", Array(" + kc.value.content.map(val_quote(_)).mkString(", ") +"), \"knownAtCompileTime\")")
+        emitShapeDecl(sym)
+        stream.println("Array(" + kc.value.shape.content.mkString(", ") + ")")
+        emitValDecl(sym)
+        val m = strip(sym.Type)
+        if (m == "String")
+          stream.println("Array(" + kc.value.content.map("\"" + _ + "\"").mkString(", ") + ") //" + m)
+        else if (m == "Char")
+          stream.println("Array(" + kc.value.content.map("'" + _ + "'").mkString(", ") + ") //" + m)
+        else
+          stream.println("Array(" + kc.value.content.mkString(", ") + ") //" + m)
+
       case kr: KnownAtRuntime[_] =>
-        emitSymDecl(sym)
-        stream.println(kr.name + " // this is a function argument")
+        // don't emit anything :)
       case fl: FromList[_] =>
-        emitSymDecl(sym)
-        stream.println("internalReshape(" + quote(fl.value) + ".length::Nil, " + quote(fl.value) + ", \"fromList\")")
-      case fa: FromArray[_] =>
-        emitSymDecl(sym)
-        stream.println("internalReshape(" + quote(fa.value) + ".length::Nil, " + quote(fa.value) + ", \"fromArray\")")
-      case fv: FromValue[_] =>
-        emitSymDecl(sym)
-        stream.println(quote(fv.value))
-      case tl: ToList[_] =>
-        emitSymDecl(sym)
-        stream.println(quote(tl.value) + ".content().toList // toList")
-      case ta: ToArray[_] =>
-        emitSymDecl(sym)
-        stream.println(quote(ta.value) + ".content() // toArray")
-      case tv: ToValue[_] =>
-      // This will automatically unbox in case there's boxing done...
-        emitSymDecl(sym)
-        stream.println(quote(tv.value))
-      case td: ToDim[_] =>
-        emitSymDecl(sym)
-        stream.println("dim(" + quote(td.a) + ")")
-      case ts: ToShape[_] =>
-        emitSymDecl(sym)
-        stream.println("shape(" + quote(ts.a) + ")")
-      case rs: Reshape[_] =>
-        emitSymDecl(sym)
-        stream.println("reshape(" + quote(rs.shp) + ", " + quote(rs.a) + ")")
-      case sel: Sel[_] =>
-      // Get rid of unnecessary boxing
-        getShapeLength(sym) match {
-          case Some(0) =>
-            emitSymDecl(sym, true)
-            stream.println(quote(sel.a) + ".content()(flatten(shape(" + quote(sel.a) + "), " + quote(sel.iv) + ", \"sel\"))")
+        fl.value match {
+          case Const(list) =>
+            emitShapeDecl(sym)
+            stream.println("Array(" + list.length + ")")
+            emitValDecl(sym)
+            stream.println("Array(" + list.mkString(", ") + ")")
           case _ =>
-            emitSymDecl(sym)
-            stream.println("sel(" + quote(sel.iv) + ", " + quote(sel.a) + ")")
+            emitShapeDecl(sym)
+            stream.println("Array(" + quote(fl.value) + ".length)")
+            emitValDecl(sym)
+            stream.println(quote(fl.value))
         }
-      case cat: Cat[_] =>
-        emitSymDecl(sym)
-        stream.println("cat(" + quote(cat.d) + ", " + quote(cat.a) + ", " + quote(cat.b) + ")")
+      case fa: FromArray[_] =>
+        fa.value match {
+          case Const(array) =>
+            emitShapeDecl(sym)
+            stream.println("Array(" + array.length + ")")
+            emitValDecl(sym)
+            stream.println("Array(" + array.mkString(", ") + ")")
+          case _ =>
+            emitShapeDecl(sym)
+            stream.println("Array(" + quote(fa.value) + ".length)")
+            emitValDecl(sym)
+            stream.println(quote(fa.value))
+        }
+      case fv: FromValue[_] =>
+        fv.value match {
+          case Const(scalar) =>
+            emitShapeDecl(sym)
+            stream.println("Array()")
+            emitValDecl(sym)
+            stream.println("Array(" + scalar + ")")
+          case _ =>
+            emitShapeDecl(sym)
+            stream.println("Array()")
+            emitValDecl(sym)
+            stream.println("Array(" + quote(fv.value) + ")")
+        }
+      case fml: FromMDArrayList[_] => fml.list match {
+        case Nil =>
+          // empty symbol
+          emitShapeDecl(sym)
+          stream.println("Array(0)")
+          emitValDecl(sym)
+          stream.println("Array()")          
+        case head::rest =>
+          val index = getNewIndex
+          stream.println("var i_" + index + ": Int = 1")
+          stream.println("var j_" + index + ": Int = 0")
+          stream.println("var size_" + index + ": Int = " + quoteValue(head) + ".length")
+          emitShapeDecl(sym)
+          stream.println("new Array(1 + " + quoteShape(head) + ".length)")
+          stream.println(quoteShape(sym) + "(0) = " + fml.list.length)
+          stream.println("while (i_" + index + " < " + quoteShape(sym) + ".length) {")
+          stream.println(quoteShape(sym) +"(i_" + index + ") = " + quoteShape(head) + "(i_" + index + " - 1)")
+          stream.println("i_" + index + " += 1")
+          stream.println("} // while (i_" + index + " < ...)")
+          emitValDecl(sym)
+          stream.println("new Array(prod(" + quoteShape(sym) + "))")
+          for (listIndex <- Range(0, fml.list.length)) {
+            stream.println("i_" + index + " = 0")
+            stream.println("while (i_" + index + " < size_" + index + ") {")
+            stream.println(quoteValue(sym) +"(i_" + index + " + size_" + index + " * " + listIndex + ") = " + quoteValue(fml.list(listIndex)) + "(i_" + index + ")")
+            stream.println("i_" + index + " += 1")
+            stream.println("} // while (i_" + index + " < ...)")        
+          }
+        }
+      case tl: ToList[_] =>
+        stream.println("val " + quote(sym) + ": " + remap(sym.Type) + " = " + quoteValue(tl.value))
+      case ta: ToArray[_] =>
+        stream.println("val " + quote(sym) + ": " + remap(sym.Type) + " = " + quoteValue(ta.value))
+      case tv: ToValue[_] =>
+        stream.println("val " + quote(sym) + ": " + remap(sym.Type) + " = " + quoteValue(tv.value) + "(0)")
+      case td: ToDim[_] =>
+        stream.println("val " + quote(sym) + ": Int = " + quoteValue(td.a) + ".length")
+      case ts: ToShape[_] =>
+        emitShapeDecl(sym)
+        stream.println("Array(" + quoteShape(ts.a) + ".length)")
+        emitValDecl(sym)
+        stream.println(quoteShape(ts.a))
+      case rs: Reshape[_] =>
+        emitShapeDecl(sym)
+        stream.println(quoteValue(rs.shp))
+        emitValDecl(sym)
+        stream.println(quoteValue(rs.a))
+      case sel: Sel[_] =>
+        val index = getNewIndex
+        val flatIndex = getNewIndex
+        stream.println("var i_" + index + ": Int = " + quoteValue(sel.iv) + ".length")
+        emitShapeDecl(sym)
+        stream.println("new Array(" + quoteShape(sel.a) + ".length -" + quoteValue(sel.iv) + ".length)")
+        stream.println("while (i_" + index + " < " + quoteShape(sel.a) + ".length) {")
+        stream.println(quoteShape(sym) +"(i_" + index + " - " + quoteValue(sel.iv) + ".length) = " + quoteShape(sel.a) + "(i_" + index + ")")
+        stream.println("i_" + index + " += 1")
+        stream.println("} // while (i_" + index + " < ...)")
+        stream.println("val flat_" + flatIndex + " = flatten(" + quoteValue(sel.iv) + ", " + quoteShape(sel.a) + ")")
+        emitValDecl(sym)
+        stream.println("new Array(prod(" + quoteShape(sym) + "))")
+        stream.println("i_" + index + " = 0")
+        stream.println("while (i_" + index + " < " + quoteValue(sym) + ".length) {")
+        stream.println(quoteValue(sym) +"(i_" + index + ") = " + quoteValue(sel.a) + "(i_" + index + " + flat_" + flatIndex + ")")
+        stream.println("i_" + index + " += 1")
+        stream.println("} // while (i_" + index + " < ...)")
+      case cat: Cat[_] => cat.d match {
+//        case KnownAtCompileTime(mdArray) if ((shape(mdArray).content().length == 0)&&(mdArray.content()(0) == 0)) =>
+//          val index = getNewIndex
+//          stream.println("var i_" + index + ": Int = 1")
+//          emitShapeDecl(sym)
+//          stream.println("new Array(" + quoteShape(cat.a) + ".length)")
+//          stream.println(quoteShape(sym) + "(0) = " + quoteShape(cat.a) + "(0) + " + quoteShape(cat.b) + "(0)")
+//          stream.println("while (i_" + index + " < " + quoteShape(sel.a) + ".length) {")
+//          stream.println(quoteShape(sym) +"(i_" + index + ") = " + quoteShape(sel.a) + "(i_" + index + ")")
+//          stream.println("i_" + index + " += 1")
+//          stream.println("} // while (i_" + index + " < ...)")
+//          emitValDecl(sym)
+//          stream.println("new Array(" + quoteValue(cat.a) + ".length + " + quoteValue(cat.b) + ".length)")
+//          stream.println("i_" + index + " = 0")
+//          stream.println("while (i_" + index + " < " + quoteValue(sym.a) + ".length) {")
+//          stream.println(quoteValue(sym) +"(i_" + index + ") = " + quoteValue(cat.a) + "(i_" + index + ")")
+//          stream.println("i_" + index + " += 1")
+//          stream.println("} // while (i_" + index + " < ...)")
+//          stream.println("i_" + index + " = 0")
+//          stream.println("while (i_" + index + " < " + quoteValue(cat.b) + ".length) {")
+//          stream.println(quoteValue(sym) +"(i_" + index + " + " + quoteValue(cat.a) + ".length + ) = " + quoteValue(cat.b) + "(i_" + index + ")")
+//          stream.println("i_" + index + " += 1")
+//          stream.println("} // while (i_" + index + " < ...)")
+        case _ =>
+          sys.error("NOT IMPLEMENTED YET!")
+      }
       case in: InfixOp[_, _] =>
-      // helper function
+        // emit operation for (array OP array) or (array OP scalar)
         def emitOperation(scalar: Boolean) = {
           val index = getNewIndex
           emitOperationPrologue(sym, in.array1, index)
           scalar match {
-            case true => stream.println("result(i_" + index +") = " + quote(in.array1) + ".content()(i_" + index +") " + in.opName + "  " + quote(in.array2))
-            case false => stream.println("result(i_" + index +") = " + quote(in.array1) + ".content()(i_" + index +") " + in.opName + "  " + quote(in.array2) + ".content()(i_" + index +")")
+            case true => stream.println(quoteValue(sym) + "(i_" + index +") = " + quoteValue(in.array1) + "(i_" + index +") " + in.opName + "  " + quoteValue(in.array2) + "(0)")
+            case false => stream.println(quoteValue(sym) + "(i_" + index +") = " + quoteValue(in.array1) + "(i_" + index +") " + in.opName + "  " + quoteValue(in.array2) + "(i_" + index +")")
           }
-          emitOperationEpilogue(sym, in.array1, index, "infixOpAA")
+          emitOperationEpilogue(sym, in.array1, index)
         }
-        emitSymDecl(sym)
-        stream.println("{")
         getShapeLength(in.array2) match {
           case Some(0) => // we have a scalar element
             emitOperation(true)
           case Some(_) => // we have an array
             emitOperation(false)
           case None => // we don't know what's there
-          //TODO: Find out why this is the most common case
+            //TODO: Find out why this is the most common case
             stream.println("// WARNING: Operation not specialized on {arrays|scalars}!")
-            stream.println("if (shape(shape(" + quote(in.array2) + ")).content()(0) == 0) {")
+            stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = {")
+            stream.println("if (" + quoteShape(in.array2) + ".length == 0) {")
             emitOperation(true)
             stream.println("} else {")
             emitOperation(false)
             stream.println("}")
+            stream.println("}")
         }
-        stream.println("}")
       case un: UnaryOp[_, _] =>
         val index = getNewIndex
-        emitSymDecl(sym)
-        stream.println("{")
         emitOperationPrologue(sym, un.array, index)
-        stream.println("result(i_" + index +") = " + un.opName + quote(un.array) + ".content()(i_" + index +")")
-        emitOperationEpilogue(sym, un.array, index, "unaryOp")
-        stream.println("}")
+        stream.println(quoteValue(sym) + "(i_" + index +") = " + un.opName + quoteValue(un.array) + "(i_" + index +")")
+        emitOperationEpilogue(sym, un.array, index)
       case wh: Where[_] =>
         val index = getNewIndex
-        emitSymDecl(sym)
-        stream.println("{")
         emitOperationPrologue(sym, wh.array1, index)
-        stream.println("result(i_" + index +") = if (" + quote(wh.cond) + ".content()(i_" + index +")) " + quote(wh.array1) + ".content()(i_" + index +") else " + quote(wh.array2) + ".content()(i_" + index +")")
-        emitOperationEpilogue(sym, wh.array1, index, "where")
-        stream.println("}")
+        stream.println(quoteValue(sym) + "(i_" + index +") = if (" + quoteValue(wh.cond) + "(i_" + index +")) " + quoteValue(wh.array1) + "(i_" + index +") else " + quoteValue(wh.array2) + "(i_" + index +")")
+        emitOperationEpilogue(sym, wh.array1, index)
       case va: Values[_] =>
         val index = getNewIndex
-        emitSymDecl(sym); stream.println("{")
-        stream.println("val result = new Array[Int](" + quote(va.dim) + ")")
+        emitShapeDecl(sym)
+        stream.println("Array(" + quoteValue(va.dim) + "(0))")
+        emitValDecl(sym)
+        stream.println("new Array[Int](" + quoteValue(va.dim) + "(0))")
         stream.println("var i_" + index + ": Int = 0")
-        stream.println("while (i_" + index + " < result.length) {")
-        stream.println("result(i_" + index + ") = " + quote(va.value))
+        stream.println("while (i_" + index + " < " + quoteValue(sym) + ".length) {")
+        stream.println(quoteValue(sym) + "(i_" + index + ") = " + quoteValue(va.value) + "(0)")
         stream.println("i_" + index + " += 1")
         stream.println("} // while (i_" + index + " ...")
-        stream.println("internalReshape(" + quote(va.dim) + "::Nil, result, \"values\")")
-        stream.println("}")
       case wn: WithNode[_] =>
         emitWithLoopModifier(sym, wn, withLoopAction)
       case ga: GenArrayWith[_] =>
         stream.println
+        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
         emitGenArray(sym, ga.lExpr, ga.shp)
         stream.println
       case ma: ModArrayWith[_] =>
         stream.println
+        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
         emitModArray(sym, ma.lExpr, ma.a)
         stream.println
       case fa: FoldArrayWith[_] =>
         stream.println
+        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
         emitFoldArray(sym, fa.wExpr, fa.neutral, fa.foldTerm1, fa.foldTerm2, fa.foldExpression)
         stream.println
       case soa: ScalarOperatorApplication[_,_,_] =>
+        emitShapeDecl(sym)
+        stream.println("Array()")
         emitSymDecl(sym)
-        stream.println("((a: " + soa.getMfA.toString + ", b: " + soa.getMfB.toString + ") => a " + soa.operator + " b)(" + quote(soa.a) + ", " + quote(soa.b) + ")")
+        stream.println("((a: " + soa.getMfA.toString + ", b: " + soa.getMfB.toString + ") => a " + soa.operator + " b)(" + quoteValue(soa.a) + "(0), " + quoteValue(soa.b) + "(0))")
       // If must also be translated to account for the scope changes
       // TODO: Is there an architecture where it's not necessary to do this?
       case ite: IfThenElse[_] =>
-        emitSymDecl(sym)
-        stream.println(" = if (" + quote(ite.cond) + ") {")
+        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
+        // The condition is always Rep[Boolean] therefore we can use the value directly
+        stream.println("if (" + quote(ite.cond) + ") {")
         TY.withinDifferentScopes(sym,
-          (ite.thenp.asInstanceOf[Sym[_]], () => {emitBlock(ite.thenp); stream.println(quote(getBlockResult(ite.thenp))); stream.println("} else {")})::
-          (ite.elsep.asInstanceOf[Sym[_]], () => {emitBlock(ite.elsep); stream.println(quote(getBlockResult(ite.elsep))); stream.println("}")})::
+          (ite.thenp.asInstanceOf[Sym[_]], () => {
+            emitBlock(ite.thenp)
+            stream.println("(" + quoteShape(getBlockResult(ite.thenp)) + ", " + quoteValue(getBlockResult(ite.thenp)) + ")")
+            stream.println("} else {")
+          })::
+          (ite.elsep.asInstanceOf[Sym[_]], () => {
+            emitBlock(ite.elsep)
+            stream.println("(" + quoteShape(getBlockResult(ite.elsep)) + ", " + quoteValue(getBlockResult(ite.elsep)) + ")")
+            stream.println("}")
+          })::
           Nil)
       case st: ToString[_] =>
         emitSymDecl(sym)
-        stream.println(quote(st.value) + ".toString")
+        stream.println("getString(" + quoteShape(st.value) + ", " + quoteValue(st.value) + ")")
       case rd: ReadMDArray[_] =>
-        emitSymDecl(sym)
-        stream.println("readMDArray[" + rd.getManifest + "](" + quote(rd.fileName) + ".content()(0))")
+        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
+        stream.println("// " + rd.fileName.Type)
+        val m = strip(sym.Type)
+        if (m == "Int")
+          stream.println("readMDArrayInt(" + quoteValue(rd.fileName) + "(0))")
+        else if (m == "Double")
+          stream.println("readMDArrayDouble(" + quoteValue(rd.fileName) + "(0))")
+        else if (m == "Float")
+          stream.println("readMDArrayFloat(" + quoteValue(rd.fileName) + "(0))")
+        else if (m == "Boolean")
+          stream.println("readMDArrayBoolean(" + quoteValue(rd.fileName) + "(0))")
+        else if (m == "Char")
+          stream.println("readMDArrayChar(" + quoteValue(rd.fileName) + "(0))")
+        else
+          sys.error("Unable to generate readMDArray: Unrecognized type " + m)
       case wr: WriteMDArray[_] =>
         emitSymDecl(sym)
-        stream.println("writeMDArray[" + wr.getManifest + "](" + quote(wr.fileName) + ".content()(0), " + quote(wr.array) + ")")
+        stream.println("writeMDArray[" + wr.getManifest + "](" + quoteValue(wr.fileName) + "(0), " + quoteShape(wr.array) + ", " + quoteValue(wr.array) + ")")
+      case st: StartTimer =>
+        emitSymDecl(sym)
+        stream.println("startTimer()")
+      case st: StopTimer =>
+        emitSymDecl(sym)
+        stream.println("stopTimer()")
       case _ =>
         super.emitNode(sym, rhs)
     }
   }
 
+  override def emitKernelHeader(syms: List[Sym[Any]], vals: List[Sym[Any]], vars: List[Sym[Any]], resultType: String, resultIsVar: Boolean, external: Boolean)(implicit stream: PrintWriter): Unit = {
+    super.emitKernelHeader(syms, vals, vars, resultType, resultIsVar, external)
+    for (v <- vals)
+      if (v.Type.erasure == classOf[MDArray[Any]])
+        stream.println("val (" + quoteShape(v) + ": Array[Int], " + quoteValue(v) + ": Array[" + remap(v.Type.typeArguments.head) + "]) = " + quote(v))
+  }
+
+  override def emitKernelFooter(syms: List[Sym[Any]], vals: List[Sym[Any]], vars: List[Sym[Any]], resultType: String, resultIsVar: Boolean, external: Boolean)(implicit stream: PrintWriter): Unit = {
+
+    for (s <- syms)
+      if (s.Type.erasure == classOf[MDArray[Any]])
+        stream.println("val " + quote(s) + ": " + remap(s.Type) + " = (" + quoteShape(s) + ", " + quoteValue(s) + ")")
+
+    super.emitKernelFooter(syms, vals, vars, resultType, resultIsVar, external)
+  }
+
   override def emitImports(implicit stream:PrintWriter): Unit = {
-    stream.println("import datastruct.scala._;")
-    stream.println("import datastruct.scala.Conversions._;")
-    stream.println("import datastruct.scala.Operations._;")
-    stream.println("import datastruct.scala.SpecificOperations._;")
-    stream.println("import datastruct.scala.MDArrayIO._;")
+    stream.println("import datastruct.scala.MDArrayRuntimeSupport._")
   }
 
 }

@@ -1,7 +1,7 @@
-package epfl.mdarrays.datastruct.scala
+package epfl.mdarrays.library.scala
 
-import epfl.mdarrays.datastruct.scala.Operations._
-import epfl.mdarrays.datastruct.scala.SpecificOperations._
+import epfl.mdarrays.library.scala.Operations._
+import epfl.mdarrays.library.scala.SpecificOperations._
 
 object Conversions {
   implicit def convertFromList[@specialized A: ClassManifest](a: List[A]): MDArray[A] = new MDArray[A]((a.length::Nil).toArray, a.toArray)

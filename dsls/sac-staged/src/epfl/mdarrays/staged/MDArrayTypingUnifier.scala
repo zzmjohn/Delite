@@ -2,8 +2,8 @@ package epfl.mdarrays.staged
 
 import _root_.scala.virtualization.lms.common._
 import _root_.scala.virtualization.lms.internal._
-import epfl.mdarrays.datastruct.scala._
-import epfl.mdarrays.datastruct.scala.Conversions._
+import epfl.mdarrays.library.scala._
+import epfl.mdarrays.library.scala.Conversions._
 import collection.mutable.{Queue, HashSet}
 import collection.immutable.{ListSet, HashMap}
 
@@ -283,7 +283,11 @@ trait MDArrayTypingUnifier extends MDArrayTypingPrimitives {
     case rv: ReconstructValueFromShape =>
       (rv.shape, rv.value) match {
         case (s: Lst, v:Var) if (countUnknowns(s) == 0) =>
-          (true, new SubstituteVarToLst(v, makeUnknowns(s.list.foldLeft(1)((v, elt) => v * elt.asInstanceOf[Value].n)))::Nil)
+          val size = s.list.foldLeft(1)((v, elt) => v * elt.asInstanceOf[Value].n)
+          if (size < 100)
+            (true, new SubstituteVarToLst(v, makeUnknowns(size))::Nil)
+          else
+            (true, Nil) // we don't want to spend forever in the type inference phase
         case _ =>
           (false, Nil)
       }

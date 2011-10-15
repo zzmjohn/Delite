@@ -1,9 +1,9 @@
-package epfl.mdarrays.datastruct.scala
+package epfl.mdarrays.library.scala
 
-import epfl.mdarrays.datastruct.scala.Conversions._
-import epfl.mdarrays.datastruct.scala.Operations._
-import epfl.mdarrays.datastruct.scala.SpecificOperations._
-import epfl.mdarrays.datastruct.scala.With._
+import epfl.mdarrays.library.scala.Conversions._
+import epfl.mdarrays.library.scala.Operations._
+import epfl.mdarrays.library.scala.SpecificOperations._
+import epfl.mdarrays.library.scala.With._
 
 object MDArrayIO {
   def readMDArray[@specialized A: Manifest](fileName: String): MDArray[A] = {
@@ -27,6 +27,27 @@ object MDArrayIO {
     source.close()
 
     reshape(shape, data)
+  }
+
+  def readMDArrayShape(fileName: String): MDArray[Int] = {
+    val source = scala.io.Source.fromFile(fileName)(scala.io.Codec.default)
+    val lines = source.getLines
+
+    // read dimension
+    if (!lines.hasNext) sys.error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain dimension!")
+    val dimension = lines.next.toInt
+
+    // read shape
+    val shape: Array[Int] = new Array(dimension)
+    for (i <- Range(0,dimension)) {
+      if (!lines.hasNext) sys.error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain the entire shape!")
+      shape(i) = lines.next.toInt
+    }
+
+    // close file
+    source.close()
+
+    reshape(List(dimension), shape)
   }
 
   def writeMDArray[@specialized A: Manifest](fileName: String, array: MDArray[A]) = {

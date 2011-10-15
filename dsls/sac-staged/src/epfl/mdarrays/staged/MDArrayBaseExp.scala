@@ -1,10 +1,10 @@
 package epfl.mdarrays.staged
 
 import _root_.scala.virtualization.lms.common._
-import epfl.mdarrays.datastruct.scala._
-import epfl.mdarrays.datastruct.scala.Conversions._
-import epfl.mdarrays.datastruct.scala.Operations
-import epfl.mdarrays.datastruct.scala.MDArrayIO
+import epfl.mdarrays.library.scala._
+import epfl.mdarrays.library.scala.Conversions._
+import epfl.mdarrays.library.scala.Operations
+import epfl.mdarrays.library.scala.MDArrayIO
 
 trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with ArgumentsExp {
   // needed so that foldTerms are not collected by the CSE
@@ -48,6 +48,7 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
   case class KnownAtCompileTime[A: Manifest](value: MDArray[A]) extends Def[MDArray[A]] {override def toString() = "KnownAtCompileTime(" + value.toString + ")" }
 
   // Conversions within the staged universe
+  case class FromMDArrayList[A: Manifest](list: List[Exp[MDArray[A]]]) extends Def[MDArray[A]] { override def toString() = "FromMDArrayList(" + list.toString + ")" }
   case class FromList[A: Manifest](value: Exp[List[A]]) extends Def[MDArray[A]] { override def toString() = "FromList(" + value.toString + ")" }
   case class FromArray[A: Manifest](value: Exp[Array[A]]) extends Def[MDArray[A]] { override def toString() = "FromArray(" + value.toString + ")" }
   case class FromValue[A: Manifest](value: Exp[A]) extends Def[MDArray[A]] { override def toString() = "FromValue(" + value.toString + ")" }
@@ -99,8 +100,12 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
   }
 
   // IO Nodes
-  case class ReadMDArray[A: Manifest](fileName: Rep[String], jitShape: Option[MDArray[Int]]) extends Def[MDArray[A]] { override def toString = "ReadMDArray(" + fileName + ")"; def getManifest = manifest[A] }
-  case class WriteMDArray[A: Manifest](fileName: Rep[String], array: Rep[MDArray[A]]) extends Def[Unit] { override def toString = "WriteMDArray(" + fileName + ", " + array + ")"; def getManifest = manifest[A] }
+  case class ReadMDArray[A: Manifest](fileName: Rep[MDArray[String]], jitShape: Option[MDArray[Int]]) extends Def[MDArray[A]] { override def toString = "ReadMDArray(" + fileName + ")"; def getManifest = manifest[A] }
+  case class WriteMDArray[A: Manifest](fileName: Rep[MDArray[String]], array: Rep[MDArray[A]]) extends Def[Unit] { override def toString = "WriteMDArray(" + fileName + ", " + array + ")"; def getManifest = manifest[A] }
+
+  // Timer nodes
+  case class StartTimer(afterComputing: List[Rep[Any]]) extends Def[Unit]
+  case class StopTimer(afterComputing: List[Rep[Any]]) extends Def[Unit]
 
   /*
       Abstract function implementation
@@ -114,6 +119,7 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
   implicit def convertFromListRepRep[A: Manifest](a: Exp[List[A]]): Exp[MDArray[A]] = FromList(a)
   implicit def convertFromArrayRepRep[A: Manifest](a: Exp[Array[A]]): Exp[MDArray[A]] = FromArray(a)
   implicit def convertFromValueRepRep[A: Manifest](a: Exp[A]): Exp[MDArray[A]] = FromValue(a)
+  implicit def convertFromMDArrayList[A: Manifest](a: List[Exp[MDArray[A]]]): Exp[MDArray[A]] = FromMDArrayList(a)
 
   // Implicit conversion from MDArray to staged array
   implicit def convertFromMDArrayToRep[A: Manifest](a: MDArray[A]): Exp[MDArray[A]] = KnownAtCompileTime(a)
@@ -212,7 +218,7 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
               val kc = tp.rhs.asInstanceOf[KnownAtCompileTime[Any]]
               val value = kc.value.asInstanceOf[MDArray[String]]
               if (Operations.dim(value) == 0)
-                hint = MDArrayIO.readMDArray(value.content()(0)).shape
+                hint = MDArrayIO.readMDArrayShape(value.content()(0))
             }
           case None =>
         }
@@ -234,6 +240,10 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
 
   def writeMDArray[A: Manifest](fileName: Exp[MDArray[String]], array: Exp[MDArray[A]]): Exp[Unit] =
     reflectEffect(WriteMDArray(fileName, array))
+
+  // Timer functions
+  def startTimer(afterComputing: List[Rep[Any]]): Rep[Unit] = reflectEffect(StartTimer(afterComputing))
+  def stopTimer(afterComputing: List[Rep[Any]]): Rep[Unit] = reflectEffect(StopTimer(afterComputing))
 
   protected val nothing: Exp[MDArray[Int]] = Nothing
 }

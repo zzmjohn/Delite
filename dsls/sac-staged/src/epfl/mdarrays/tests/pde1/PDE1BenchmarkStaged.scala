@@ -1,7 +1,7 @@
 package epfl.mdarrays.tests.pde1
 
-import epfl.mdarrays.datastruct.scala.Conversions._
-import epfl.mdarrays.datastruct.scala._
+import epfl.mdarrays.library.scala.Conversions._
+import epfl.mdarrays.library.scala._
 
 import epfl.mdarrays.staged._
 import scala.util.Random
@@ -153,9 +153,9 @@ trait PDE1BenchmarkStagedFakeReadMDArray {
   def fakeReadMDArray(): MDArray[Double] = {
     Random.setSeed(0);
 
-    import epfl.mdarrays.datastruct.scala.Operations._
-    import epfl.mdarrays.datastruct.scala.Conversions._
-    import epfl.mdarrays.datastruct.scala._
+    import epfl.mdarrays.library.scala.Operations._
+    import epfl.mdarrays.library.scala.Conversions._
+    import epfl.mdarrays.library.scala._
 
     val size: Int = 10
     val arr: Array[Double] = new Array[Double](size * size * size)

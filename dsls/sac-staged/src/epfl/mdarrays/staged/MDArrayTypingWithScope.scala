@@ -1,7 +1,7 @@
 package epfl.mdarrays.staged
 
-import epfl.mdarrays.datastruct.scala._
-import epfl.mdarrays.datastruct.scala.Conversions._
+import epfl.mdarrays.library.scala._
+import epfl.mdarrays.library.scala.Conversions._
 import java.io.{Writer, PrintWriter}
 import collection.immutable.HashMap
 
@@ -62,14 +62,17 @@ trait MDArrayTypingWithScope extends MDArrayTypingConstraints {
   /**
    * Gather the constraints in a optimizer & code generator-friendly way
    */
-  def doTyping(result: Exp[_], debug: Boolean = false): Unit = {
+  def doTyping(result: Exp[_], debug: Boolean = false): Unit = result match {
+    case sym: Sym[_] =>
+      // 1. Gather constraints
+      currentScope = TypingScope(IR.fresh[Any], sym, null)
+      emitBlock(result)(new PrintWriter(System.err)) // shouldn't output anything
 
-    // 1. Gather constraints
-    currentScope = TypingScope(IR.fresh[Any], result.asInstanceOf[Sym[_]], null)
-    emitBlock(result)(new PrintWriter(System.err)) // shouldn't output anything
-
-    // 2. Get the substitution list & the pre-requirement list
-    solveScope(currentScope, Nil, debug)
+      // 2. Get the substitution list & the pre-requirement list
+      solveScope(currentScope, Nil, debug)
+    case _ =>
+      // Make a bogus typing scope
+      currentScope = TypingScope(IR.fresh[Any], IR.fresh[Any], null)
   }
 
 
@@ -93,7 +96,7 @@ trait MDArrayTypingWithScope extends MDArrayTypingConstraints {
     }
 
     (valueVar != valueVarValue, shapeVar != shapeVarValue) match {
-      case (true, true) => valueVar.toString + "=" + valueString + " and " + shapeVar.toString + "=" + shapeVarValue.toString
+      case (true, true) => shapeVar.toString + "=" + shapeVarValue.toString + " and " + valueVar.toString + "=" + valueString 
       case (true, false) => valueVar.toString + "=" + valueString
       case (false, true) => shapeVar.toString + "=" + shapeVarValue.toString
       case (false, false) => "?!?"

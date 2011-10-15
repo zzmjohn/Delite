@@ -1,8 +1,11 @@
 #!/bin/bash
 
-for a in `seq 100 100 10000`
+for a in `seq 12000 -300 200`
 do
     echo MATRIX SIZE: $a
     ./create_matrix.sh $a
     ./perform-test-sac-transpose
+    sleep 1
+    killall -9 java
+    sleep 1
 done

@@ -8,6 +8,7 @@ import java.io.{StringWriter, FileWriter, File, PrintWriter}
 import scala.virtualization.lms.common.LoopFusionOpt
 import scala.virtualization.lms.internal.{GenerationFailedException}
 import ppl.delite.framework.datastruct.scala.DeliteCollection
+import ppl.delite.framework.util.IndentWriter
 
 trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
   val IR: DeliteOpsExp
@@ -89,7 +90,7 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
       val buildPath = Config.buildDir + sep + gen + sep + "kernels" + sep
       val outDir = new File(buildPath); outDir.mkdirs()
       val outFile = new File(buildPath + kernelName + "." + gen.kernelFileExt)
-      val kstream = new PrintWriter(outFile)
+      val kstream = new PrintWriter(new IndentWriter(new FileWriter(outFile)))
       val bodyString = new StringWriter()
       val bodyStream = new PrintWriter(bodyString)
 

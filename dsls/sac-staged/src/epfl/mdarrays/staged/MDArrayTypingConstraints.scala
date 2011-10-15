@@ -1,8 +1,8 @@
 package epfl.mdarrays.staged
 
 import _root_.scala.virtualization.lms.common._
-import epfl.mdarrays.datastruct.scala._
-import epfl.mdarrays.datastruct.scala.Conversions._
+import epfl.mdarrays.library.scala._
+import epfl.mdarrays.library.scala.Conversions._
 
 import java.io.{Writer, PrintWriter}
 import collection.immutable.HashMap
@@ -76,6 +76,13 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with BaseGenIfThenElse wit
       Equality(ShapeVar(sym), Lst(getNewUnknownElement::Nil), postReq, rhs)::Nil
     case FromArray(array) =>
       Equality(ShapeVar(sym), Lst(getNewUnknownElement::Nil), postReq, rhs)::Nil
+    case FromMDArrayList(list) => list match {
+      case Nil =>
+        Equality(ShapeVar(sym), Lst(Value(0)::Nil), postReq, rhs)::Nil
+      case head::rest =>
+        EqualityAeqBcatC(ShapeVar(sym), Lst(Value(list.length)::Nil), ShapeVar(head), postReq, rhs)::
+        rest.map((x: Exp[_]) => Equality(ShapeVar(head), ShapeVar(x), preReq, rhs))
+    }
     case FromValue(value) =>
       Equality(ShapeVar(sym), Lst(Nil), postReq, rhs)::Nil
     case ToList(value) =>
@@ -183,6 +190,10 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with BaseGenIfThenElse wit
       })
     case WriteMDArray(fileName, array) =>
       Equality(ShapeVar(fileName), Lst(Nil), preReq, rhs)::Nil
+    case StartTimer(afterComputing) =>
+      Nil
+    case StopTimer(afterComputing) =>
+      Nil
     case _ =>
       super.emitNode(sym, rhs)(null) // for Reify() - careful, if it outputs anything it will crash&burn!
       Nil

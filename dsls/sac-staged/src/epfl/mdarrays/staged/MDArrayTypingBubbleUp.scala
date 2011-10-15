@@ -1,8 +1,8 @@
 package epfl.mdarrays.staged
 
 import _root_.scala.virtualization.lms.common._
-import epfl.mdarrays.datastruct.scala._
-import epfl.mdarrays.datastruct.scala.Conversions._
+import epfl.mdarrays.library.scala._
+import epfl.mdarrays.library.scala.Conversions._
 import java.io.{Writer, PrintWriter}
 import collection.immutable.HashMap
 
@@ -39,12 +39,15 @@ trait MDArrayTypingBubbleUp extends MDArrayTypingWithScope {
         fillInRuntimeChecks(argSym)
   }
 
-  override def doTyping(result: Exp[_], debug: Boolean = false): Unit = {
-    // Let the bottom layers do their work
-    super.doTyping(result, debug)
+  override def doTyping(result: Exp[_], debug: Boolean = false): Unit = result match {
+    case sym: Sym[_] =>
+      // Let the bottom layers do their work
+      super.doTyping(sym, debug)
 
-    // Create runtimeChecks
-    fillInRuntimeChecks(result.asInstanceOf[Sym[_]])
+      // Create runtimeChecks
+      fillInRuntimeChecks(sym)
+    case _ =>
+      // Don't do anything
   }
 
   // Gets the exact runtime checks

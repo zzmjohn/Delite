@@ -1,7 +1,7 @@
 package epfl.mdarrays.tests.jit
 
-import epfl.mdarrays.datastruct.scala.Conversions._
-import epfl.mdarrays.datastruct.scala._
+import epfl.mdarrays.library.scala.Conversions._
+import epfl.mdarrays.library.scala._
 
 import epfl.mdarrays.staged._
 import scala.util.Random
@@ -74,9 +74,9 @@ trait JITStagedFakeReadMDArray {
     // We want deterministic random
     Random.setSeed(0);
 
-    import epfl.mdarrays.datastruct.scala.Operations._
-    import epfl.mdarrays.datastruct.scala.Conversions._
-    import epfl.mdarrays.datastruct.scala._
+    import epfl.mdarrays.library.scala.Operations._
+    import epfl.mdarrays.library.scala.Conversions._
+    import epfl.mdarrays.library.scala._
 
     // Create the matrix
     val size: Int = 10

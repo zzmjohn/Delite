@@ -1,7 +1,7 @@
 package epfl.mdarrays.tests
 
-import epfl.mdarrays.datastruct.scala.Conversions._
-import epfl.mdarrays.datastruct.scala._
+import epfl.mdarrays.library.scala.Conversions._
+import epfl.mdarrays.library.scala._
 import epfl.mdarrays.staged._
 import _root_.scala.virtualization.lms.common._
 import java.io.{FileWriter, PrintWriter}

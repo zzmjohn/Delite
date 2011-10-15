@@ -11,6 +11,7 @@ import codegen.delite.{DeliteCodeGenPkg, DeliteCodegen, TargetDelite}
 import codegen.scala.TargetScala
 import codegen.Target
 import ops.DeliteOpsExp
+import util.IndentWriter
 
 trait DeliteApplication extends DeliteOpsExp with ScalaCompile {
   type DeliteApplicationTarget = Target{val IR: DeliteApplication.this.type}
@@ -69,7 +70,7 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile {
     }
 
     if (Config.degFilename.endsWith(".deg")) {
-      val streamScala = new PrintWriter(new FileWriter(Config.degFilename.replace(".deg",".scala")))
+      val streamScala = new PrintWriter(new IndentWriter(new FileWriter(Config.degFilename.replace(".deg",".scala"))))
       codegen.emitSource(liftedMain, "Application", streamScala) // whole scala application (for testing)
       // TODO: dot output
       reset

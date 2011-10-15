@@ -1,8 +1,8 @@
 package epfl.mdarrays.tests
 
-import epfl.mdarrays.datastruct.scala.Conversions._
-import epfl.mdarrays.datastruct.scala.Operations._
-import epfl.mdarrays.datastruct.scala._
+import epfl.mdarrays.library.scala.Conversions._
+import epfl.mdarrays.library.scala.Operations._
+import epfl.mdarrays.library.scala._
 import scala.util.Random
 
 /*

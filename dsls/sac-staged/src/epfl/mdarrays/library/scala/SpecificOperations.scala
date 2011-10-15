@@ -1,7 +1,7 @@
-package epfl.mdarrays.datastruct.scala
+package epfl.mdarrays.library.scala
 
-import epfl.mdarrays.datastruct.scala.Conversions._
-import epfl.mdarrays.datastruct.scala.Operations._
+import epfl.mdarrays.library.scala.Conversions._
+import epfl.mdarrays.library.scala.Operations._
 
 object SpecificOperations {
 

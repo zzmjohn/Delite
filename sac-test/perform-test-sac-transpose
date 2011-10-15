@@ -5,8 +5,8 @@ export JAVA_OPTS="-Xmx$HEAP_SIZE"
 
 echo Set classpath...
 export CLASSPATH=$CLASSPATH:$DELITE/dsls/sac-staged/target/$VANILLA_VERSION/classes/:$DELITE/framework/target/$VANILLA_VERSION/classes:$LMS/target/$VANILLA_VERSION/classes:.
-echo Compile...
-$SCALA_VIRTUALIZED/scalac Transpose.scala
+#echo Compile...
+#$SCALA_VIRTUALIZED/scalac Transpose.scala
 
 echo "Stage... (JIT/Blocks)"
 $SCALA_VIRTUALIZED/scala -Ddelite.home.dir=$DELITE -DStagedSAC.blocks=true -DTranspose.JIT=true TransposeRunner #-Dlms.verbosity=2

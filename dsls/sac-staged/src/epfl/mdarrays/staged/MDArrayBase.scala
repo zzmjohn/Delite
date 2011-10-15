@@ -1,11 +1,10 @@
 package epfl.mdarrays.staged
 
 import scala.virtualization.lms.common._
-import epfl.mdarrays.datastruct.scala._
+import epfl.mdarrays.library.scala._
 
 
 trait MDArrayBase extends Base with Arguments with IfThenElse {
-  // TODO: What are the implications of having something like MDArray[Rep[T]]? Do the implicits still work?
 
   /**
    * This is a hack to compute MDArray.apply()
@@ -68,6 +67,7 @@ trait MDArrayBase extends Base with Arguments with IfThenElse {
     Since the index vectors are also MDArrays, they will be transformed in the same fashion
    */
   // TODO: Conversions going back to the "real" world are problematic... Decide what to do about them
+  // TODO: What are the implications of having something like MDArray[Rep[T]]? Do the implicits still work?
   // Implicit conversions
   implicit def convertFromListRep[A: Manifest](a: List[A]): Rep[MDArray[A]]
   implicit def convertFromArrayRep[A: Manifest](a: Array[A]): Rep[MDArray[A]]
@@ -76,6 +76,7 @@ trait MDArrayBase extends Base with Arguments with IfThenElse {
   implicit def convertToArrayRep[A: Manifest](a: Rep[MDArray[A]]): Rep[Array[A]]
   implicit def convertToValueRep[A: Manifest](a: Rep[MDArray[A]]): Rep[A]
   implicit def convertFromMDArrayToRep[A: Manifest](a: MDArray[A]): Rep[MDArray[A]]
+  implicit def convertFromMDArrayList[A: Manifest](a: List[Rep[MDArray[A]]]): Rep[MDArray[A]]
 
   // Implicit conversions from unknown elements
   implicit def convertFromListRepRep[A: Manifest](a: Rep[List[A]]): Rep[MDArray[A]]
@@ -184,4 +185,8 @@ trait MDArrayBase extends Base with Arguments with IfThenElse {
   // The IO functions
   def readMDArray[A: Manifest](fileName: Rep[MDArray[String]], jit: Boolean = true): Rep[MDArray[A]]
   def writeMDArray[A: Manifest](fileName: Rep[MDArray[String]], array: Rep[MDArray[A]]): Rep[Unit]
+
+  // Timer functions
+  def startTimer(afterComputing: List[Rep[Any]]): Rep[Unit]
+  def stopTimer(afterComputing: List[Rep[Any]]): Rep[Unit]
 }
