@@ -133,13 +133,13 @@ object MDArrayRuntimeSupport {
       i += 1
     }
 
-    // read contents
+    // read contents (HACKED!)
     i = 0
     val size = prod(shape)
     val data: Array[Int] = new Array(size)
     while (i < size) {
-      if (!lines.hasNext) sys.error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain the data!")
-      data(i) = readInt(lines.next)
+      //if (!lines.hasNext) sys.error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain the data!")
+      data(i) = i //readInt(lines.next)
       i += 1
     }
 

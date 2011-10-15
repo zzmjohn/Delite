@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export HEAP_SIZE=2048m
+export HEAP_SIZE=2500m
 export JAVA_OPTS="-Xmx$HEAP_SIZE"
 
 echo Set classpath...

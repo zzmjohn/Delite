@@ -12,7 +12,8 @@ echo CONFIRM: $size
 echo 2 > matrix.txt 
 echo $size >> matrix.txt 
 echo $size >> matrix.txt 
-    
+echo "" >> matrix.txt
+
 maxelt=`expr $size \* $size` 
  
-seq 1 $maxelt >> matrix.txt 
+#seq 1 $maxelt >> matrix.txt 
