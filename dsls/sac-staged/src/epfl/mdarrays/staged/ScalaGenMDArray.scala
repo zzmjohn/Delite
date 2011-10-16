@@ -6,6 +6,9 @@ import _root_.scala.virtualization.lms.internal._
 import epfl.mdarrays.library.scala.MDArray
 import java.io.PrintWriter
 
+import ppl.delite.framework.codegen.delite.overrides.{DeliteScalaGenIfThenElse,DeliteScalaGenVariables}
+import ppl.delite.framework.ops.{DeliteOpsExp}
+
 trait BaseGenMDArray extends GenericNestedCodegen {
 
   val IR: MDArrayBaseExp
@@ -35,8 +38,7 @@ trait TypedGenMDArray extends BaseGenMDArray {
   }
 }
 
-trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
-
+trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with DeliteScalaGenVariables with TypedGenMDArray {
   import IR._
   import TY.{getShapeLength, getValueLength, getShapeValue, getValueValue}
 
@@ -210,7 +212,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     stream.println("}")   // Emit the loop action
 
     val savedLoopAction = withLoopAction
-    withLoopAction = emitFoldArrayAction
+    withLoopAction = emitFoldArrayAction _
     emitBlock(withNode)
     withLoopAction = savedLoopAction
 
@@ -586,6 +588,43 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
             stream.println("}")
           })::
           Nil)
+      case ite: DeliteIfThenElse[_] => // handle delite ite, too
+        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
+        // The condition is always Rep[Boolean] therefore we can use the value directly
+        stream.println("if (" + quote(ite.cond) + ") {")
+        TY.withinDifferentScopes(sym,
+          (ite.thenp.asInstanceOf[Sym[_]], () => {
+            emitBlock(ite.thenp)
+            stream.println("(" + quoteShape(getBlockResult(ite.thenp)) + ", " + quoteValue(getBlockResult(ite.thenp)) + ")")
+            stream.println("} else {")
+          })::
+          (ite.elsep.asInstanceOf[Sym[_]], () => {
+            emitBlock(ite.elsep)
+            stream.println("(" + quoteShape(getBlockResult(ite.elsep)) + ", " + quoteValue(getBlockResult(ite.elsep)) + ")")
+            stream.println("}")
+          })::
+          Nil)
+      case NewVar(x) => 
+        stream.println("//NEWVAR")
+        val symIsResult = !deliteResult.isEmpty && (deliteResult.get contains sym)
+        if (symIsResult)
+          emitValDef(sym, "new generated.scala.Ref((" + quoteShape(x) + ", " + quoteValue(x) + "))")
+        else
+          emitVarDef((sym.asInstanceOf[Sym[Variable[Any]]]), "(" + quoteShape(x) + ", " + quoteValue(x) + ")")
+      case Assign(Variable(lhs), x) => 
+        stream.println("//ASSIGN")
+        val isInput = (deliteInputs intersect syms(rhs)).nonEmpty
+        if (isInput)
+          emitValDef(sym, quote(lhs) + ".set((" + quoteShape(x) + ", " + quoteValue(x) + "))")
+        else
+          emitAssignment(quote(lhs), "(" + quoteShape(x) + ", " + quoteValue(x) + ")")
+      case ReadVar(Variable(x)) => 
+        stream.println("//READVAR")
+        val isInput = (deliteInputs intersect syms(rhs)).nonEmpty
+        if (isInput)
+          stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = " + quote(x) + ".get")
+        else
+          stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = " + quote(x))
       case st: ToString[_] =>
         emitSymDecl(sym)
         stream.println("getString(" + quoteShape(st.value) + ", " + quoteValue(st.value) + ")")

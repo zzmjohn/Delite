@@ -26,7 +26,7 @@ trait GameOfLifeStaged extends StagedSACApplication with GameOfLifeStagedFakeRea
     var i = 0: Rep[MDArray[Int]]
     while (i < iter) {
       alive = gameOfLife(alive)
-      i += 1
+      i = i + 1
     }
     alive
   }

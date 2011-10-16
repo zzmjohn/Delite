@@ -29,7 +29,7 @@ trait StagedSACLift extends LiftVariables with LiftEquals /*with LiftString with
 }
 
 trait StagedSACExp extends StagedSAC with MDArrayBaseExp with MiscOpsExp
- 	with DeliteOpsExp /* with DeliteAllOverridesExp */ {
+ 	with DeliteOpsExp with DeliteAllOverridesExp {
 	
 	this: DeliteApplication with StagedSACApplication with StagedSACExp =>
 
@@ -67,7 +67,7 @@ trait StagedSACCodegenBase extends GenericFatCodegen with Utils {
 }
 
 trait StagedSACCodegenScala extends StagedSACCodegenBase with ScalaGenMDArray
-  with ScalaGenDeliteOps with ScalaGenDeliteCollectionOps /* with DeliteScalaGenAllOverrides */ with ScalaGenMiscOps {
+  with ScalaGenDeliteOps with ScalaGenDeliteCollectionOps with DeliteScalaGenAllOverrides with ScalaGenMiscOps {
 	
   val IR: TY.IR.type with DeliteApplication with StagedSACExp
 	
