@@ -268,11 +268,11 @@ trait MDArrayBaseExp extends MDArrayBase with EffectExp with /*DeliteIfThenElseE
   def startTimer(afterComputing: List[Rep[Any]]): Rep[Unit] = reflectEffect(StartTimer(afterComputing))
   def stopTimer(afterComputing: List[Rep[Any]]): Rep[Unit] = reflectEffect(StopTimer(afterComputing))
 
+  /*
 
   // Prevent Game Of Life staging from hanging
   override def utilLoadSymTP[T](s: Sym[T]): List[TP[Any]] = Nil
 
-  /*
   // Speed up symbol finding
   var map1: Map[Sym[Any], TP[Any]] = HashMap.empty
   var map2: Map[Def[Any], TP[Any]] = HashMap.empty
