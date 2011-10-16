@@ -2,6 +2,7 @@ package epfl.mdarrays.tests.gol
 
 import epfl.mdarrays.library.scala.Conversions._
 import epfl.mdarrays.library.scala._
+import epfl.mdarrays.library.scala.Operations._
 
 import epfl.mdarrays.staged._
 import scala.util.Random
@@ -17,8 +18,10 @@ trait GameOfLifeStaged extends StagedSACApplication with GameOfLifeStagedFakeRea
       2. run testGameOfLife(1000, <array>)
       3. print the result? -- we don't have any effects, is there another way to do this?
      */
-    val matrix = fakeReadMDArray()
-    println(testGameOfLife(1000, matrix).getString)
+    val matrix = reshape(300::300::Nil, values(90000, 0)) // simulating some matrix :|
+    val start = startTimer(matrix::Nil)
+    val result = testGameOfLife(1000, matrix)
+    val stop = stopTimer(result::Nil)
   }
 
   def testGameOfLife(iter: Rep[MDArray[Int]], start: Rep[MDArray[Int]]): Rep[MDArray[Int]] = {
@@ -46,14 +49,14 @@ trait GameOfLifeStaged extends StagedSACApplication with GameOfLifeStagedFakeRea
       0
   }
 
-  def computeIfReborn(neigh: Rep[MDArray[Int]], dead: Rep[MDArray[Int]]): Rep[MDArray[Int]] = {
-
-    if (dead === 1) {
+  def computeIfReborn(neigh: Rep[MDArray[Int]], alive: Rep[MDArray[Int]]): Rep[MDArray[Int]] = {
+    if (alive === 0) {
       if (neigh === 3)
         1 // Rule 4: Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
       else
         0
-    } else
+    }
+    else
       0
   }
 
@@ -63,8 +66,7 @@ trait GameOfLifeStaged extends StagedSACApplication with GameOfLifeStagedFakeRea
       iv => computeIfDead(sum(tile(values(dim(alive), 3), iv-1, alive)), alive(iv))).GenArray(shape(alive))
 
     val reborn = With(lbStrict = true, ubStrict = true, function =
-      iv => computeIfReborn(sum(tile(values(dim(alive), 3), iv-1, alive)) -
-                            sum(tile(values(dim(alive), 3), iv-1, dead)), dead(iv))).GenArray(shape(alive))
+      iv => computeIfReborn(sum(tile(values(dim(alive), 3), iv-1, alive)), alive(iv))).GenArray(shape(alive))
 
     val result = alive - dead + reborn
     result
@@ -81,12 +83,46 @@ trait GameOfLifeStagedFakeReadMDArray {
     import epfl.mdarrays.library.scala._
 
     // Create the matrix
-    val size: Int = 10
+    val size: Int = 300
     val arr2: Array[Int] = new Array[Int](size * size)
     val rnd2: Random = new Random(1) // We need to have a fixed seed
     for (i <- arr2.indices)
       arr2(i) = rnd2.nextInt(2)
+
+    val lwss = Array(
+      0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,
+      0,0,1,1,1,1,0,0,0,0,
+      0,1,0,0,0,1,0,0,0,0,
+      0,0,0,0,0,1,0,0,0,0,
+      0,1,0,0,1,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0)
+
+    val osc4 = Array(
+      0,0,0,0,0,0,0,0,0,0,
+      0,0,1,0,0,0,0,0,0,0,
+      0,0,1,0,0,0,1,1,1,0,
+      0,0,1,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,0,0,0,
+      0,0,0,0,0,0,0,1,0,0,
+      0,1,1,1,0,0,0,1,0,0,
+      0,0,0,0,0,0,0,1,0,0,
+      0,0,0,0,0,0,0,0,0,0)
+
+    val osc = Array(
+      0,0,0,0,0,
+      0,0,0,0,0,
+      0,1,1,1,0,
+      0,0,0,0,0,
+      0,0,0,0,0
+    )
+
     val gameOfLifeMatrix: MDArray[Int] = reshape(size :: size :: Nil, arr2)
+    //val gameOfLifeMatrix: MDArray[Int] = reshape(5::5::Nil, osc)
 
     gameOfLifeMatrix
   }

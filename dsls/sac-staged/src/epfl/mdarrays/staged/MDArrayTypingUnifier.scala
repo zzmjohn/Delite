@@ -41,7 +41,13 @@ trait MDArrayTypingUnifier extends MDArrayTypingPrimitives {
       for (constraint <- constraints) {
         index = index + 1
         if (indexSuccessful == -1) {
-          val pair = unifyConstraint(constraint)
+          val pair = try {
+            unifyConstraint(constraint)
+          } catch {
+            case x =>
+              println("Exception while solving: " + constraint)
+              throw x
+          }
           if (pair._1) { // it was successful
             if (debug) {
               println(" SOLVED: ")

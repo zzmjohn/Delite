@@ -158,8 +158,9 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with DeliteScalaGenIfThenE
       Equality(ShapeVar(shape), Lst(getNewUnknownElement::Nil), preReq, rhs)::
       withLoops.flatMap(wn =>
         Equality(ShapeVar(shape), ShapeVar(recoverWithNode(wn).lb), preReq, rhs)::
-        PrefixLt(ValueVar(shape), ValueVar(recoverWithNode(wn).lb), ShapeVar(wn), preReq, rhs)::
-        SuffixEq(ValueVar(shape), ValueVar(recoverWithNode(wn).lb), ShapeVar(wn), preReq, rhs)::Nil
+        PrefixLt(ValueVar(shape), ValueVar(recoverWithNode(wn).lb), ShapeVar(wn), preReq, rhs)::Nil
+        // let the expr(iv) return any dimension
+        // SuffixEq(ValueVar(shape), ValueVar(recoverWithNode(wn).lb), ShapeVar(wn), preReq, rhs)::Nil
       ) :::
       EqualityAeqBcatC(ShapeVar(sym), ValueVar(shape), ShapeVar(withLoops.head), postReq, rhs)::Nil
     case ModArrayWith(withLoops, array) =>

@@ -11,13 +11,11 @@ trait MDArrayBaseExp extends MDArrayBase with EffectExp with /*DeliteIfThenElseE
   // needed so that foldTerms are not collected by the CSE
   var foldTermIndex = 0
 
-  //override def readMutableData[A](d: Def[A]) = Nil // TODO: find root cause for blowup
-
   var idxFcd = 0
   override def createDefinition[T](s: Sym[T], d: Def[T]): TP[T] = {
     idxFcd += 1
     val r = super.createDefinition(s,d)
-    println("#"+idxFcd + "   " + r)
+    //println("#"+idxFcd + "   " + r)
     r
   }
 

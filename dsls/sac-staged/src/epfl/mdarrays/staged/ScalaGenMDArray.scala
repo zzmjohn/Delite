@@ -6,8 +6,8 @@ import _root_.scala.virtualization.lms.internal._
 import epfl.mdarrays.library.scala.MDArray
 import java.io.PrintWriter
 
-import ppl.delite.framework.codegen.delite.overrides.{DeliteScalaGenIfThenElse,DeliteScalaGenVariables}
 import ppl.delite.framework.ops.{DeliteOpsExp}
+import ppl.delite.framework.codegen.delite.overrides.{DeliteScalaGenAllOverrides, DeliteScalaGenIfThenElse, DeliteScalaGenVariables}
 
 trait BaseGenMDArray extends GenericNestedCodegen {
 
@@ -38,7 +38,7 @@ trait TypedGenMDArray extends BaseGenMDArray {
   }
 }
 
-trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
+trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with DeliteScalaGenVariables with TypedGenMDArray {
 
   // We cannot import eveything, else scala-virtualized will virtualize us :)
   import IR.{KnownAtCompileTime, KnownAtRuntime}
@@ -51,6 +51,11 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
   import IR.{ReadMDArray, WriteMDArray}
   import IR.{StartTimer, StopTimer}
   import IR.IfThenElse
+  import IR.PrintLn
+
+  // Delite
+  import IR.{DeliteWhile, DeliteIfThenElse, ReadVar, NewVar, Assign, Variable, deliteInputs, deliteResult}
+
   // Generic IR
   import IR.{Sym, Def, TP, Exp, Const, findDefinition, syms}
   // Typing
@@ -158,6 +163,9 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
       stream.println("// copy new content")
       stream.println("val mainIndex: Int = flattenGenArray(" + quoteValue(shpSym) + ", rshape, " + iv + ")")
       val index = getNewIndex
+      //stream.println("println(\"IV=\"+"+iv+".mkString(\" \"))")
+      //stream.println("println(\"Shape=\"+"+quoteValue(shpSym)+".mkString(\" \"))")
+      //stream.println("println(\"Copying \"+"+resultValue+".mkString(\" \")+\" to offset: \"+mainIndex)")
       stream.println("var innerIndex_" + index + ": Int = 0")
       stream.println("while (innerIndex_" + index + " < " + resultValue + ".length) {")
       stream.println("result(mainIndex + innerIndex_" + index + ") = " + resultValue + "(innerIndex_" + index + ")")
@@ -242,7 +250,6 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
 
     stream.println("{")
     stream.println("var result: Array[" + strip(neutralSym.Type) + "] = " + quoteValue(neutralSym))
-    stream.println("val rsahpe: Array[Int] = " + quoteShape(neutralSym))
     stream.println("val " + quoteShape(foldTerm1Sym) + ": Array[Int] = " + quoteShape(neutralSym))
     stream.println("val " + quoteShape(foldTerm2Sym) + ": Array[Int] = " + quoteShape(neutralSym))
 
@@ -257,7 +264,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     emitBlock(withNode)
     withLoopAction = savedLoopAction
 
-    stream.println("(rshape, result)")
+    stream.println("(" + quoteShape(neutralSym) + ", result)")
     stream.println("}")
   }
 
@@ -272,7 +279,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     def emitForRange(lower: String, upper: String) = {
       // emit loop and filter
       stream.println(quoteValue(withLoop.sym) + "(" + index + ") = " + lower)
-      stream.println("while (" + quoteValue(withLoop.sym) + "(" + index +") < " + upper + ") {")
+      stream.println("while (" + quoteValue(withLoop.sym) + "(" + index +") <= " + upper + ") {")
       stream.println("if ((" + quoteValue(withLoop.sym) + "(" + index +") - " + quoteValue(withLoop.lb) + "(" + index +")) % " + quoteValue(withLoop.step) + "(" + index +") <= " + quoteValue(withLoop.width) + "(" + index +")) {")
       // emit nested loops
       emitWithLoopNestedFor(index+1, maxIndex, withNodeSym, withLoop, emitAction, lastLevelForLoops)
@@ -286,7 +293,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
       // emit loop and filter
       val givenIndex = getNewIndex
       stream.println(quoteValue(withLoop.sym) + "_block(" + index +") = " + lower)
-      stream.println("while (" + quoteValue(withLoop.sym) + "_block(" + index +") < " + upper + ") {")
+      stream.println("while (" + quoteValue(withLoop.sym) + "_block(" + index +") <= " + upper + ") {")
       // emit nested loops
       val newStart = quoteValue(withLoop.sym) + "(" + index +") = " + quoteValue(withLoop.sym) + "_block(" + index +") * " + BLOCK_SIZE + "\n" +
                      "while (" + quoteValue(withLoop.sym) + "(" + index +") < (" + quoteValue(withLoop.sym) + "_block(" + index +") + 1) * " + BLOCK_SIZE + ") {\n" +
@@ -347,7 +354,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     stream.println("var i_" + index + ": Int = 0")
     stream.println("while (i_" + index + " < " + quoteValue(withLoop.ub) + ".length) {")
     stream.println("ll(i_" + index + ") = if (" + quote(withLoop.lbStrict) + ") " + quoteValue(withLoop.lb) + "(i_" + index + ")" + " + 1 else " + quoteValue(withLoop.lb) + "(i_" + index + ")")
-    stream.println("ul(i_" + index + ") = if (" + quote(withLoop.ubStrict) + ") " + quoteValue(withLoop.ub) + "(i_" + index + ")" + " else " + quoteValue(withLoop.ub) + "(i_" + index + ") - 1")
+    stream.println("ul(i_" + index + ") = if (" + quote(withLoop.ubStrict) + ") " + quoteValue(withLoop.ub) + "(i_" + index + ")" + " - 1 else " + quoteValue(withLoop.ub) + "(i_" + index + ")")
     stream.println(quoteValue(withLoop.sym) + "(i_" + index + ") = ll(i_" + index + ")")
     stream.println("i_" + index + " += 1")
     stream.println("} // while (i" + index + " ...")
@@ -645,27 +652,33 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
             stream.println("}")
           })::
           Nil)
-      case NewVar(x) => 
+      case NewVar(x) =>
         stream.println("//NEWVAR")
         val symIsResult = !deliteResult.isEmpty && (deliteResult.get contains sym)
         if (symIsResult)
           emitValDef(sym, "new generated.scala.Ref((" + quoteShape(x) + ", " + quoteValue(x) + "))")
         else
           emitVarDef((sym.asInstanceOf[Sym[Variable[Any]]]), "(" + quoteShape(x) + ", " + quoteValue(x) + ")")
-      case Assign(Variable(lhs), x) => 
+      case Assign(Variable(lhs), x) =>
         stream.println("//ASSIGN")
         val isInput = (deliteInputs intersect syms(rhs)).nonEmpty
         if (isInput)
           emitValDef(sym, quote(lhs) + ".set((" + quoteShape(x) + ", " + quoteValue(x) + "))")
         else
           emitAssignment(quote(lhs), "(" + quoteShape(x) + ", " + quoteValue(x) + ")")
-      case ReadVar(Variable(x)) => 
+      case ReadVar(Variable(x)) =>
         stream.println("//READVAR")
         val isInput = (deliteInputs intersect syms(rhs)).nonEmpty
         if (isInput)
           stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = " + quote(x) + ".get")
         else
           stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = " + quote(x))
+      case pn: PrintLn => pn.x match {
+        case s: Sym[_] if (s.Type.erasure == classOf[MDArray[Any]]) =>
+          emitValDef(sym, "println(getString(" + quoteShape(s) + ", " + quoteValue(s) + "))")
+        case _ =>
+          super.emitNode(sym, rhs)
+      }
       case st: ToString[_] =>
         emitSymDecl(sym)
         stream.println("getString(" + quoteShape(st.value) + ", " + quoteValue(st.value) + ")")

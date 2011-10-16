@@ -22,7 +22,9 @@ trait PDE1BenchmarkStaged extends StagedSACApplication with PDE1BenchmarkStagedF
      * Right now we don't have IO from files => let's generate the array by hand
      */
     val matrix = fakeReadMDArray()
-    println(range(matrix, 1).getString)
+    startTimer(matrix::Nil)
+    val result = range(matrix, 1)
+    stopTimer(result::Nil)
   }
 
   def testWithLoopExtraction(matrix: MDArrayInt): MDArrayInt = {

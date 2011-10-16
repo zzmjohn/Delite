@@ -39,21 +39,11 @@ object MDArrayRuntimeSupport {
       var i = 1
       var r = iv(0)
       while (i < iv.length) {
-        r *= shp1(i-1)
+        r *= shp1(i)
         r += iv(i)
         i += 1
       }
-      if (shp2.length == 0)
-        r
-      else {
-        r *= shp1(i-1)
-        i = 0
-        while (i < shp2.length - 1) {
-          r *= shp1(i)
-          i += 1
-        }
-        r
-      }
+      r * prod(shp2)
     }
   }
 
@@ -133,13 +123,12 @@ object MDArrayRuntimeSupport {
       i += 1
     }
 
-    // read contents (HACKED!)
     i = 0
     val size = prod(shape)
     val data: Array[Int] = new Array(size)
     while (i < size) {
-      //if (!lines.hasNext) sys.error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain the data!")
-      data(i) = i //readInt(lines.next)
+      if (!lines.hasNext) sys.error("MDArrayIO.readMDArray: File " + fileName + " doesn't contain the data!")
+      data(i) = readInt(lines.next)
       i += 1
     }
 
@@ -232,7 +221,7 @@ object MDArrayRuntimeSupport {
 
     breakable {
       while (i >= 0) {
-        if (crt(i) < ul(i) - 1) {
+        if (crt(i) <= ul(i) - 1) {
           crt(i) += 1
           while(i < crt.length - 1) {
             crt(i+1) = ll(i+1)

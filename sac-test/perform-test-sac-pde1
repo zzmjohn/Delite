@@ -7,4 +7,6 @@ $SCALA_VIRTUALIZED/scala -cp $CLASSPATH -Ddelite.home.dir=$DELITE epfl.mdarrays.
 rm -rf generatedCache
 
 echo Execute...
-java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
+java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=1 -Ddelite.runs=100 ppl.delite.runtime.Delite out.deg
+echo Execute...
+java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 -Ddelite.runs=100 ppl.delite.runtime.Delite out.deg
