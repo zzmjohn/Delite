@@ -1,6 +1,7 @@
 package epfl.mdarrays.staged
 
 import _root_.scala.virtualization.lms.common._
+import _root_.ppl.delite.framework.codegen.delite.overrides.{DeliteIfThenElseExp,DeliteScalaGenIfThenElse,DeliteWhileExp,DeliteScalaGenWhile,DeliteScalaGenVariables}
 import epfl.mdarrays.library.scala._
 import epfl.mdarrays.library.scala.Conversions._
 
@@ -8,9 +9,9 @@ import java.io.{Writer, PrintWriter}
 import collection.immutable.HashMap
 
 
-trait MDArrayTypingConstraints extends BaseGenMDArray with BaseGenIfThenElse with ScalaGenMiscOps with MDArrayTypingUnifier {
+trait MDArrayTypingConstraints extends BaseGenMDArray with DeliteScalaGenIfThenElse with DeliteScalaGenWhile with DeliteScalaGenVariables with ScalaGenMiscOps with MDArrayTypingUnifier {
 
-  val IR: MDArrayBaseExp with IfThenElseExp with MiscOpsExp
+  val IR: MDArrayBaseExp with DeliteIfThenElseExp with DeliteWhileExp with MiscOpsExp
   import IR._
 
   override type Symbol = Sym[_]
@@ -28,6 +29,14 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with BaseGenIfThenElse wit
       // and the specific constraints for each node
       (rhs match {
         // We only analyze the "special" cases here
+        case DeliteWhile(cond, body) =>
+          createSubScope(sym, cond.asInstanceOf[Sym[_]]) { emitBlock(cond) }
+          createSubScope(sym, body.asInstanceOf[Sym[_]]) { emitBlock(body) }
+          getConstraints(sym, rhs)
+        case DeliteIfThenElse(cond, thenp, elsep, _) =>
+          createSubScope(sym, thenp.asInstanceOf[Sym[_]]) { emitBlock(thenp) }
+          createSubScope(sym, elsep.asInstanceOf[Sym[_]]) { emitBlock(elsep) }
+          getConstraints(sym, rhs)
         case IfThenElse(cond, thenp, elsep) =>
           createSubScope(sym, thenp.asInstanceOf[Sym[_]]) { emitBlock(thenp) }
           createSubScope(sym, elsep.asInstanceOf[Sym[_]]) { emitBlock(elsep) }
@@ -169,10 +178,21 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with BaseGenIfThenElse wit
       Equality(ShapeVar(foldTerm2), ShapeVar(neutral), postReq, rhs)::
       Equality(ShapeVar(foldExpression), ShapeVar(withLoop), preReq, rhs)::
       Equality(ShapeVar(sym), ShapeVar(neutral), postReq, rhs)::Nil
+    case NewVar(x) =>
+      Equality(ShapeVar(sym), ShapeVar(x), postReq, rhs)::Nil
+    case ReadVar(Variable(x)) =>
+      Equality(ShapeVar(sym), ShapeVar(x), postReq, rhs)::Nil
+    case Assign(Variable(lhs), x) =>
+      Equality(ShapeVar(lhs), ShapeVar(x), postReq, rhs)::Nil
+    case DeliteWhile(cond, body) =>
+      Equality(ShapeVar(cond), Lst(Nil), preReq, rhs)::Nil
+    case DeliteIfThenElse(cond, thenp, elsep, _) =>
+      Equality(ShapeVar(cond), Lst(Nil), preReq, rhs)::
+      CommonDenominator(ShapeVar(sym), ShapeVar(thenp), ShapeVar(elsep), postReq, rhs)::Nil
     case IfThenElse(cond, thenp, elsep) =>
       Equality(ShapeVar(cond), Lst(Nil), preReq, rhs)::
       CommonDenominator(ShapeVar(sym), ShapeVar(thenp), ShapeVar(elsep), postReq, rhs)::Nil
-    case ScalarOperatorApplication(function, operator, operand1, operand2) =>
+    case ScalarOperatorApplication(/*function, */operator, operand1, operand2) =>
       Equality(ShapeVar(operand1), Lst(Nil), preReq, rhs)::
       Equality(ShapeVar(operand2), Lst(Nil), preReq, rhs)::
       Equality(ShapeVar(sym), Lst(Nil), postReq, rhs)::Nil

@@ -5,7 +5,7 @@ import ppl.delite.framework.ops.DeliteOpsExp
 import scala.virtualization.lms.internal.{CLikeCodegen}
 import scala.virtualization.lms.common._
 
-trait DeliteScalaGenVariables extends ScalaGenEffect {
+trait DeliteScalaGenVariables extends ScalaGenVariables {
   val IR: VariablesExp with DeliteOpsExp
   import IR._
 
@@ -42,6 +42,6 @@ trait DeliteCLikeGenVariables extends CLikeCodegen {
 
 }
 
-trait DeliteCudaGenVariables extends CudaGenEffect with DeliteCLikeGenVariables
+trait DeliteCudaGenVariables extends CudaGenVariables with DeliteCLikeGenVariables
 
-trait DeliteCGenVariables extends CGenEffect with DeliteCLikeGenVariables
+trait DeliteCGenVariables extends CGenVariables with DeliteCLikeGenVariables

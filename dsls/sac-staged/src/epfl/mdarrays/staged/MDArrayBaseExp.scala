@@ -7,9 +7,20 @@ import epfl.mdarrays.library.scala.Operations
 import epfl.mdarrays.library.scala.MDArrayIO
 import scala.collection.mutable.{Map, HashMap}
 
-trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with ArgumentsExp {
+trait MDArrayBaseExp extends MDArrayBase with EffectExp with /*DeliteIfThenElseExp with*/ ArgumentsExp {
   // needed so that foldTerms are not collected by the CSE
   var foldTermIndex = 0
+
+  //override def readMutableData[A](d: Def[A]) = Nil // TODO: find root cause for blowup
+  
+  var idxFcd = 0
+  override def createDefinition[T](s: Sym[T], d: Def[T]): TP[T] = {
+    idxFcd += 1
+    val r = super.createDefinition(s,d)
+    println("#"+idxFcd + "   " + r)
+    r
+  }
+
 
 //  override def syms(e: Any): List[Sym[Any]] = e match {
 //    case GenArrayWith(lExpr, shape) => syms(shape) ::: syms(lExpr)
@@ -60,6 +71,17 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
   case class ToValue[A: Manifest](value: Exp[MDArray[A]]) extends Def[A] { override def toString() = "ToValue(" + value.toString + ")" }
   case class ToString[A: Manifest](value: Exp[MDArray[A]]) extends Def[String]
 
+  def arrayFromValue[A: Manifest](value: Exp[A]): Exp[MDArray[A]] = value match {
+    case Def(ToValue(v)) => v
+    case _ => FromValue(value)
+  }
+
+  def arrayToValue[A: Manifest](value: Exp[MDArray[A]]): Exp[A] = value match {
+    case Def(FromValue(v)) => v
+    case _ => ToValue(value)
+  }
+
+
   // With
   case class WithNode[A: Manifest](lb: Exp[MDArray[Int]], lbStrict: Exp[Boolean], ub: Exp[MDArray[Int]], ubStrict: Exp[Boolean], step: Exp[MDArray[Int]], width: Exp[MDArray[Int]], sym: Sym[MDArray[Int]], expr: Exp[MDArray[A]]) extends Def[MDArray[A]] {
     override def toString() = "With(lb=" + lb.toString + " lbStrict=" + lbStrict.toString + " ubStict=" + ubStrict.toString + " ub=" + ub.toString + " step=" + step.toString + " width=" + width.toString + "  " + sym.toString + " => " + expr.toString + ")"
@@ -91,9 +113,9 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
 
   // Function wrapping
   case class ScalarOperatorWrapper[A: Manifest, B: Manifest, C: Manifest](f: (A,B)=>C, operator: String) extends ((Exp[MDArray[A]], Exp[MDArray[B]]) => Exp[MDArray[C]]) {
-    def apply(a: Exp[MDArray[A]], b: Exp[MDArray[B]]): Exp[MDArray[C]] = ScalarOperatorApplication(f, operator, a, b)
+    def apply(a: Exp[MDArray[A]], b: Exp[MDArray[B]]): Exp[MDArray[C]] = ScalarOperatorApplication[A,B,C](/*f, */operator, a, b)
   }
-  case class ScalarOperatorApplication[A, B, C](f: (A,B)=>C, operator: String, a: Exp[MDArray[A]], b: Exp[MDArray[B]])(implicit mfA: Manifest[A], mfB: Manifest[B], mfC: Manifest[C]) extends Def[MDArray[C]] {
+  case class ScalarOperatorApplication[A, B, C](/*f: (A,B)=>C, */operator: String, a: Exp[MDArray[A]], b: Exp[MDArray[B]])(implicit mfA: Manifest[A], mfB: Manifest[B], mfC: Manifest[C]) extends Def[MDArray[C]] {
     def getMfA = manifest[A]
     def getMfB = manifest[B]
     def getMfC = manifest[C]
@@ -119,7 +141,7 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
   // Implicit conversions from unknown elements
   implicit def convertFromListRepRep[A: Manifest](a: Exp[List[A]]): Exp[MDArray[A]] = FromList(a)
   implicit def convertFromArrayRepRep[A: Manifest](a: Exp[Array[A]]): Exp[MDArray[A]] = FromArray(a)
-  implicit def convertFromValueRepRep[A: Manifest](a: Exp[A]): Exp[MDArray[A]] = FromValue(a)
+  implicit def convertFromValueRepRep[A: Manifest](a: Exp[A]): Exp[MDArray[A]] = arrayFromValue(a)
   implicit def convertFromMDArrayList[A: Manifest](a: List[Exp[MDArray[A]]]): Exp[MDArray[A]] = FromMDArrayList(a)
 
   // Implicit conversion from MDArray to staged array
@@ -127,7 +149,7 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
 
   implicit def convertToListRep[A: Manifest](a: Exp[MDArray[A]]): Exp[List[A]] = ToList(a)
   implicit def convertToArrayRep[A: Manifest](a: Exp[MDArray[A]]): Exp[Array[A]] = ToArray(a)
-  implicit def convertToValueRep[A: Manifest](a: Exp[MDArray[A]]): Exp[A] = ToValue(a)
+  implicit def convertToValueRep[A: Manifest](a: Exp[MDArray[A]]): Exp[A] = arrayToValue(a)
 
   // Explicit conversion for elements known only at runtime, including shape
   // To create an element with known shape, use reshape(<known shape>, knownOnlyAtRuntime(...))

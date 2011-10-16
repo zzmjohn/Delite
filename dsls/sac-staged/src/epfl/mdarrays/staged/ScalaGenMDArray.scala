@@ -106,7 +106,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
 
     val shpSym: Sym[_] = shp.asInstanceOf[Sym[_]]
 
-    def emitGenArrayAction(iv: String, resultShape: String, resultValue: String) = {
+    def emitGenArrayAction(iv: String, resultShape: String, resultValue: String): Unit = {
       stream.println("if (result == null) {")
       stream.println("// create the array and shape")
       stream.println("result = new Array[" + strip(sym.Type) + "](prod(" + quoteValue(shpSym) + ") * " + resultValue + ".length)")
@@ -127,7 +127,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     stream.println("var rshape: Array[Int] = null")
 
     val savedLoopAction = withLoopAction
-    withLoopAction = emitGenArrayAction
+    withLoopAction = emitGenArrayAction _
 
     for (withNode <- wl)
       emitBlock(withNode)
@@ -155,7 +155,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
 
     val arraySym: Sym[_] = array.asInstanceOf[Sym[_]]
 
-    def emitModArrayAction(iv: String, resultShape: String, resultValue: String) = {
+    def emitModArrayAction(iv: String, resultShape: String, resultValue: String): Unit = {
       stream.println("val mainIndex: Int = flattenModArray(" + quoteShape(arraySym) + ", " + iv + ")")
       stream.println("// copy new content")
       val index = getNewIndex
@@ -176,7 +176,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     stream.println("}")
 
     val savedLoopAction = withLoopAction
-    withLoopAction = emitModArrayAction
+    withLoopAction = emitModArrayAction _
 
     for (withNode <- wl)
       emitBlock(withNode)

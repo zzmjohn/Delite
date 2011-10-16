@@ -21,8 +21,11 @@ trait StagedSACApplication extends StagedSAC {
   def main(): Unit
 }
 
-trait StagedSAC extends MDArrayBase with MiscOps {
+trait StagedSAC extends MDArrayBase with MiscOps with StagedSACLift with Variables with Equal with While {
 	this: StagedSACApplication =>
+}
+
+trait StagedSACLift extends LiftVariables with LiftEquals /*with LiftString with LiftBoolean with LiftNumeric*/ { this: StagedSAC =>
 }
 
 trait StagedSACExp extends StagedSAC with MDArrayBaseExp with MiscOpsExp
