@@ -70,7 +70,7 @@ trait StagedSACCodegenScala extends StagedSACCodegenBase with ScalaGenDeliteOps 
   with DeliteScalaGenAllOverrides with ScalaGenMiscOps with ScalaGenMDArray {
   // Vlad: We need to make sure ScalaGenMDArray is the last in the linearization, since it needs control
   // over what's going out and how it's represented :|
-	
+
   val IR: TY.IR.type with DeliteApplication with StagedSACExp
 	
   override def remap[A](m: Manifest[A]): String = {
