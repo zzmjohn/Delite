@@ -11,7 +11,7 @@ import collection.immutable.HashMap
 
 trait MDArrayTypingConstraints extends BaseGenMDArray with DeliteScalaGenIfThenElse with DeliteScalaGenWhile with DeliteScalaGenVariables with ScalaGenMiscOps with MDArrayTypingUnifier {
 
-  val IR: MDArrayBaseExp with DeliteIfThenElseExp with DeliteWhileExp with MiscOpsExp
+  val IR: StagedSACExp
   import IR._
 
   override type Symbol = Sym[_]

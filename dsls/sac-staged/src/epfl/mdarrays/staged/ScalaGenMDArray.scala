@@ -37,12 +37,29 @@ trait TypedGenMDArray extends BaseGenMDArray {
 
 trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
 
-  import IR._
+  // We cannot import eveything, else scala-virtualized will virtualize us :)
+  import IR.{KnownAtCompileTime, KnownAtRuntime}
+  import IR.{ToArray, ToList, ToValue, FromArray, FromList, FromValue, FromMDArrayList}
+  import IR.{ToDim, ToShape, Sel, Cat, Reshape}
+  import IR.{InfixOp, UnaryOp, Values, Where}
+  import IR.{GenArrayWith, ModArrayWith, FoldArrayWith, WithNode}
+  import IR.{ScalarOperatorApplication, ScalarOperatorWrapper }
+  import IR.{ToString}
+  import IR.{ReadMDArray, WriteMDArray}
+  import IR.{StartTimer, StopTimer}
+  import IR.IfThenElse
+  // Generic IR
+  import IR.{Sym, Def, TP, Exp, Const, findDefinition, syms}
+  // Typing
   import TY.{getShapeLength, getValueLength, getShapeValue, getValueValue}
 
   // Generate unique identifiers
   var currentIndex = 0
   def getNewIndex = { currentIndex += 1; currentIndex}
+
+  // Mark values generated outside
+  var emittedOutside = false
+  var emittedOutsideSyms: List[Sym[_]] = Nil
 
   // This function stores the action of the innermost with loop
   var withLoopAction: (String, String, String)=>Unit = (a, b, c)=> { sys.error("No with loop action set!") }
@@ -65,9 +82,32 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
           val (x4_shape: Array[Int], x4_value: Array[java.lang.String]) = x4
        */
   }
-  
-  def quoteShape(e: Exp[Any]): String = quote(e) + "_shape"
-  def quoteValue(e: Exp[Any]): String = quote(e) + "_value"
+
+  def quoteShape(e: Exp[Any]): String = e match {
+    case sym: Sym[_] =>
+      if (sym.Type.erasure == classOf[MDArray[Any]])
+        if (!emittedOutsideSyms.contains(sym))
+          super.quote(e) + "_shape"
+        else
+          super.quote(e) + "._1"
+      else
+        "Array()"
+    case _ =>
+      super.quote(e)
+  }
+
+  def quoteValue(e: Exp[Any]): String = e match {
+    case sym: Sym[_] =>
+      if (sym.Type.erasure == classOf[MDArray[Any]])
+        if (!emittedOutsideSyms.contains(sym))
+          super.quote(e) + "_value"
+        else
+          super.quote(e) + "._2"
+      else
+        "Array(" + super.quote(e) + ")"
+    case _ =>
+      super.quote(e)
+  }
 
   def emitShapeDecl(sym: Sym[_], debug: Boolean = false)(implicit stream: PrintWriter) = {
     stream.print("val " + quoteShape(sym) + ": Array[Int] = ")
@@ -210,7 +250,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
     stream.println("}")   // Emit the loop action
 
     val savedLoopAction = withLoopAction
-    withLoopAction = emitFoldArrayAction
+    withLoopAction = emitFoldArrayAction _
     emitBlock(withNode)
     withLoopAction = savedLoopAction
 
@@ -615,28 +655,64 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
         emitSymDecl(sym)
         stream.println("stopTimer()")
       case _ =>
+        stream.println("// emitting outside!")
+        emittedOutsideSyms = sym::emittedOutsideSyms
+        val oldEmittedOutside = emittedOutside
+        emittedOutside = true
         super.emitNode(sym, rhs)
+        emittedOutside = oldEmittedOutside
     }
   }
 
+  override def emitSource[A,B](f: Exp[A] => Exp[B], className: String, stream: PrintWriter)(implicit mA: Manifest[A], mB: Manifest[B]): List[(Sym[Any], Any)] = {
+    super.emitSource(f, className, stream)(mA, mB)
+  }
+
   override def emitKernelHeader(syms: List[Sym[Any]], vals: List[Sym[Any]], vars: List[Sym[Any]], resultType: String, resultIsVar: Boolean, external: Boolean)(implicit stream: PrintWriter): Unit = {
+    // unfortunately pair deconstruction is not supported in the method definition => it needs to be inside and add the
+    // elements outside as
     super.emitKernelHeader(syms, vals, vars, resultType, resultIsVar, external)
-    for (v <- vals)
-      if (v.Type.erasure == classOf[MDArray[Any]])
-        stream.println("val (" + quoteShape(v) + ": Array[Int], " + quoteValue(v) + ": Array[" + remap(v.Type.typeArguments.head) + "]) = " + quote(v))
+
+    stream.println("// syms: " + syms.mkString(" "))
+    stream.println("// vals: " + vals.mkString(" "))
+    stream.println("// vars: " + vars.mkString(" "))
+
+    // since the kernel header was generated as "inside" we need to really bring the symbols inside
+    for (s <- vals)
+      if (s.Type.erasure == classOf[MDArray[Any]])
+        stream.println("val (" + quoteShape(s) + ", " + quoteValue(s) + "): " + remap(s.Type) + " = (" + super.quote(s) + ")")
   }
 
   override def emitKernelFooter(syms: List[Sym[Any]], vals: List[Sym[Any]], vars: List[Sym[Any]], resultType: String, resultIsVar: Boolean, external: Boolean)(implicit stream: PrintWriter): Unit = {
 
-    for (s <- syms)
-      if (s.Type.erasure == classOf[MDArray[Any]])
-        stream.println("val " + quote(s) + ": " + remap(s.Type) + " = (" + quoteShape(s) + ", " + quoteValue(s) + ")")
+    stream.println("// emittedOustideSyms: " + emittedOutsideSyms.map(super.quote(_)).mkString(" "))
 
+    stream.println("// syms: " + syms.mkString(" "))
+    stream.println("// vals: " + vals.mkString(" "))
+    stream.println("// vars: " + vars.mkString(" "))
+
+    // The kernel footer should generate symbols as seen from outside
+    val oldEmittedOutside = emittedOutside
+    emittedOutside = true
     super.emitKernelFooter(syms, vals, vars, resultType, resultIsVar, external)
+    emittedOutside = oldEmittedOutside
   }
 
   override def emitImports(implicit stream:PrintWriter): Unit = {
     stream.println("import datastruct.scala.MDArrayRuntimeSupport._")
   }
 
+  override def quote(x: Exp[Any]) : String =
+    if (emittedOutside)
+      x match {
+        case sym: Sym[_] if (sym.Type.erasure == classOf[MDArray[Any]]) =>
+          if (emittedOutsideSyms.contains(sym))
+            super.quote(x)
+          else
+            "(" + quoteShape(sym) + ", " + quoteValue(sym) + ")"
+        case _ =>
+          super.quote(x)
+      }
+    else
+      super.quote(x)
 }

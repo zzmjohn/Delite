@@ -24,9 +24,10 @@ trait GameOfLifeStaged extends StagedSACApplication with GameOfLifeStagedFakeRea
   def testGameOfLife(iter: Rep[MDArray[Int]], start: Rep[MDArray[Int]]): Rep[MDArray[Int]] = {
     var alive = start
     var i = 0: Rep[MDArray[Int]]
+
     while (i < iter) {
       alive = gameOfLife(alive)
-      i += 1
+      i = i + 1
     }
     alive
   }

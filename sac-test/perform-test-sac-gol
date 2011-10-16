@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export HEAP_SIZE=2048m
-export JAVA_OPTS="-Xmx$HEAP_SIZE -Xrunhprof:cpu=samples,depth=20"
+export JAVA_OPTS="-Xmx$HEAP_SIZE -Xrunhprof:cpu=samples,depth=20 -Xms100m"
 
 rm -rf generatedCache
 
@@ -11,6 +11,6 @@ echo Stage...
 $SCALA_VIRTUALIZED/scala -Ddelite.home.dir=$DELITE epfl.mdarrays.tests.gol.GameOfLifeStagedRunner
 
 echo Execute...
-java -Xmx$HEAP_SIZE -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=1 -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
+java -Xmx$HEAP_SIZE -Xms100m -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=1 -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
 echo Execute...
-java -Xmx$HEAP_SIZE -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg
+java -Xmx$HEAP_SIZE -Xms100m -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg

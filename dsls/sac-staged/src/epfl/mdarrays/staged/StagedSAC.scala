@@ -29,7 +29,7 @@ trait StagedSACLift extends LiftVariables with LiftEquals /*with LiftString with
 }
 
 trait StagedSACExp extends StagedSAC with MDArrayBaseExp with MiscOpsExp
- 	with DeliteOpsExp /* with DeliteAllOverridesExp */ {
+ 	with DeliteOpsExp with DeliteAllOverridesExp {
 	
 	this: DeliteApplication with StagedSACApplication with StagedSACExp =>
 
@@ -66,8 +66,10 @@ trait StagedSACCodegenBase extends GenericFatCodegen with Utils {
   def dsmap(s: String) = s.replaceAll("epfl.mdarrays", "generated.scala")
 }
 
-trait StagedSACCodegenScala extends StagedSACCodegenBase with ScalaGenMDArray
-  with ScalaGenDeliteOps with ScalaGenDeliteCollectionOps /* with DeliteScalaGenAllOverrides */ with ScalaGenMiscOps {
+trait StagedSACCodegenScala extends StagedSACCodegenBase with ScalaGenDeliteOps with ScalaGenDeliteCollectionOps
+  with DeliteScalaGenAllOverrides with ScalaGenMiscOps with ScalaGenMDArray {
+  // Vlad: We need to make sure ScalaGenMDArray is the last in the linearization, since it needs control
+  // over what's going out and how it's represented :|
 	
   val IR: TY.IR.type with DeliteApplication with StagedSACExp
 	
