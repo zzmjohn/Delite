@@ -5,6 +5,7 @@ import epfl.mdarrays.library.scala._
 import epfl.mdarrays.library.scala.Conversions._
 import epfl.mdarrays.library.scala.Operations
 import epfl.mdarrays.library.scala.MDArrayIO
+import scala.collection.mutable.{Map, HashMap}
 
 trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with ArgumentsExp {
   // needed so that foldTerms are not collected by the CSE
@@ -244,6 +245,35 @@ trait MDArrayBaseExp extends MDArrayBase with BaseExp with IfThenElseExp with Ar
   // Timer functions
   def startTimer(afterComputing: List[Rep[Any]]): Rep[Unit] = reflectEffect(StartTimer(afterComputing))
   def stopTimer(afterComputing: List[Rep[Any]]): Rep[Unit] = reflectEffect(StopTimer(afterComputing))
+
+
+  // Prevent Game Of Life staging from hanging
+  override def utilLoadSymTP[T](s: Sym[T]): List[TP[Any]] = Nil
+
+  /*
+  // Speed up symbol finding
+  var map1: Map[Sym[Any], TP[Any]] = HashMap.empty
+  var map2: Map[Def[Any], TP[Any]] = HashMap.empty
+
+  override def createDefinition[T](s: Sym[T], d: Def[T]): TP[T] = {
+    val f = TP(s, d)
+    globalDefs = globalDefs:::List(f)
+    map1 += s -> f
+    map2 += d -> f
+    f
+  }
+
+  override def findDefinition[T](d: Def[T]): Option[TP[T]] = map2.contains(d) match {
+    case true => Some(map2(d).asInstanceOf[TP[T]])
+    case false => None
+  }
+
+
+  override def findDefinition[T](s: Sym[T]): Option[TP[T]] = map1.contains(s) match {
+    case true => Some(map1(s).asInstanceOf[TP[T]])
+    case false => None
+  }
+  */
 
   protected val nothing: Exp[MDArray[Int]] = Nothing
 }

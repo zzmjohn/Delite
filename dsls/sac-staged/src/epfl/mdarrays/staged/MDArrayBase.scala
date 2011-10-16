@@ -30,8 +30,8 @@ trait MDArrayBase extends Base with Arguments with IfThenElse {
   def infix_> [A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit ordering: Ordering[A], mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)(ordering.gt, ">")
   def infix_>=[A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit ordering: Ordering[A], mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)(ordering.gteq, ">=")
 
-  def infix_===[A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)((a, b) => a == b, "===")
-  def infix_!==[A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)((a, b) => !(a == b), "!==")
+  def infix_===[A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)((a, b) => a == b, "==")
+  def infix_!==[A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)((a, b) => !(a == b), "!=")
 
   def infix_&&[A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit ev: A =:= Boolean, mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)((a, b) => ev(a) && ev(b), "&&")
   def infix_||[A](o1: Rep[MDArray[A]], o2: Rep[MDArray[A]])(implicit ev: A =:= Boolean, mf: Manifest[A]): Rep[MDArray[Boolean]] = op(o1, o2)((a, b) => ev(a) || ev(b), "||")

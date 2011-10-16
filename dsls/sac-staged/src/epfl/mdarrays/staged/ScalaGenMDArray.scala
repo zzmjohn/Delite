@@ -30,8 +30,8 @@ trait TypedGenMDArray extends BaseGenMDArray {
   }
 
   def emitShapeValue(sym: Sym[_], rhs: Def[_])(implicit stream: PrintWriter): Unit = {
-    stream.println("// " + sym + " <= " + rhs)
-    stream.println("//   ... " + TY.getTypingString(sym))
+    stream.println("/* " + sym + " <= " + rhs + " */")
+    stream.println("/*   ... " + TY.getTypingString(sym) + " */")
   }
 }
 
@@ -189,35 +189,33 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
 
   def emitFoldArray(sym: Sym[_], withNode: Exp[MDArray[_]], neutral: Exp[_], foldTerm1: Exp[_], foldTerm2: Exp[_], foldExpr: Exp[_])(implicit stream: PrintWriter) = {
 
-    sys.error("NOT IMPLEMENTED YET!")
+    val neutralSym = neutral.asInstanceOf[Sym[_]]
+    val foldTerm1Sym = foldTerm1.asInstanceOf[Sym[_]]
+    val foldTerm2Sym = foldTerm2.asInstanceOf[Sym[_]]
+    val foldExprSym = foldExpr.asInstanceOf[Sym[_]]
 
-//    val neutralSym = neutral.asInstanceOf[Sym[_]]
-//    val foldTerm1Sym = foldTerm1.asInstanceOf[Sym[_]]
-//    val foldTerm2Sym = foldTerm2.asInstanceOf[Sym[_]]
-//    val foldExprSym = foldExpr.asInstanceOf[Sym[_]]
-//
-//    def emitFoldArrayAction(iv: String, resultShape: String, resultValue: String) =
-//      stream.println("result = foldFunction(result, " + loopElement + ")")
-//
-//    stream.println("{")
-//    stream.println("var result: " + remap(neutralSym.Type) + " = " + quote(neutralSym))
-//    // Emit the fold expression
-//    stream.println("val foldFunction: (" + remap(neutralSym.Type) + ", " + remap(neutralSym.Type)
-//      + ") => " + remap(neutralSym.Type) + " = (" + quote(foldTerm1Sym) + ", " + quote(foldTerm2Sym) + ") => {")
-//    emitBlock(foldExprSym)
-//    stream.println(quote(getBlockResult(foldExprSym)))
-//    stream.println("}")
-//
-//    // Emit the loop action
-//    val savedLoopAction = withLoopAction
-//    withLoopAction = emitFoldArrayAction
-//    emitBlock(withNode)
-//    withLoopAction = savedLoopAction
-//    // inside the with loop
-//    //emitWithLoopModifier(withNode.asInstanceOf[Sym[_]], findAndCast[WithNode[_]](withNode).get, emitFoldArrayAction)
-//
-//    stream.println("result")
-//    stream.println("}")
+    def emitFoldArrayAction(iv: String, resultShape: String, resultValue: String) =
+      stream.println("foldAction(result, " + resultValue + ")")
+
+    stream.println("{")
+    stream.println("var result: Array[" + strip(neutralSym.Type) + "] = " + quoteValue(neutralSym))
+    stream.println("val rsahpe: Array[Int] = " + quoteShape(neutralSym))
+    stream.println("val " + quoteShape(foldTerm1Sym) + ": Array[Int] = " + quoteShape(neutralSym))
+    stream.println("val " + quoteShape(foldTerm2Sym) + ": Array[Int] = " + quoteShape(neutralSym))
+
+    stream.println("def foldAction(" + quoteValue(foldTerm1Sym) + ": Array[" + strip(foldTerm1Sym.Type) + "], " + quoteValue(foldTerm2Sym) + ": Array[" + strip(foldTerm2Sym.Type) + "])= {")
+    // emit loop content
+    emitBlock(foldExprSym)
+    stream.println("result = " + quoteValue(getBlockResult(foldExprSym)))
+    stream.println("}")   // Emit the loop action
+
+    val savedLoopAction = withLoopAction
+    withLoopAction = emitFoldArrayAction
+    emitBlock(withNode)
+    withLoopAction = savedLoopAction
+
+    stream.println("(rshape, result)")
+    stream.println("}")
   }
 
   // support for blocks
@@ -445,7 +443,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
       case tv: ToValue[_] =>
         stream.println("val " + quote(sym) + ": " + remap(sym.Type) + " = " + quoteValue(tv.value) + "(0)")
       case td: ToDim[_] =>
-        stream.println("val " + quote(sym) + ": Int = " + quoteValue(td.a) + ".length")
+        stream.println("val " + quote(sym) + ": Int = " + quoteShape(td.a) + ".length")
       case ts: ToShape[_] =>
         emitShapeDecl(sym)
         stream.println("Array(" + quoteShape(ts.a) + ".length)")
@@ -506,8 +504,8 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
           val index = getNewIndex
           emitOperationPrologue(sym, in.array1, index)
           scalar match {
-            case true => stream.println(quoteValue(sym) + "(i_" + index +") = " + quoteValue(in.array1) + "(i_" + index +") " + in.opName + "  " + quoteValue(in.array2) + "(0)")
-            case false => stream.println(quoteValue(sym) + "(i_" + index +") = " + quoteValue(in.array1) + "(i_" + index +") " + in.opName + "  " + quoteValue(in.array2) + "(i_" + index +")")
+            case true => stream.println(quoteValue(sym) + "(i_" + index +") = (" + quoteValue(in.array1) + "(i_" + index +") " + in.opName + "  " + quoteValue(in.array2) + "(0))")
+            case false => stream.println(quoteValue(sym) + "(i_" + index +") = (" + quoteValue(in.array1) + "(i_" + index +") " + in.opName + "  " + quoteValue(in.array2) + "(i_" + index +"))")
           }
           emitOperationEpilogue(sym, in.array1, index)
         }
@@ -568,8 +566,8 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
       case soa: ScalarOperatorApplication[_,_,_] =>
         emitShapeDecl(sym)
         stream.println("Array()")
-        emitSymDecl(sym)
-        stream.println("((a: " + soa.getMfA.toString + ", b: " + soa.getMfB.toString + ") => a " + soa.operator + " b)(" + quoteValue(soa.a) + "(0), " + quoteValue(soa.b) + "(0))")
+        emitValDecl(sym)
+        stream.println("Array(((a: " + soa.getMfA.toString + ", b: " + soa.getMfB.toString + ") => a " + soa.operator + " b)(" + quoteValue(soa.a) + "(0), " + quoteValue(soa.b) + "(0)))")
       // If must also be translated to account for the scope changes
       // TODO: Is there an architecture where it's not necessary to do this?
       case ite: IfThenElse[_] =>

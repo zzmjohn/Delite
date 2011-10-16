@@ -14,7 +14,7 @@ trait MDArrayTypingBubbleUp extends MDArrayTypingWithScope {
 
   var runtimeChecks: Map[Sym[_], List[TypingConstraint]] = Map.empty
 
-  def fillInRuntimeChecks(sym: Sym[_]): Unit = findDefinition(sym) match {
+  def fillInRuntimeChecks(sym: Sym[_]): Unit = () /*findDefinition(sym) match {
     case None =>
       runtimeChecks = runtimeChecks + (sym -> Nil)
     case Some(tp) =>
@@ -37,7 +37,7 @@ trait MDArrayTypingBubbleUp extends MDArrayTypingWithScope {
       runtimeChecks = runtimeChecks + (sym -> checks)
       for (argSym <- argSyms)
         fillInRuntimeChecks(argSym)
-  }
+  } */
 
   override def doTyping(result: Exp[_], debug: Boolean = false): Unit = result match {
     case sym: Sym[_] =>

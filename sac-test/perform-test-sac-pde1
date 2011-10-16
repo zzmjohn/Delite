@@ -3,9 +3,8 @@ echo Set classpath...
 export CLASSPATH=$CLASSPATH:$DELITE/dsls/sac-staged/target/scala_2.9.x-virtualized-SNAPSHOT/classes/:$DELITE/framework/target/scala_2.9.x-virtualized-SNAPSHOT/classes:$LMS/target/scala_2.9.x-virtualized-SNAPSHOT/classes:.
 echo Stage...
 $SCALA_VIRTUALIZED/scala -cp $CLASSPATH -Ddelite.home.dir=$DELITE epfl.mdarrays.tests.pde1.PDE1BenchmarkStagedRunner
+
+rm -rf generatedCache
+
 echo Execute...
-java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
-java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
-java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
-java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
-java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 ppl.delite.runtime.Delite out.deg
+java -cp $DELITE/runtime/target/$VANILLA_VERSION/classes:$SCALA_VANILLA/../lib/scala-library.jar:$SCALA_VANILLA/../lib/scala-compiler.jar -Ddelite.threads=2 -Ddelite.runs=10 ppl.delite.runtime.Delite out.deg

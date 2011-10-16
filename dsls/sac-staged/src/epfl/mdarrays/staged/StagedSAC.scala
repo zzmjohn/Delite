@@ -26,9 +26,9 @@ trait StagedSAC extends MDArrayBase with MiscOps {
 }
 
 trait StagedSACExp extends StagedSAC with MDArrayBaseExp with MiscOpsExp
- 	with DeliteOpsExp with DeliteAllOverridesExp {
+ 	with DeliteOpsExp /* with DeliteAllOverridesExp */ {
 	
-	this: DeliteApplication with StagedSACApplication with StagedSACExp => 
+	this: DeliteApplication with StagedSACApplication with StagedSACExp =>
 
   // we want a single typer for both the sequential and parallel code
   lazy val typer = new MDArrayTypingBubbleUp { val IR: StagedSACExp.this.type = StagedSACExp.this }
@@ -64,7 +64,7 @@ trait StagedSACCodegenBase extends GenericFatCodegen with Utils {
 }
 
 trait StagedSACCodegenScala extends StagedSACCodegenBase with ScalaGenMDArray
-  with ScalaGenDeliteOps with ScalaGenDeliteCollectionOps with DeliteScalaGenAllOverrides with ScalaGenMiscOps {
+  with ScalaGenDeliteOps with ScalaGenDeliteCollectionOps /* with DeliteScalaGenAllOverrides */ with ScalaGenMiscOps {
 	
   val IR: TY.IR.type with DeliteApplication with StagedSACExp
 	

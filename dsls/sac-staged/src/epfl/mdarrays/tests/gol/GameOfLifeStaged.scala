@@ -18,7 +18,7 @@ trait GameOfLifeStaged extends StagedSACApplication with GameOfLifeStagedFakeRea
       3. print the result? -- we don't have any effects, is there another way to do this?
      */
     val matrix = fakeReadMDArray()
-    println(testGameOfLife(1000, matrix).getString)
+    println(testGameOfLife(100, matrix).getString)
   }
 
   def testGameOfLife(iter: Int, start: Rep[MDArray[Int]]): Rep[MDArray[Int]] = {
