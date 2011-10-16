@@ -71,11 +71,13 @@ trait MDArrayBaseExp extends MDArrayBase with EffectExp with /*DeliteIfThenElseE
   case class ToString[A: Manifest](value: Exp[MDArray[A]]) extends Def[String]
 
   def arrayFromValue[A: Manifest](value: Exp[A]): Exp[MDArray[A]] = value match {
+    case Const(v) => KnownAtCompileTime(v)
     case Def(ToValue(v)) => v
     case _ => FromValue(value)
   }
 
   def arrayToValue[A: Manifest](value: Exp[MDArray[A]]): Exp[A] = value match {
+    case Def(KnownAtCompileTime(v)) => Const(v.content()(0)) // TODO: should assert dim == 0 ??
     case Def(FromValue(v)) => v
     case _ => ToValue(value)
   }
@@ -155,17 +157,72 @@ trait MDArrayBaseExp extends MDArrayBase with EffectExp with /*DeliteIfThenElseE
   def knownOnlyAtRuntime[A](name: String)(implicit mf: Manifest[A]): Exp[MDArray[A]] = KnownAtRuntime[A](name)
 
   // Basic operations
-  def dim[A: Manifest](a: Exp[MDArray[A]]): Exp[Int] = ToDim(a)
-  def shape[A: Manifest](a: Exp[MDArray[A]]): Exp[MDArray[Int]] = ToShape(a)
-  def sel[A: Manifest](iv: Exp[MDArray[Int]], a: Exp[MDArray[A]]): Exp[MDArray[A]] = Sel(iv, a)
+  def dim[A: Manifest](a: Exp[MDArray[A]]): Exp[Int] = a match {
+    case Def(KnownAtCompileTime(b)) => Const(b.dim)
+    case _ => ToDim(a) // TODO: look for compile time shape
+  }
+  
+  
+  var ivShapeRelation: List[(Sym[MDArray[_]], Exp[MDArray[Int]])] = Nil
+  
+  override def reset = {
+    super.reset
+    ivShapeRelation = Nil
+  }
+  
+  
+  def shape[A: Manifest](a: Exp[MDArray[A]]): Exp[MDArray[Int]] = a match {
+    case Def(Reflect(ReadMDArray(_, Some(hint)), _, _)) => KnownAtCompileTime(hint)
+    case Def(KnownAtCompileTime(b)) => KnownAtCompileTime(b.shape)
+    case s: Sym[_] => 
+      // if this is a loop iv, it's shape is equal to the shape of the loop bounds
+      //val withDef = globalDefs.collectFirst {
+      //  case TP(_, WithNode(lb, lbStrict, ub, ubStrict, step, width, sym, expr)) if sym == s => shape(lb)
+      //}
+      ivShapeRelation.collectFirst { case (`s`, shp) => shp }.getOrElse(ToShape(a))
+    case _ => ToShape(a)
+  }
+  
+  def sel[A: Manifest](iv: Exp[MDArray[Int]], a: Exp[MDArray[A]]): Exp[MDArray[A]] = (iv,a) match {
+    case (Def(KnownAtCompileTime(iw)), Def(KnownAtCompileTime(b))) => 
+      KnownAtCompileTime(b.sel(iw))
+    case (Def(KnownAtCompileTime(iw)), _) => 
+      println("sel with known iv " + iv +"="+iw+ " shape " + shape(a))
+      shape(a) match {
+        case Def(KnownAtCompileTime(sa)) =>
+          println("select " + a + " with shape " + sa + " at " + iw)
+          
+          // TODO: could optimize selection ...
+                    
+/*        case Def(KnownAtCompileTime(sa)) if sa.dim == b.dim =>
+          println("sel with known iv and known shape " + iv)
+*/          
+          Sel(iv, a)
+        case _ => Sel(iv, a)
+      }
+    
+    case _ => Sel(iv, a)
+  }
+  
   def reshape[A: Manifest](iv: Exp[MDArray[Int]], a: Exp[MDArray[A]]): Exp[MDArray[A]] = Reshape(iv, a)
   def cat[A: Manifest](d: Rep[MDArray[Int]], one: Exp[MDArray[A]], two: Exp[MDArray[A]]): Exp[MDArray[A]] = Cat(d, one, two)
 
   // Zeroes, ones and values
-  def values(dim: Exp[MDArray[Int]], value: Exp[MDArray[Int]]): Exp[MDArray[Int]] = {
-    // XXX: Let's make values a primitive, before with loops
-    // With().GenArray(convertFromValueRepRep(dim), iv => value)
-    Values(dim, value)
+  def values(dim: Exp[MDArray[Int]], value: Exp[MDArray[Int]]): Exp[MDArray[Int]] = (dim,value) match {
+    case (Def(KnownAtCompileTime(d)), Def(KnownAtCompileTime(v))) =>
+      // TODO: maybe we don't want to create the full array at compile time but just its shape
+      val shp = Array(d.content()(0))
+      val dta = new Array[Int](d.content()(0))
+      var i = 0
+      while (i < dta.length) {
+        dta(i) = v.content()(0)
+        i += 1
+      }
+      KnownAtCompileTime(new MDArray[Int](shp,dta))
+    case _ =>
+      // XXX: Let's make values a primitive, before with loops
+      // With().GenArray(convertFromValueRepRep(dim), iv => value)
+      Values(dim, value)
   }
 
   // Where
@@ -209,6 +266,7 @@ trait MDArrayBaseExp extends MDArrayBase with EffectExp with /*DeliteIfThenElseE
   // With-comprehensions
   def toWithNode[A: Manifest](withObject: With[A]): Exp[MDArray[A]] = {
     val sym: Sym[MDArray[Int]] = fresh[MDArray[Int]]
+    ivShapeRelation = (sym, shape(withObject.lb))::ivShapeRelation
     WithNode(withObject.lb, withObject.lbStrict, withObject.ub, withObject.ubStrict, withObject.step, withObject.width, sym, withObject.function(sym))
   }
 

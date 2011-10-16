@@ -351,71 +351,73 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
   override def performTyping[A: Manifest, B: Manifest](x: Exp[A], y: Exp[B]): Unit =
     TY.doTyping(y, false)
 
+  def emitShapeConstArray(sym: Sym[Any], elems: Any*)(implicit stream: PrintWriter): Unit = {
+    emitShapeDecl(sym)
+    //stream.println("Array(" + elems.mkString(", ") + ")")
+    stream.println("new Array("+elems.length+")")
+    for (i <- 0 until elems.length)
+      stream.println(quoteShape(sym)+"("+i+") = " + elems(i))
+  }
+  def emitValConstArray(sym: Sym[Any], elems: Any*)(implicit stream: PrintWriter): Unit = {
+    emitValDecl(sym)
+    //stream.println("Array(" + elems.mkString(", ") + ")" )
+    stream.println("new Array("+elems.length+")")
+    for (i <- 0 until elems.length)
+      stream.println(quoteValue(sym)+"("+i+") = " + elems(i))
+  }
+
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = {
     //emitChecks(sym, rhs)
     emitShapeValue(sym, rhs)
 
     rhs match {
       case kc: KnownAtCompileTime[_] =>
-        emitShapeDecl(sym)
-        stream.println("Array(" + kc.value.shape.content.mkString(", ") + ")")
-        emitValDecl(sym)
+        emitShapeConstArray(sym, kc.value.shape.content.toList:_*)
         val m = strip(sym.Type)
         if (m == "String")
-          stream.println("Array(" + kc.value.content.map("\"" + _ + "\"").mkString(", ") + ") //" + m)
+          emitValConstArray(sym, kc.value.content.map("\"" + _ + "\"").toList:_*)
         else if (m == "Char")
-          stream.println("Array(" + kc.value.content.map("'" + _ + "'").mkString(", ") + ") //" + m)
+          emitValConstArray(sym, kc.value.content.map("'" + _ + "'").toList:_*)
         else
-          stream.println("Array(" + kc.value.content.mkString(", ") + ") //" + m)
+          emitValConstArray(sym, kc.value.content.toList:_*)
+        // used to print out m as comment
 
       case kr: KnownAtRuntime[_] =>
         // don't emit anything :)
       case fl: FromList[_] =>
         fl.value match {
           case Const(list) =>
-            emitShapeDecl(sym)
-            stream.println("Array(" + list.length + ")")
-            emitValDecl(sym)
-            stream.println("Array(" + list.mkString(", ") + ")")
+            emitShapeConstArray(sym, list.length)
+            emitValConstArray(sym, list:_*)
           case _ =>
-            emitShapeDecl(sym)
-            stream.println("Array(" + quote(fl.value) + ".length)")
+            emitShapeConstArray(sym, quote(fl.value) + ".length")
             emitValDecl(sym)
             stream.println(quote(fl.value))
         }
       case fa: FromArray[_] =>
         fa.value match {
           case Const(array) =>
-            emitShapeDecl(sym)
-            stream.println("Array(" + array.length + ")")
-            emitValDecl(sym)
-            stream.println("Array(" + array.mkString(", ") + ")")
+            emitShapeConstArray(sym, array.length)
+            emitValConstArray(sym, array.toList:_*)
           case _ =>
-            emitShapeDecl(sym)
-            stream.println("Array(" + quote(fa.value) + ".length)")
+            emitShapeConstArray(sym, quote(fa.value) + ".length")
             emitValDecl(sym)
             stream.println(quote(fa.value))
         }
       case fv: FromValue[_] =>
         fv.value match {
           case Const(scalar) =>
-            emitShapeDecl(sym)
-            stream.println("Array()")
-            emitValDecl(sym)
-            stream.println("Array(" + scalar + ")")
+            emitShapeConstArray(sym)
+            emitValConstArray(sym, scalar)
           case _ =>
-            emitShapeDecl(sym)
-            stream.println("Array()")
-            emitValDecl(sym)
-            stream.println("Array(" + quote(fv.value) + ")")
+            emitShapeConstArray(sym)
+            emitValConstArray(sym, quote(fv.value))
         }
       case fml: FromMDArrayList[_] => fml.list match {
         case Nil =>
           // empty symbol
-          emitShapeDecl(sym)
-          stream.println("Array(0)")
-          emitValDecl(sym)
-          stream.println("Array()")          
+          emitShapeConstArray(sym, 0)
+          emitValConstArray(sym)
         case head::rest =>
           val index = getNewIndex
           stream.println("var i_" + index + ": Int = 1")
@@ -447,8 +449,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
       case td: ToDim[_] =>
         stream.println("val " + quote(sym) + ": Int = " + quoteValue(td.a) + ".length")
       case ts: ToShape[_] =>
-        emitShapeDecl(sym)
-        stream.println("Array(" + quoteShape(ts.a) + ".length)")
+        emitShapeConstArray(sym, quoteShape(ts.a) + ".length")
         emitValDecl(sym)
         stream.println(quoteShape(ts.a))
       case rs: Reshape[_] =>
@@ -539,8 +540,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
         emitOperationEpilogue(sym, wh.array1, index)
       case va: Values[_] =>
         val index = getNewIndex
-        emitShapeDecl(sym)
-        stream.println("Array(" + quoteValue(va.dim) + "(0))")
+        emitShapeConstArray(sym, quoteValue(va.dim) + "(0)")
         emitValDecl(sym)
         stream.println("new Array[Int](" + quoteValue(va.dim) + "(0))")
         stream.println("var i_" + index + ": Int = 0")
@@ -566,8 +566,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with TypedGenMDArray {
         emitFoldArray(sym, fa.wExpr, fa.neutral, fa.foldTerm1, fa.foldTerm2, fa.foldExpression)
         stream.println
       case soa: ScalarOperatorApplication[_,_,_] =>
-        emitShapeDecl(sym)
-        stream.println("Array()")
+        emitShapeConstArray(sym)
         emitSymDecl(sym)
         stream.println("((a: " + soa.getMfA.toString + ", b: " + soa.getMfB.toString + ") => a " + soa.operator + " b)(" + quoteValue(soa.a) + "(0), " + quoteValue(soa.b) + "(0))")
       // If must also be translated to account for the scope changes

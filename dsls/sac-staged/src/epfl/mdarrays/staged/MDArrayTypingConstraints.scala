@@ -22,6 +22,11 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with DeliteScalaGenIfThenE
   protected def addSymbol(sym: Sym[_]): Unit
   protected def createSubScope(ifSym: Sym[_], sym: Sym[_])(action: => Unit): Unit
 
+  def EqualityScalarShape(e: Expression, preReq: Boolean, rhs: Any) = e match {
+    case s: Sym[_] => Equality(ShapeVar(s), Lst(Nil), preReq, rhs)
+    case _ => Equality(Lst(Nil), Lst(Nil), preReq, rhs)
+  }
+
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter): Unit = {
     val nodeConstraints =
       // generic reconstruct value from shape
@@ -144,8 +149,10 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with DeliteScalaGenIfThenE
       Equality(ShapeVar(sym), ShapeVar(array1), postReq, rhs)::Nil
     case WithNode(lb, lbStrict, ub, ubStrict, step, width, ivSym, expr) =>
       LengthEqualityAeqB(ShapeVar(lb), Lst(getNewUnknownElement::Nil), preReq, rhs)::
-      Equality(ShapeVar(lbStrict), Lst(Nil), preReq, rhs)::
-      Equality(ShapeVar(ubStrict), Lst(Nil), preReq, rhs)::
+      //Equality(ShapeVar(lbStrict), Lst(Nil), preReq, rhs)::
+      EqualityScalarShape(lbStrict, preReq, rhs)::
+      //Equality(ShapeVar(ubStrict), Lst(Nil), preReq, rhs)::
+      EqualityScalarShape(ubStrict, preReq, rhs)::
       Equality(ShapeVar(ub), ShapeVar(lb), preReq, rhs)::
       Equality(ShapeVar(step), ShapeVar(lb), preReq, rhs)::
       Equality(ShapeVar(width), ShapeVar(lb), preReq, rhs)::
@@ -190,12 +197,12 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with DeliteScalaGenIfThenE
       Equality(ShapeVar(cond), Lst(Nil), preReq, rhs)::
       CommonDenominator(ShapeVar(sym), ShapeVar(thenp), ShapeVar(elsep), postReq, rhs)::Nil
     case IfThenElse(cond, thenp, elsep) =>
-      Equality(ShapeVar(cond), Lst(Nil), preReq, rhs)::
-      CommonDenominator(ShapeVar(sym), ShapeVar(thenp), ShapeVar(elsep), postReq, rhs)::Nil
+      //Equality(ShapeVar(cond), Lst(Nil), preReq, rhs)::
+      EqualityScalarShape(cond, preReq, rhs)::CommonDenominator(ShapeVar(sym), ShapeVar(thenp), ShapeVar(elsep), postReq, rhs)::Nil
     case ScalarOperatorApplication(/*function, */operator, operand1, operand2) =>
-      Equality(ShapeVar(operand1), Lst(Nil), preReq, rhs)::
-      Equality(ShapeVar(operand2), Lst(Nil), preReq, rhs)::
-      Equality(ShapeVar(sym), Lst(Nil), postReq, rhs)::Nil
+      EqualityScalarShape(operand1, preReq, rhs)::
+      EqualityScalarShape(operand2, preReq, rhs)::
+      EqualityScalarShape(sym, postReq, rhs)::Nil
     case Argument(base, index) =>
       Nil // arguments are not constrained in any way
     case PrintLn(x) =>
