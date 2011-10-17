@@ -21,10 +21,12 @@ trait PDE1BenchmarkStaged extends StagedSACApplication with PDE1BenchmarkStagedF
     /*
      * Right now we don't have IO from files => let's generate the array by hand
      */
-    val matrix = fakeReadMDArray()
+    val matrix = readMDArray[Double]("mdarray-pde1-in.txt")
     startTimer(matrix::Nil)
     val result = range(matrix, 1)
     stopTimer(result::Nil)
+    writeMDArray("mdarray-pde1-out.txt", result)
+    print(result)
   }
 
   def testWithLoopExtraction(matrix: MDArrayInt): MDArrayInt = {
@@ -50,8 +52,6 @@ trait PDE1BenchmarkStaged extends StagedSACApplication with PDE1BenchmarkStagedF
                Relax: (MDArrayDbl, MDArrayDbl, Dbl) => MDArrayDbl,
                iterations: Int): MDArrayDbl = {
 
-    val startTime: Long = System.currentTimeMillis
-
     val red: MDArrayBool = With(lb = List(1, 0, 0), step = List(2,1,1), function = iv => true).
       GenArray(shape(matrix))
 
@@ -62,8 +62,6 @@ trait PDE1BenchmarkStaged extends StagedSACApplication with PDE1BenchmarkStagedF
       u = where(red, Relax(u, f, 1d/10d), u)
       u = where(!red, Relax(u, f, 1d/10d), u)
     }
-    val finishTime: Long = System.currentTimeMillis
-    println("Time: " + (finishTime-startTime).toString + "ms")
 
     u
   }
@@ -159,7 +157,7 @@ trait PDE1BenchmarkStagedFakeReadMDArray {
     import epfl.mdarrays.library.scala.Conversions._
     import epfl.mdarrays.library.scala._
 
-    val size: Int = 10
+    val size: Int = 64
     val arr: Array[Double] = new Array[Double](size * size * size)
     val rnd: Random = new Random(1) // We need to have a fixed seed
     for (i <- arr.indices)
