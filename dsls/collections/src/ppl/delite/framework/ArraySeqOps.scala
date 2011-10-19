@@ -53,7 +53,7 @@ self: ArraySeqEmitting =>
     // TODO: why doesn't this implicit conversion get resolved automatically? It is available in the current scope without a prefix.
     def alloc(source: Exp[ArraySeq[T]]) = ArraySeq[S](arraybufferrep2traversableops(source).size)
     def emptyAlloc(source: Exp[ArraySeq[T]]) = ArraySeq[S](Const(0))
-    def emitterScala(source: Exp[ArraySeq[T]]): ScalaEmitter = scalaArraySeqEmitter[T]
+    def emitterFactory(source: Exp[ArraySeq[T]]) = arraySeqEmitterFactory[T]
     def noPrealloc = false
   }
   

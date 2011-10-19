@@ -16,7 +16,7 @@ trait GenericCollectionOps extends DSLType with Variables {
   trait CanBuild[-Coll, -S, +Target] {
     def alloc(source: Rep[Coll]): Rep[Target]
     def emptyAlloc(source: Rep[Coll]): Rep[Target]
-    def emitterScala(source: Rep[Coll]): ScalaEmitter
+    def emitterFactory(source: Rep[Coll]): EmitterFactory
     def noPrealloc: Boolean
   }
   
@@ -27,16 +27,28 @@ trait GenericCollectionGen {
 }
 
 
+trait EmitterFactory {
+  def needsCombine: Boolean
+  def needsPostProcess: Boolean
+  def needsPostProcess2: Boolean
+  
+  def scala: ScalaEmitter
+}
+
+
 /** Collection construction emitter. Given that the collection can be emitted for a given
  *  platform, uses the evidence to emit the code.
  */
 trait ScalaEmitter {
-  def emitBufferDefs(basename: String, elemtype: String)(implicit stream: PrintWriter)
-  def emitInitSubActivation(basename: String, activname: String)(implicit stream: PrintWriter)
+  def emitBufferDefs(kernelname: String, basename: String, elemtype: String)(implicit stream: PrintWriter)
+  def emitInitSubActivation(basename: String, activname: String, chunkIdxVar: String, numChunksVar: String)(implicit stream: PrintWriter)
   def emitAddToBuffer(basename: String, activname: String, elemname: String)(implicit stream: PrintWriter)
   def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter)
   def emitPostCombine(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter)
   def emitPostProcInit(basename: String, activname: String)(implicit stream: PrintWriter)
   def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter)
+  def emitPostCombine2(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter)
+  def emitPostProcInit2(basename: String, activname: String)(implicit stream: PrintWriter)
+  def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter)
 }
 

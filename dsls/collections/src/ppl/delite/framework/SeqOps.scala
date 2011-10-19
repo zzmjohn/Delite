@@ -39,7 +39,7 @@ self: ArraySeqOpsExp with ArraySeqEmitting =>
   implicit def seqCanBuild[T: Manifest, S: Manifest]: CanBuild[Seq[T], S, Seq[S]] = new CanBuild[Seq[T], S, Seq[S]] {
     def alloc(source: Exp[Seq[T]]) = ArraySeq.apply[S](seqrep2traversableops(source).size)
     def emptyAlloc(source: Exp[Seq[T]]) = ArraySeq[S](Const(0))
-    def emitterScala(source: Exp[Seq[T]]) = scalaArraySeqEmitter[T]
+    def emitterFactory(source: Exp[Seq[T]]) = arraySeqEmitterFactory[T]
     def noPrealloc = false
   }
   

@@ -39,4 +39,11 @@ trait Map[@specialized K, @specialized V] extends Traversable[(K, V)] {
 
 
 trait HashMap[@specialized K, @specialized V] extends Map[K, V] {
+  def unsafeIndices: Array[Int]
+  def unsafeData: Array[AnyRef]
+  def unsafeSize: Int
+  def unsafeSetInternal(_ind: Array[Int], _data: Array[AnyRef], _sz: Int)
+  def unsafeBlockSizes: Array[Int]
+  def unsafeSetBlockSizes(_blkszs: Array[Int])
+  def unsafeSetData(_data: Array[AnyRef])
 }

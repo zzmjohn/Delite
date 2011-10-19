@@ -118,6 +118,21 @@ object MultiLoop_SMP_Array_Generator {
       if (chunkIdx != numChunks-1) out.append("head.getB"+(numChunks-1)+"\n") // wait for last one
       out.append("head.closure.postProcess(acc)\n")
     }
+    
+    if (op.needsPostProcess2) {
+      if (chunkIdx != 0) {
+        val neighbor = chunkIdx - 1
+        out.append("head.closure.postCombine2(acc, head.getB"+neighbor+")\n")
+      }
+      if (chunkIdx == numChunks - 1) {
+        out.append("head.closure.postProcInit2(acc)\n")
+      }
+
+      if (numChunks > 1) out.append("head.setC"+chunkIdx+"(acc)\n") // kick off others
+      if (chunkIdx != numChunks-1) out.append("head.getC"+(numChunks-1)+"\n") // wait for last one
+      out.append("head.closure.postProcess2(acc)\n")
+    }
+    
     if (chunkIdx == 0) out.append("acc\n")    
     out.append("}\n")
   }
@@ -147,6 +162,10 @@ object MultiLoop_SMP_Array_Header_Generator {
     if (op.needsPostProcess && numChunks > 1) { //all chunks need to sync
       for (i <- 0 until numChunks)
         writeSync(out, "B"+i, op.outputType)
+    }
+    if (op.needsPostProcess2 && numChunks > 1) { //all chunks need to sync
+      for (i <- 0 until numChunks)
+        writeSync(out, "C"+i, op.outputType)
     }
     
     //the footer

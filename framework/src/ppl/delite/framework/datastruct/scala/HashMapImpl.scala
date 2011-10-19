@@ -9,6 +9,7 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
   private val loadfactor_d2 = 0.4f / 2
   private var indices = _indices
   private var data = _data
+  private var blocksizes: Array[Int] = _
   private var sz = _sz
   
   def this() = this(Array.fill(128)(-1), new Array(52), 0)
@@ -33,7 +34,8 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
   
   def get(k: K): V = {
     val hc = k.##
-    var pos = (absolute(hc) % (indices.length / 2)) * 2
+    val relbits = Integer.numberOfTrailingZeros(indices.length / 2)
+    var pos = (hc >>> (32 - relbits)) * 2
     var currelem = indices(pos)
     var currhash = indices(pos + 1)
     
@@ -49,7 +51,8 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
   
   def put(k: K, v: V) {
     val hc = k.##
-    var pos = (absolute(hc) % (indices.length / 2)) * 2
+    val relbits = Integer.numberOfTrailingZeros(indices.length / 2)
+    var pos = (hc >>> (32 - relbits)) * 2
     var currelem = indices(pos)
     var currhash = indices(pos + 1)
     
@@ -92,12 +95,12 @@ growth threshold: %d
     
     // copy indices
     var i = 0
-    val totalnindices = nindices.length / 2
+    val relbits = Integer.numberOfTrailingZeros(nindices.length / 2)
     while (i < indices.length) {
       val elem = indices(i)
       if (elem != -1) {
         val hash = indices(i + 1)
-        var pos = (absolute(hash) % totalnindices) * 2
+        var pos = (hash >>> (32 - relbits)) * 2
         
         // insert it into nindices
         var currelem = nindices(pos)
@@ -126,6 +129,25 @@ growth threshold: %d
   
   override def toString = "HashMapImpl(sz: %d; indices: %s; data: %s)".format(sz, indices.mkString(", "), data.mkString(", "))
   
+  def unsafeIndices: Array[Int] = indices
+  
+  def unsafeData: Array[AnyRef] = data
+  
+  def unsafeSize = sz
+  
+  def unsafeBlockSizes = blocksizes
+  
+  def unsafeSetBlockSizes(_blkszs: Array[Int]) = blocksizes = _blkszs
+  
+  def unsafeSetData(_data: Array[AnyRef]) {
+    data = _data
+  }
+  
+  def unsafeSetInternal(_ind: Array[Int], _data: Array[AnyRef], _sz: Int) {
+    indices = _ind
+    data = _data
+    sz = _sz
+  }
 }
 
 

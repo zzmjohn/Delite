@@ -43,7 +43,7 @@ self: HashMapOpsExp with HashMapEmitting =>
   implicit def hashMapCanBuild[K: Manifest, V: Manifest, P: Manifest, Q: Manifest]: CanBuild[HashMap[K, V], (P, Q), HashMap[P, Q]] = new CanBuild[HashMap[K, V], (P, Q), HashMap[P, Q]] {
     def alloc(source: Exp[HashMap[K, V]]) = HashMap.apply[P, Q]()
     def emptyAlloc(source: Exp[HashMap[K, V]]) = HashMap[P, Q]()
-    def emitterScala(source: Exp[HashMap[K, V]]) = scalaHashMapEmitter[K, V]
+    def emitterFactory(source: Exp[HashMap[K, V]]) = hashMapEmitterFactory[K, V]
     def noPrealloc = true
   }
   

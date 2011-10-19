@@ -58,7 +58,7 @@ trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp
   extends DeliteOpMap[T, S, Target] {
     val size = copyTransformedOrElse(_.size)(in.size)
     def alloc = cbf.alloc(in)
-    override def emitterScala = if (cbf.noPrealloc) Some(cbf.emitterScala(in)) else None
+    override def emitterFactory = if (cbf.noPrealloc) Some(cbf.emitterFactory(in)) else None
     
     val mA = manifest[T]
     val mB = manifest[S]
@@ -69,7 +69,7 @@ trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp
     def func = e => e
     def cond = pred
     val size = in.size
-    override def emitterScala = Some(cbf.emitterScala(in))
+    override def emitterFactory = Some(cbf.emitterFactory(in))
     
     def m = manifest[T]
   }
@@ -84,7 +84,7 @@ trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp
   implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
     def alloc(source: Exp[Traversable[T]]) = null //ArraySeq.apply[S](travrep2traversableops(source).size)
     def emptyAlloc(source: Exp[Traversable[T]]) = null //ArraySeq[S](Const(0))
-    def emitterScala(source: Exp[Traversable[T]]) = null //scalaArraySeqEmitter[T]
+    def emitterFactory(source: Exp[Traversable[T]]) = null //scalaArraySeqEmitter[T]
     def noPrealloc = false
   }
   

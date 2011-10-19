@@ -6,6 +6,7 @@ import ppl.delite.framework.collections._
 
 
 
+// HashMap.fill[Int, String](xs)(x => x.toString)
 trait HelloCollections extends CollectionsApplication {
   def main() {
     // val xs = ArraySeq[Int](6)
@@ -20,6 +21,7 @@ trait HelloCollections extends CollectionsApplication {
     // println("Elements left after filter: " + zs.size)
     // for (z <- zs) println(z)
     
+    // xs.map({ x => (x, x) })(hashMapCanBuild, manifest[(Int, Int)], manifest[HashMapImpl[Int, Int]])
     val ms = HashMap[Int, String]()
     ms.map(kv => kv)
   }
