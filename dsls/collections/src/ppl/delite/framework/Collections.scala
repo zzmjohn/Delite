@@ -67,13 +67,14 @@ trait CollScalaCodeGenPkg extends ScalaGenImplicitOps with ScalaGenNumericOps wi
 */
 
 
-trait Collections extends ScalaOpsPkg with CollectionsOps
+trait Collections extends ScalaOpsPkg with CollectionsOps with TupleOps
 
 
 trait CollectionsExp
 extends Collections
 with ScalaOpsPkgExp
 with CollectionsOpsExp
+with TupleOpsExp
 with DeliteOpsExp
 with VariantsOpsExp
 with DeliteAllOverridesExp {

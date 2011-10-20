@@ -15,6 +15,7 @@ trait HashMapOps extends MapOps {
   /* ctors */
   object HashMap {
     def apply[K: Manifest, V: Manifest]() = hashmap_obj_new[K, V]()
+    def range(n: Rep[Int]) = hashmap_obj_new_range(n)
   }
   
   /* lifting */
@@ -22,6 +23,7 @@ trait HashMapOps extends MapOps {
   
   /* object defs */
   def hashmap_obj_new[K: Manifest, V: Manifest](): Rep[HashMap[K, V]]
+  def hashmap_obj_new_range(n: Rep[Int]): Rep[HashMap[Int, Int]]
   
   /* class interface defs */
   
@@ -36,6 +38,9 @@ self: HashMapOpsExp with HashMapEmitting =>
   
   /* nodes */
   case class HashMapNew[K, V]()(val mV: Manifest[HashMapImpl[K, V]]) extends Def[HashMap[K, V]]
+  case class HashMapNewRange(n: Exp[Int])(val mV: Manifest[HashMapImpl[Int, Int]]) extends Def[HashMap[Int, Int]]
+  
+  /* lifting */
   
   /* class interface */
   
@@ -48,6 +53,7 @@ self: HashMapOpsExp with HashMapEmitting =>
   }
   
   def hashmap_obj_new[K: Manifest, V: Manifest](): Exp[HashMap[K, V]] = HashMapNew[K, V]()(manifest[HashMapImpl[K, V]])
+  def hashmap_obj_new_range(n: Exp[Int]) = HashMapNewRange(n)(manifest[HashMapImpl[Int, Int]])
   
 }
 
@@ -61,8 +67,14 @@ trait ScalaGenHashMapOps extends ScalaGenMapOps {
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = rhs match {
     // these are the ops that call through to the underlying real data structure
     case v @ HashMapNew() => emitValDef(sym, "new " + remap(v.mV) + "()")
+    case v @ HashMapNewRange(n) =>
+      emitValDef(sym, "HashMapImpl.range(%s)".format(quote(n)))
     case _ => super.emitNode(sym, rhs)
   }
   
 }
+
+
+
+
 

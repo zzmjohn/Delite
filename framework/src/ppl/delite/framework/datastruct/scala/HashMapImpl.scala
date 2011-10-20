@@ -143,6 +143,10 @@ growth threshold: %d
     data = _data
   }
   
+  def unsafeSetSize(_sz: Int) {
+    sz = _sz
+  }
+  
   def unsafeSetInternal(_ind: Array[Int], _data: Array[AnyRef], _sz: Int) {
     indices = _ind
     data = _data
@@ -151,4 +155,10 @@ growth threshold: %d
 }
 
 
-
+object HashMapImpl {
+  def range(n: Int) = {
+    val hm = new HashMapImpl[Int, Int](n * 5, n * 3)
+    for (i <- 0 until n) hm.put(i, i)
+    hm
+  }
+}

@@ -46,4 +46,5 @@ trait HashMap[@specialized K, @specialized V] extends Map[K, V] {
   def unsafeBlockSizes: Array[Int]
   def unsafeSetBlockSizes(_blkszs: Array[Int])
   def unsafeSetData(_data: Array[AnyRef])
+  def unsafeSetSize(_sz: Int)
 }

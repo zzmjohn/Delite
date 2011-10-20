@@ -41,6 +41,41 @@ trait HashMapEmitting {
         stream.println("c + 1")
         stream.println("}")
         
+        stream.println("def " + basename + "_grow() {")
+        stream.println("if (%s_bufsz > (%s_buf_ind.length * 0.4f)) {".format(basename, basename))
+        stream.println("val nindices = Array.fill[Int](%s_buf_ind.length * 2)(-1)".format(basename))
+        stream.println("val ndata = new Array[AnyRef](%s_buf_data.length * 2)".format(basename))
+        stream.println("// copy raw data")
+        stream.println("System.arraycopy(%s_buf_data, 0, ndata, 0, %s_bufsz * 2)".format(basename, basename))
+        stream.println("// copy indices")
+        stream.println("var i = 0")
+        stream.println("val relbits = Integer.numberOfTrailingZeros(nindices.length / 2)")
+        stream.println("while (i < %s_buf_ind.length) {".format(basename))
+        stream.println("val elem = %s_buf_ind(i)".format(basename))
+        stream.println("if (elem != -1) {")
+        stream.println("val hash = %s_buf_ind(i + 1)".format(basename))
+        stream.println("var pos = (hash >>> (32 - relbits)) * 2")
+        stream.println("")
+        stream.println("// insert it into nindices")
+        stream.println("var currelem = nindices(pos)")
+        stream.println("var currhash = nindices(pos + 1)")
+        stream.println("while (currelem != -1) {")
+        stream.println("pos = (pos + 2) % nindices.length")
+        stream.println("currelem = nindices(pos)")
+        stream.println("currhash = nindices(pos + 1)")
+        stream.println("}")
+        stream.println("nindices(pos) = elem")
+        stream.println("nindices(pos + 1) = hash")
+        stream.println("}")
+        stream.println("i += 2")
+        stream.println("}")
+        stream.println("")
+        stream.println("%s_buf_ind = nindices".format(basename))
+        stream.println("%s_buf_data = ndata".format(basename))
+        stream.println("")
+        stream.println("}")
+        stream.println("}")
+        
         stream.println("def " + basename + "_buf_init(chunkIdx: Int, numChunks: Int, numElems: Int) {")
         stream.println(basename + "_chunkIdx = chunkIdx")
         stream.println(basename + "_numChunks = numChunks")
@@ -49,7 +84,7 @@ trait HashMapEmitting {
         stream.println("val elemest = math.max(" + basename + "_blocks * 8, numElems / numChunks)")
         stream.println("val tablesize = " + basename + "_nextPow2((elemest / 0.4f).toInt) * 2")
         stream.println(basename + "_buf_ind = Array.fill[Int](tablesize)(-1)")
-        stream.println(basename + "_buf_data = new Array[AnyRef]((elemest * 1.1f).toInt * 2)")
+        stream.println(basename + "_buf_data = new Array[AnyRef]((elemest * 1.2f).toInt * 2)")
         stream.println("}")
         
         stream.println("def " + basename + "_buf_append(x: " + elemtype + ") {")
@@ -74,7 +109,7 @@ trait HashMapEmitting {
         stream.println("%s_buf_data(datapos) = x._1.asInstanceOf[AnyRef]".format(basename))
         stream.println("%s_buf_data(datapos + 1) = x._2.asInstanceOf[AnyRef]".format(basename))
         stream.println("%s_bufsz += 1".format(basename))
-        stream.println("// grow()")
+        stream.println("%s_grow()".format(basename))
         stream.println("} else {")
         stream.println("val datapos = currelem")
         stream.println("%s_buf_data(datapos) = x._1.asInstanceOf[AnyRef]".format(basename))
@@ -89,10 +124,7 @@ trait HashMapEmitting {
         stream.println(prefixSym + basename + "_buf_append(" + elemname + ")")
       }
       def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
-        // TODO
-        
-        // old
-        stream.println(prefixSym + basename + ".+=(" + elemname + ")")
+        stream.println(prefixSym + basename + ".put(" + elemname + ")")
       }
       def emitPostCombine(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {
         stream.println(activname + "." + basename + "_offset = " + lhsname + "." + basename + "_offset + " + lhsname + "." + basename + "_bufsz")
@@ -120,7 +152,7 @@ trait HashMapEmitting {
       }
       def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter) {
         // process all chunks
-        stream.println("if (%s.%s_numChunks > 0) {".format(activname, basename))
+        stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
         stream.println("val mychunk = %s.%s_chunkIdx".format(activname, basename))
         stream.println("var chidx = 0")
         stream.println("val targetindices = %s.%s.unsafeIndices".format(activname, basename))
@@ -178,13 +210,13 @@ trait HashMapEmitting {
       }
       def emitPostCombine2(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {
         // count the number of elements in each block
-        stream.println("if (%s.%s_numChunks > 0) {".format(activname, basename))
+        stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
         stream.println("}")
       }
       def emitPostProcInit2(basename: String, activname: String)(implicit stream: PrintWriter) {
-        stream.println("if (%s.%s_numChunks > 0) {".format(activname, basename))
+        stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
         // 1) put all the spills in proper blocks, and update the count
-        stream.println("chidx = 0")
+        stream.println("var chidx = 0")
         stream.println("val targetindices = %s.%s.unsafeIndices".format(activname, basename))
         stream.println("val targetsizes = %s.%s.unsafeBlockSizes".format(activname, basename))
         stream.println("while (chidx < %s.%s_numChunks) {".format(activname, basename))
@@ -198,7 +230,7 @@ trait HashMapEmitting {
         stream.println("var telem = targetindices(tpos)")
         stream.println("while (telem != -1 && (%s.%s_activations(targetindices(tpos + 1)).%s_buf_data(telem) != k)) {".format(activname, basename, basename))
         stream.println("tpos = (tpos + 2) % targetindices.length")
-        stream.println("currelem = targetindices(tpos)")
+        stream.println("telem = targetindices(tpos)")
         stream.println("}")
         stream.println("targetindices(tpos) = idx")
         stream.println("targetindices(tpos + 1) = chidx")
@@ -216,7 +248,7 @@ trait HashMapEmitting {
         stream.println("var blkidx = chidx")
         stream.println("var currblockcount = 0")
         stream.println("while (blkidx < %s.%s_blocks) {".format(activname, basename))
-        stream.println("currblockcount += %s.%s.unsafeBlockSizes(blkidx)")
+        stream.println("currblockcount += %s.%s.unsafeBlockSizes(blkidx)".format(activname, basename))
         stream.println("blkidx += %s.%s_numChunks".format(activname, basename))
         stream.println("}")
         stream.println("curract.%s_offset = elemcount".format(basename))
@@ -225,14 +257,17 @@ trait HashMapEmitting {
         stream.println("}")
         stream.println("")
         
-        // 3) allocate the data table
+        // 3) allocate the data table and set size
         stream.println("var datatable = new Array[AnyRef]((2.2 * elemcount).toInt)")
         stream.println("%s.%s.unsafeSetData(datatable)".format(activname, basename))
+        stream.println("%s.%s.unsafeSetSize(elemcount)".format(activname, basename))
+        stream.println("%s.%s.unsafeSetBlockSizes(null)".format(activname, basename))
         stream.println("")
+        stream.println("}")
       }
       def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter) {
         // update the references to the data table and hashcodes in each block
-        stream.println("if (%s.%s_numChunks > 0) {".format(activname, basename))
+        stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
         // go through your blocks, copy each element into the data table, and store its hashcode
         stream.println("val tindices = %s.%s.unsafeIndices".format(activname, basename))
         stream.println("val tdata = %s.%s.unsafeData".format(activname, basename))
@@ -259,6 +294,7 @@ trait HashMapEmitting {
         stream.println("blkidx += %s.%s_numChunks".format(activname, basename))
         stream.println("}")
         stream.println("}")
+        stream.println("println(%s.%s)".format(activname, basename))
       }
     }
   }
