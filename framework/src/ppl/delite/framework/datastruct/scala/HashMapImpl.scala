@@ -12,18 +12,10 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
   private var blocksizes: Array[Int] = _
   private var sz = _sz
   
-  def this() = this(Array.fill(128)(-1), new Array(52), 0)
-  def this(indsz: Int, datasz: Int) = this(Array.fill(indsz)(-1), new Array(datasz), 0)
+  import HashMapImpl.nextPow2
   
-  private def nextPow2(x: Int) = {
-    var c = x - 1;
-    c |= c >>>  1;
-    c |= c >>>  2;
-    c |= c >>>  4;
-    c |= c >>>  8;
-    c |= c >>> 16;
-    c + 1;
-  }
+  def this() = this(Array.fill(128)(-1), new Array(52), 0)
+  def this(indsz: Int, datasz: Int) = this(Array.fill(HashMapImpl.nextPow2(indsz))(-1), new Array(datasz * 2), 0)
   
   @inline private def absolute(hc: Int) = {
     val mask = hc >> 31
@@ -33,7 +25,7 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
   def size = sz
   
   def get(k: K): V = {
-    val hc = k.##
+    val hc = k.## * 0x9e3775cd
     val relbits = Integer.numberOfTrailingZeros(indices.length / 2)
     var pos = (hc >>> (32 - relbits)) * 2
     var currelem = indices(pos)
@@ -50,7 +42,7 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
   }
   
   def put(k: K, v: V) {
-    val hc = k.##
+    val hc = k.## * 0x9e3775cd
     val relbits = Integer.numberOfTrailingZeros(indices.length / 2)
     var pos = (hc >>> (32 - relbits)) * 2
     var currelem = indices(pos)
@@ -160,5 +152,14 @@ object HashMapImpl {
     val hm = new HashMapImpl[Int, Int](n * 5, n * 3)
     for (i <- 0 until n) hm.put(i, i)
     hm
+  }
+  def nextPow2(x: Int) = {
+    var c = x - 1;
+    c |= c >>>  1;
+    c |= c >>>  2;
+    c |= c >>>  4;
+    c |= c >>>  8;
+    c |= c >>> 16;
+    c + 1;
   }
 }
