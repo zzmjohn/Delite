@@ -76,8 +76,10 @@ trait DeliteSuite extends Suite with DeliteTestConfig {
     // need to use a different compiler version to build and run Delite
     var p: Process = null
     val output = new File("test.tmp")
-    try{
+    try {
       val javaProc = javaBin.toString
+      // println("scala vanilla: " + scalaHome)
+      // println("scala library: " + scalaLibrary)
       val javaArgs = "-server -d64 -XX:+UseCompressedOops -XX:+DoEscapeAnalysis -Xmx16g -Ddelite.threads=" + threads + " -cp " + runtimeClasses + ":" + scalaLibrary + ":" + scalaCompiler
       val cmd = Array(javaProc) ++ javaArgs.split(" ") ++ Array("ppl.delite.runtime.Delite") ++ args
       val pb = new ProcessBuilder(java.util.Arrays.asList(cmd: _*))
@@ -116,6 +118,7 @@ trait DeliteSuite extends Suite with DeliteTestConfig {
 
   private def checkTest(outStr: String) {
     println("CHECKING...")
+    println(outStr)
     val resultStr = outStr substring (outStr.indexOf(MAGICDELIMETER) + MAGICDELIMETER.length, outStr.lastIndexOf(MAGICDELIMETER))
     val results = resultStr split ","
     for (i <- 0 until results.length) {

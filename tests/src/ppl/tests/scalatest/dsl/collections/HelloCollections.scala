@@ -9,27 +9,24 @@ import ppl.tests.scalatest._
 
 
 
-trait HelloCollections extends CollectionsApplication {
+trait HelloCollections extends CollectionsApplication with DeliteTestModule {
   def main() {
-    val xs = ArraySeq[Int](6)
-    for (x <- xs) println(x)
-    val ys = xs.map(_ + 1)
-    for (y <- ys) println(y)
-    val zs = ys.filter(_ % 2 == 1)
-    for (z <- zs) println(z)
-    for (x <- xs) {
-      val ts = ys.filter(_ % 2 == (x + 1))
-      println(ts)
-    }
+    implicit val collector = ArrayBuffer[Boolean]()
+    
+    val ms = HashMap.range(60)
+    val ms2 = ms.map(kv => kv)
+    //println(ms2)
+    
+    mkReport
   }
 }
 
 
-object HelloCollectionsRunner extends CollectionsApplicationRunner with HelloCollections // with DeliteTestRunner
+object HelloCollectionsRunner extends CollectionsApplicationRunner with HelloCollections with DeliteTestRunner
 
 
 class HelloCollectionsOpsSuite extends DeliteSuite {
-  //def testHelloCollections() { compileAndTest(HelloCollectionsRunner) }
+  def testHelloCollections() { compileAndTest(HelloCollectionsRunner) }
 }
 
 

@@ -42,19 +42,20 @@ with ScalaGenHashMapOps
 }
 
 
-/*
+
 trait CollScalaOpsPkg extends Base
     with ImplicitOps with NumericOps with FractionalOps with OrderingOps with StringOps
     with RangeOps with IOOps with ArrayOps with BooleanOps with PrimitiveOps with MiscOps
     with Equal with IfThenElse with Variables with While with TupleOps with ListOps
     with MathOps with CastingOps with ObjectOps
-
+    // with SynchronizedArrayBufferOps
 
 trait CollScalaOpsPkgExp extends CollScalaOpsPkg
     with ImplicitOpsExp with NumericOpsExp with FractionalOpsExp with OrderingOpsExp with StringOpsExp
     with RangeOpsExp with IOOpsExp with ArrayOpsExp with BooleanOpsExp with PrimitiveOpsExp with MiscOpsExp
     with FunctionsExp with EqualExp with IfThenElseExp with VariablesExp with WhileExp with TupleOpsExp with ListOpsExp
     with DSLOpsExp with MathOpsExp with CastingOpsExp with ObjectOpsExp
+    // with SynchronizedArrayBufferOpsExp
 
 
 trait CollScalaCodeGenPkg extends ScalaGenImplicitOps with ScalaGenNumericOps with ScalaGenFractionalOps with ScalaGenOrderingOps
@@ -63,16 +64,17 @@ trait CollScalaCodeGenPkg extends ScalaGenImplicitOps with ScalaGenNumericOps wi
     with ScalaGenVariables with ScalaGenWhile with ScalaGenTupleOps with ScalaGenListOps
     with ScalaGenDSLOps with ScalaGenMathOps with ScalaGenCastingOps
     with ScalaGenObjectOps
-  { val IR: CollScalaOpsPkgExp  }
-*/
+    // with SynchronizedArrayBufferOpsExp
+{ val IR: CollScalaOpsPkgExp  }
 
 
-trait Collections extends ScalaOpsPkg with CollectionsOps with TupleOps
+
+trait Collections extends CollScalaOpsPkg with CollectionsOps with TupleOps
 
 
 trait CollectionsExp
 extends Collections
-with ScalaOpsPkgExp
+with CollScalaOpsPkgExp
 with CollectionsOpsExp
 with TupleOpsExp
 with DeliteOpsExp
@@ -112,7 +114,7 @@ trait CollectionsCodeGenBase extends GenericFatCodegen with codegen.Utils {
 
 trait CollectionsCodeGenScala
 extends CollectionsCodeGenBase
-with ScalaCodeGenPkg
+with CollScalaCodeGenPkg
 with ScalaGenDeliteOps
 with ScalaGenCollectionsOps
 with ScalaGenVariantsOps
@@ -122,7 +124,7 @@ with DeliteScalaGenAllOverrides {
 }
 
 
-trait CollectionsLift extends LiftScala {
+trait CollectionsLift extends LiftAll with LiftVariables with LiftEquals {
 _: Collections =>
 }
 
