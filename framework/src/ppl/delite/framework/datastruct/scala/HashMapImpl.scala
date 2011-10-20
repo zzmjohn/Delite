@@ -127,7 +127,7 @@ growth threshold: %d
   
   def dcUpdate(idx: Int, x: (K, V)) = throw new UnsupportedOperationException
   
-  override def toString = "HashMapImpl(sz: %d; indices: %s; data: %s)".format(sz, indices.mkString(", "), data.mkString(", "))
+  override def toString = "HashMapImpl(sz: %d; indices: %s; data: %s)".format(sz, if (indices != null) indices.mkString(", ") else "null", if (data != null) data.mkString(", ") else "null")
   
   def unsafeIndices: Array[Int] = indices
   

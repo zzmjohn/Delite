@@ -23,8 +23,9 @@ trait HelloCollections extends CollectionsApplication {
     
     // xs.map({ x => (x, x) })(hashMapCanBuild, manifest[(Int, Int)], manifest[HashMapImpl[Int, Int]])
     //val ms = HashMap[Int, String]()
-    val ms = HashMap.range(20)
+    val ms = HashMap.range(30)
     ms.map(kv => kv)
+    println(ms)
   }
 }
 
