@@ -215,11 +215,15 @@ trait HashMapEmitting {
         stream.println("}")
         stream.println("}")
         //stream.println("println(\"chidx(\" + %s.%s_chunkIdx + \")\", %s.%s)".format(activname, basename, activname, basename))
+        //stream.println("for (act <- %s.%s_activations) println(act.%s_chunkIdx + \"::\", act.%s_buf_ind.mkString(\", \"))".format(activname, basename, basename, basename))
       }
       def emitPostCombine2(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {
         // count the number of elements in each block
         stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
         stream.println("}")
+        
+        stream.println("println(%s.%s.unsafeBlockSizes.mkString(\", \"))".format(activname, basename))
+        //stream.println("for (act <- %s.%s_activations) println(act.%s_chunkIdx + \"::\" + act.%s_buf_spills)".format(activname, basename, basename, basename))
       }
       def emitPostProcInit2(basename: String, activname: String)(implicit stream: PrintWriter) {
         stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
@@ -251,28 +255,29 @@ trait HashMapEmitting {
         stream.println("")
         
         // 2) count the number of elements in each chunk and set offsets
+        stream.println("println(%s.%s.unsafeBlockSizes.mkString(\", \"))".format(activname, basename))
         stream.println("chidx = 0")
         stream.println("var elemcount = 0")
         stream.println("while (chidx < %s.%s_numChunks) {".format(activname, basename))
-        //stream.println("println('counting, chidx, elemcount)")
+        stream.println("println('counting, chidx, elemcount)")
         stream.println("val curract = %s.%s_activations(chidx)".format(activname, basename))
         stream.println("var blkidx = chidx")
         stream.println("var currchcount = 0")
         stream.println("while (blkidx < %s.%s_blocks) {".format(activname, basename))
-        stream.println("currchcount += %s.%s.unsafeBlockSizes(32 * blkidx)".format(activname, basename))
-        //stream.println("println('counting, chidx, blkidx, currchcount)")
+        stream.println("currchcount += targetsizes(32 * blkidx)".format(activname, basename))
+        stream.println("println('inblock, chidx, blkidx, targetsizes(32 * blkidx))")
         stream.println("blkidx += %s.%s_numChunks".format(activname, basename))
         stream.println("}")
         stream.println("curract.%s_offset = elemcount".format(basename))
         stream.println("elemcount += currchcount")
         stream.println("chidx += 1")
-        //stream.println("println('counting, chidx, elemcount)")
+        stream.println("println('counting, chidx, elemcount)")
         stream.println("}")
         stream.println("")
         
         // 3) allocate the data table and set size
-        //stream.println("println(elemcount)")
-        stream.println("var datatable = new Array[AnyRef]((2.4 * elemcount).toInt)")
+        stream.println("println(elemcount)")
+        stream.println("var datatable = new Array[AnyRef]((2.5 * elemcount).toInt)")
         stream.println("%s.%s.unsafeSetData(datatable)".format(activname, basename))
         stream.println("%s.%s.unsafeSetSize(elemcount)".format(activname, basename))
         stream.println("%s.%s.unsafeSetBlockSizes(null)".format(activname, basename))

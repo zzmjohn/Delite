@@ -120,16 +120,19 @@ object MultiLoop_SMP_Array_Generator {
     }
     
     if (op.needsPostProcess2) {
+      if (numChunks > 1) out.append("head.setC"+chunkIdx+"(acc)\n") // kick off others
+      if (chunkIdx != numChunks-1) out.append("head.getC"+(numChunks-1)+"\n") // wait for last one
+      
       if (chunkIdx != 0) {
         val neighbor = chunkIdx - 1
-        out.append("head.closure.postCombine2(acc, head.getB"+neighbor+")\n")
+        out.append("head.closure.postCombine2(acc, head.getC"+neighbor+")\n")
       }
       if (chunkIdx == numChunks - 1) {
         out.append("head.closure.postProcInit2(acc)\n")
       }
 
-      if (numChunks > 1) out.append("head.setC"+chunkIdx+"(acc)\n") // kick off others
-      if (chunkIdx != numChunks-1) out.append("head.getC"+(numChunks-1)+"\n") // wait for last one
+      if (numChunks > 1) out.append("head.setD"+chunkIdx+"(acc)\n") // kick off others
+      if (chunkIdx != numChunks-1) out.append("head.getD"+(numChunks-1)+"\n") // wait for last one
       out.append("head.closure.postProcess2(acc)\n")
     }
     
@@ -166,6 +169,10 @@ object MultiLoop_SMP_Array_Header_Generator {
     if (op.needsPostProcess2 && numChunks > 1) { //all chunks need to sync
       for (i <- 0 until numChunks)
         writeSync(out, "C"+i, op.outputType)
+    }
+    if (op.needsPostProcess2 && numChunks > 1) { //all chunks need to sync
+      for (i <- 0 until numChunks)
+        writeSync(out, "D"+i, op.outputType)
     }
     
     //the footer
