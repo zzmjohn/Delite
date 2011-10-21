@@ -149,7 +149,7 @@ growth threshold: %d
 
 object HashMapImpl {
   def range(n: Int) = {
-    val hm = new HashMapImpl[Int, Int](n * 5, n * 3)
+    val hm = new HashMapImpl[Int, Int](n * 5 + 1, n * 3)
     for (i <- 0 until n) hm.put(i, i)
     hm
   }

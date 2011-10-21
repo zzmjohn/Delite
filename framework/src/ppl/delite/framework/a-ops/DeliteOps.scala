@@ -1232,7 +1232,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
     stream.println("def processRange(__act: " + actType + ", start: Int, end: Int, chunkIdx: Int, numChunks: Int): " + actType + " = {"/*}*/)
     stream.println("var idx = start")
     stream.println("val __act2 = init(__act,idx,chunkIdx,numChunks)")
-    stream.println("idx += 1")
+    //stream.println("idx += 1")
     stream.println("while (idx < end) {"/*}*/)
     stream.println("process(__act2, idx)")
     stream.println("idx += 1")
@@ -1254,7 +1254,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
 
     stream.println("def init(__act: " + actType + ", " + quotearg(op.v) + ", chunkIdx: Int, numChunks: Int): " + actType + " = {"/*}*/)
     if (op.body exists (d => loopBodyNeedsCombine(d) || loopBodyNeedsPostProcess(d))) {
-      emitMultiLoopFuncs(op, symList)                               
+      //emitMultiLoopFuncs(op, symList)                               
       stream.println("val __act2 = new " + actType)
       (symList zip op.body) foreach {
         case (sym, elem: DeliteCollectElem[_,_]) =>
@@ -1263,16 +1263,16 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
             emitter.emitInitSubActivation(quote(sym), "__act2", "chunkIdx", "numChunks")
           }
           stream.println("__act2." + quote(sym) + " = " + "__act." + quote(sym))
-          emitCollectElem(op, sym, elem, "__act2.")
+          //emitCollectElem(op, sym, elem, "__act2.")
         case (sym, elem: DeliteForeachElem[_]) => 
           stream.println("__act2." + quote(sym) + " = {"/*}*/)
-          emitForeachElem(op, sym, elem)
+          //emitForeachElem(op, sym, elem)
           stream.println(/*{*/"}")               
         case (sym, elem: DeliteReduceElem[_]) =>
           if (elem.stripFirst) {
             stream.println("__act2." + quote(sym) + "_zero = " + "__act." + quote(sym) + "_zero") // do we need zero here? yes, for comparing against...
             stream.println("__act2." + quote(sym) + " = {"/*}*/)
-            emitFirstReduceElem(op, sym, elem, "__act2.")
+            //emitFirstReduceElem(op, sym, elem, "__act2.")
             stream.println(/*{*/"}")
           } else { 
             stream.println("__act2." + quote(sym) + "_zero = " + "__act." + quote(sym) + "_zero")
@@ -1281,7 +1281,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
             } else {
               stream.println("__act2." + quote(sym) + " = " + "__act2." + quote(sym) + "_zero.cloneL") // separate zero buffer
             }
-            emitReduceElem(op, sym, elem, "__act2.")
+            //emitReduceElem(op, sym, elem, "__act2.")
           }
         case (sym, elem: DeliteReduceTupleElem[_,_]) =>
           // no strip first here ... stream.println("assert(false, \"TODO: tuple reduce\")")
@@ -1289,11 +1289,11 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
           stream.println("__act2." + quote(sym) + "_zero_2 = " + "__act." + quote(sym) + "_zero_2")
           stream.println("__act2." + quote(sym) + "   = " + "__act2." + quote(sym) + "_zero  ")
           stream.println("__act2." + quote(sym) + "_2 = " + "__act2." + quote(sym) + "_zero_2")
-          emitReduceTupleElem(op, sym, elem, "__act2.")
+          //emitReduceTupleElem(op, sym, elem, "__act2.")
       }
       stream.println("__act2")
     } else {
-      stream.println("process(__act, " + quote(op.v) + ")")
+      //stream.println("process(__act, " + quote(op.v) + ")")
       stream.println("__act")
     }
     stream.println(/*{*/"}")

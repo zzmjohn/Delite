@@ -124,7 +124,7 @@ trait HashMapEmitting {
         stream.println(prefixSym + basename + "_buf_append(" + elemname + ")")
       }
       def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
-        stream.println(prefixSym + basename + ".put(" + elemname + ")")
+        stream.println(prefixSym + basename + ".put(" + elemname + "._1, " + elemname + "._2)")
       }
       def emitPostCombine(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {
         stream.println(activname + "." + basename + "_offset = " + lhsname + "." + basename + "_offset + " + lhsname + "." + basename + "_bufsz")
@@ -148,6 +148,7 @@ trait HashMapEmitting {
         stream.println("%s.%s.unsafeSetBlockSizes(new Array[Int](%s.%s_blocks * 32))".format(activname, basename, activname, basename))
         stream.println("} else {")
         stream.println("%s.%s.unsafeSetInternal(%s.%s_buf_ind, %s.%s_buf_data, %s.%s_bufsz)".format(activname, basename, activname, basename, activname, basename, activname, basename))
+        stream.println("%s.%s.unsafeSetBlockSizes(new Array[Int](%s.%s_blocks * 32))".format(activname, basename, activname, basename))
         stream.println("}")
         
         //stream.println("for (act <- %s.%s_activations) println(act.%s_chunkIdx + \"::\", act.%s_buf_ind.mkString(\", \"))".format(activname, basename, basename, basename))
