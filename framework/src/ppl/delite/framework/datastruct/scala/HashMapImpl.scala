@@ -5,17 +5,22 @@ package ppl.delite.framework.datastruct.scala
 
 
 
-final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_indices: Array[Int], _data: Array[AnyRef], _sz: Int) extends HashMap[K, V] {
+final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_indices: Array[Int], _keys: Array[K], _values: Array[V], _sz: Int) extends HashMap[K, V] {
   private val loadfactor_d2 = 0.4f / 2
   private var indices = _indices
-  private var data = _data
+  private var keys = _keys
+  private var values = _values
   private var blocksizes: Array[Int] = _
   private var sz = _sz
   
   import HashMapImpl.nextPow2
   
-  def this() = this(Array.fill(128)(-1), new Array(52), 0)
-  def this(indsz: Int, datasz: Int) = this(Array.fill(HashMapImpl.nextPow2(indsz))(-1), new Array(datasz * 2), 0)
+  def this() = this(Array.fill(128)(-1), new Array(52), new Array(52), 0)
+  def this(indsz: Int, datasz: Int) = this(
+    Array.fill[Int](HashMapImpl.nextPow2(indsz))(-1),
+    new Array[K](datasz),
+    new Array[V](datasz), 
+    0)
   
   @inline private def absolute(hc: Int) = {
     val mask = hc >> 31
@@ -31,14 +36,14 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
     var currelem = indices(pos)
     var currhash = indices(pos + 1)
     
-    while (currelem != -1 && (currhash != hc || data(currelem).asInstanceOf[V] != k)) {
+    while (currelem != -1 && (currhash != hc || keys(currelem).asInstanceOf[V] != k)) {
       pos = (pos + 2) % indices.length
       currelem = indices(pos)
       currhash = indices(pos + 1)
     }
     
     if (currelem == -1) null.asInstanceOf[V]
-    else data(currelem + 1).asInstanceOf[V]
+    else values(currelem)
   }
   
   def put(k: K, v: V) {
@@ -48,25 +53,25 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
     var currelem = indices(pos)
     var currhash = indices(pos + 1)
     
-    while (currelem != -1 && (currhash != hc || data(currelem).asInstanceOf[K] != k)) {
+    while (currelem != -1 && (currhash != hc || keys(currelem).asInstanceOf[K] != k)) {
       pos = (pos + 2) % indices.length
       currelem = indices(pos)
       currhash = indices(pos + 1)
     }
     
     if (currelem == -1) {
-      val datapos = sz * 2
+      val datapos = sz
       indices(pos) = datapos
       indices(pos + 1) = hc
-      data(datapos) = k.asInstanceOf[AnyRef]
-      data(datapos + 1) = v.asInstanceOf[AnyRef]
+      keys(datapos) = k
+      values(datapos) = v
       sz += 1
       
       grow()
     } else {
       val datapos = currelem
-      data(datapos) = k.asInstanceOf[AnyRef]
-      data(datapos + 1) = v.asInstanceOf[AnyRef]
+      keys(datapos) = k
+      values(datapos) = v
     }
   }
   
@@ -75,15 +80,17 @@ final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_ind
 indices length: %d
 data length: %d
 growth threshold: %d
-""".format(sz, indices.length, data.length, (loadfactor_d2 * indices.length).toInt)
+""".format(sz, indices.length, keys.length, (loadfactor_d2 * indices.length).toInt)
   }
   
   private def grow() = if (sz > (loadfactor_d2 * indices.length)) {
     val nindices = Array.fill[Int](indices.length * 2)(-1)
-    val ndata = new Array[AnyRef](data.length * 2)
+    val nkeys = new Array[K](keys.length * 2)
+    val nvalues = new Array[V](values.length * 2)
     
     // copy raw data
-    System.arraycopy(data, 0, ndata, 0, sz * 2)
+    System.arraycopy(keys, 0, nkeys, 0, sz)
+    System.arraycopy(values, 0, nvalues, 0, sz)
     
     // copy indices
     var i = 0
@@ -109,21 +116,24 @@ growth threshold: %d
     }
     
     indices = nindices
-    data = ndata
+    keys = nkeys
+    values = nvalues
   }
   
   def dcApply(idx: Int) = {
-    val pos = idx * 2
-    (data(pos).asInstanceOf[K], data(pos + 1).asInstanceOf[V])
+    val pos = idx
+    (keys(pos).asInstanceOf[K], values(pos).asInstanceOf[V])
   }
   
   def dcUpdate(idx: Int, x: (K, V)) = throw new UnsupportedOperationException
   
-  override def toString = "HashMapImpl(sz: %d; indices: %s; data: %s)".format(sz, if (indices != null) indices.mkString(", ") else "null", if (data != null) data.mkString(", ") else "null")
+  override def toString = "HashMapImpl(sz: %d; indices: %s; keys: %s, values: %s)".format(sz, if (indices != null) indices.mkString(", ") else "null", if (keys != null) keys.mkString(", ") else "null", if (values != null) keys.mkString(", ") else "null")
   
   def unsafeIndices: Array[Int] = indices
   
-  def unsafeData: Array[AnyRef] = data
+  def unsafeKeys: Array[K] = keys
+  
+  def unsafeValues: Array[V] = values
   
   def unsafeSize = sz
   
@@ -131,17 +141,22 @@ growth threshold: %d
   
   def unsafeSetBlockSizes(_blkszs: Array[Int]) = blocksizes = _blkszs
   
-  def unsafeSetData(_data: Array[AnyRef]) {
-    data = _data
+  def unsafeSetKeys(_keys: Array[K]) {
+    keys = _keys
+  }
+  
+  def unsafeSetValues(_values: Array[V]) {
+    values = _values
   }
   
   def unsafeSetSize(_sz: Int) {
     sz = _sz
   }
   
-  def unsafeSetInternal(_ind: Array[Int], _data: Array[AnyRef], _sz: Int) {
+  def unsafeSetInternal(_ind: Array[Int], _keys: Array[K], _values: Array[V], _sz: Int) {
     indices = _ind
-    data = _data
+    keys = _keys
+    values = _values
     sz = _sz
   }
 }
