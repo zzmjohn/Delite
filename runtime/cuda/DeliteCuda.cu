@@ -20,81 +20,68 @@ queue<FreeItem>* freeList = new queue<FreeItem>();
 
 map<void*,list<void*>*>* cudaMemoryMap = new map<void*,list<void*>*>();
 
-/*
-int mallocInit = 0;
-void *retPtr;
-void DeliteCudaMalloc(void** ptr, size_t size) {
-	if(mallocInit == 0) {
-		cudaMalloc(&retPtr,2000*2000*8);
-		mallocInit = 1;
-	}
-	*ptr = retPtr;
-}
-*/
-
-/*
-char* devBufferStart = 0;
-size_t devBufferSize = 1024*1024*1024;
-char* devBufferEnd;
-char* devBufferCurrent;
-
-void devInit() {
-	cudaMalloc(&devBufferStart, devBufferSize);
-	devBufferEnd = devBufferStart + devBufferSize;
-	devBufferCurrent = devBufferStart;
-}
-void DeliteCudaMalloc(void** ptr, size_t size) {
-	if (devBufferStart == 0) devInit();
-	if ((devBufferCurrent + size) > devBufferEnd)
-		devBufferCurrent = devBufferStart;
-	*ptr = devBufferCurrent;
-	devBufferCurrent += size;
-}
-*/
-
-void DeliteCudaMalloc(void** ptr, size_t size) {
-	size_t freeAmt;
-	size_t totalAmt;
-	cudaMemGetInfo(&freeAmt, &totalAmt);
-	while (freeAmt < size) {
-		if (freeList->size() == 0) {
-			cout << "FATAL: Insufficient device memory" << endl;
-			exit(-1);
+void freeCudaMemory(FreeItem item) {
+    list<void*>::iterator iter;
+    for (iter = item.keys->begin(); iter != item.keys->end(); iter++) {
+        //cout << "object ref: " << (long) *iter << endl;
+        if(cudaMemoryMap->find(*iter) != cudaMemoryMap->end()) {
+        	list<void*>* freePtrList = cudaMemoryMap->find(*iter)->second;
+       		list<void*>::iterator iter2;
+        	for (iter2 = freePtrList->begin(); iter2 != freePtrList->end(); iter2++) {
+            	void* freePtr = *iter2;
+            	cudaFree(freePtr);
+            	//if (cudaFree(freePtr) != cudaSuccess)
+            	//    cout << "bad free pointer: " << (long) freePtr << endl;
+            	//else
+                	//cout << "freed successfully: " << (long) freePtr << endl;
+       		}
+        	cudaMemoryMap->erase(*iter);
+        	delete freePtrList;
+        	free(*iter);
 		}
-		FreeItem item = freeList->front();
-        	freeList->pop();
-
-		while (cudaEventQuery(item.event) != cudaSuccess)
-			cudaEventSynchronize(item.event);
-		cudaEventDestroy(item.event);
-		
-		list<void*>::iterator iter;
-		for (iter = item.keys->begin(); iter != item.keys->end(); iter++) {
-			list<void*>* freePtrList = cudaMemoryMap->find(*iter)->second;
-			list<void*>::iterator iter2;
-			for (iter2 = freePtrList->begin(); iter2 != freePtrList->end(); iter2++) {
-				cudaFree(*iter2);	
-			}
-			cudaMemoryMap->erase(*iter);
-			delete freePtrList;
-			free(*iter);
-		}
-		delete item.keys;
-		cudaMemGetInfo(&freeAmt, &totalAmt);
-	}
-	
-	cudaMalloc(ptr, size);
-	lastAlloc->push_back(*ptr);
+    }
+    delete item.keys;
 }
 
-/* //this version frees memory eagerly; useful for debugging
+void DeliteCudaMalloc(void** ptr, size_t size) {
+
+    while (freeList->size() != 0) {
+	FreeItem item = freeList->front();
+    	if (cudaEventQuery(item.event) != cudaSuccess) {
+	    break;
+	}
+	freeList->pop();
+	cudaEventDestroy(item.event);
+	freeCudaMemory(item);
+    }
+
+    while (cudaMalloc(ptr, size) != cudaSuccess) {
+        if (freeList->size() == 0) {
+	    cout << "FATAL: Insufficient device memory" << endl;
+	    exit(-1);
+	}
+	FreeItem item = freeList->front();
+        freeList->pop();
+
+        while (cudaEventQuery(item.event) != cudaSuccess) {
+            cudaEventSynchronize(item.event);
+        }
+        cudaEventDestroy(item.event);
+	freeCudaMemory(item);
+    }
+
+    lastAlloc->push_back(*ptr);
+}
+
+/*
 void DeliteCudaMalloc(void** ptr, size_t size) {
     while (freeList->size() > 0) {
 	    FreeItem item = freeList->front();
  	        freeList->pop();
 		
-		while (cudaEventQuery(item.event) != cudaSuccess)
+		while (cudaEventQuery(item.event) != cudaSuccess) {
 			cudaEventSynchronize(item.event);
+		}
 		cudaEventDestroy(item.event);
 		
 		list<void*>::iterator iter;
@@ -106,8 +93,8 @@ void DeliteCudaMalloc(void** ptr, size_t size) {
 				void* freePtr = *iter2;
 				if (cudaFree(freePtr) != cudaSuccess)
 					cout << "bad free pointer: " << (long) freePtr << endl;
-				//else
-					//cout << "freed successfully: " << (long) freePtr << endl;
+				else
+					cout << "freed successfully: " << (long) freePtr << endl;
 			}
 			cudaMemoryMap->erase(*iter);
 			delete freePtrList;
@@ -120,15 +107,14 @@ void DeliteCudaMalloc(void** ptr, size_t size) {
 		cout << "FATAL: cuda malloc failed unexpectedly" << endl;
 		exit(-1);
 	}
-	//else
-		//cout << "allocated successfully: " << (long) *ptr << endl;
+	else
+		cout << "allocated successfully: " << (long) *ptr << endl;
 	
 	lastAlloc->push_back(*ptr);
-}
-*/
+} */
 
 char* bufferStart = 0;
-size_t bufferSize = 10737418240;
+size_t bufferSize = 10737418240/2;
 char* bufferEnd;
 char* bufferCurrent;
 
@@ -138,12 +124,6 @@ void hostInit() {
 	bufferCurrent = bufferStart;
 }
 
-/*
-void DeliteCudaMallocHost(void** ptr, size_t size) {
-	if (bufferStart == 0) hostInit();
-	*ptr = bufferCurrent;
-}
-*/
 void DeliteCudaMallocHost(void** ptr, size_t size) {
 	if (bufferStart == 0) hostInit();
 	if ((bufferCurrent + size) > bufferEnd)
@@ -161,6 +141,12 @@ void DeliteCudaMemcpyDtoHAsync(void* dptr, void* sptr, size_t size) {
 	cudaStreamSynchronize(d2hStream);
 }
 
-void DeliteCudaMemset(void *ptr, int value, size_t count) {
-	cudaMemset(ptr,value,count);
+void DeliteCudaMemcpyDtoDAsync(void* dptr, void* sptr, size_t size) {
+	cudaMemcpyAsync(dptr, sptr, size, cudaMemcpyDeviceToDevice, h2dStream);
 }
+
+void DeliteCudaMemset(void* ptr, int value, size_t count) {
+  cudaMemset(ptr,value,count);
+}
+
+

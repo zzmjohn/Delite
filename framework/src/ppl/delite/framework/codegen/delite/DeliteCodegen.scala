@@ -111,7 +111,7 @@ trait DeliteCodegen extends GenericNestedCodegen {
       case _ => e5 contains z
     })
     effectScope :::= e6 filter { case TP(sym, Reflect(x, es)) => true; case _ => false }
-    generators foreach { _.effectScope = effectScope }
+    //generators foreach { _.effectScope = effectScope }
 
     var localEmittedNodes: List[Sym[_]] = Nil
     for (t@TP(sym, rhs) <- e6) {
