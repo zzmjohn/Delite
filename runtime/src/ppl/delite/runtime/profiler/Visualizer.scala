@@ -1,6 +1,6 @@
 package ppl.delite.runtime.profiler
 
-import java.io.{PrintWriter, FileInputStream}
+import java.io.{File, PrintWriter, FileWriter, FileInputStream}
 import scala.io.Source
 import ppl.delite.runtime.graph.ops._
 
@@ -13,47 +13,16 @@ case class TaskNode(timing: Timing, parent: Option[TaskNode])
  */
 object Visualizer {
 
-  def relativePath(fileName: String): String = {
-    val i = fileName.lastIndexOf('/')
-    fileName.substring(i + 1)
-  }
-  
   def deliteOpById(id: String): DeliteOP =
-    deliteOpByIdOrNone(id) match {
+    Profiler.deliteOpByIdOrNone(id) match {
       case None => error("couldn't find DeliteOP with id " + id)
       case Some(op) => op
-    }
-  
-  def deliteOpByIdOrNone(id: String): Option[DeliteOP] =
-    Profiler.graph.get.ops.find(_.id == id)
-  
-  def deliteOpType(id: String): String = {
-    val opOpt = deliteOpByIdOrNone(id)
-    if (opOpt.isEmpty) "ALL"
-    else {
-      opOpt.get match {
-        case _: OP_Single => "OP_Single"
-        case _: OP_External => "OP_External"
-        case _: OP_MultiLoop => "OP_MultiLoop"
-        case _: OP_Foreach => "OP_Foreach"
-        case other =>
-          if (other.toString() == "x0") "ARGS"
-          else if (other.toString() == "eop") "EOP"
-          else error("OP Type not recognized: " + other)
-      }
-    }
-  }
-  
-  def safeSourceInfo(timing: Timing) =
-    Profiler.sourceInfo.get(timing.component) match {
-      case None => ("<unknown file>", 0, timing.component)
-      case Some(tuple) => tuple
     }
   
   // parent: parentTiming with same source context,
   // where op(timing) is an input of op(parentTiming)
   def isParentTimingOf(parentTiming: Timing, timing: Timing): Boolean = {
-    safeSourceInfo(parentTiming) == safeSourceInfo(timing) && {
+    Profiler.safeSourceInfo(parentTiming) == Profiler.safeSourceInfo(timing) && {
       val op = deliteOpById(timing.component)
       val parentOp = deliteOpById(parentTiming.component)
       !(parentOp.getInputs find {
@@ -228,17 +197,18 @@ object Visualizer {
         case timing :: rest =>
           // find out whether task can be scheduled
           // check dependencies
-          val op = Profiler.graph.get.ops.find(_.id == timing.component) match {
-            case None =>
-              error("DeliteOp not found")
+          val opOpt = Profiler.graph.get.ops.find(_.id == timing.component) match {
+            case none @ None =>
+              //error("DeliteOp not found")
+              none
             case opt @ Some(_) =>
               println("found DeliteOP corresponding to timing " + timing)
               println("deps: " + opt.get.getDependencies.map(op => op.id).mkString(" "))
-              opt.get
+              opt
           }
           
           // check that all dependencies have been scheduled
-          if (op.getDependencies forall { depOp =>
+          if (opOpt.isEmpty || (opOpt.get.getDependencies forall { depOp =>
             depOp.id.endsWith("_h") ||
             (schedule exists {
               case (t, l) => l exists {
@@ -249,7 +219,7 @@ object Visualizer {
                 case Left(_) => false
               }
             })
-          }) {
+          })) {
             // schedule timing
             println("scheduling " + timing + " on " + currThr)
             val currSchedule = schedule.getOrElse(currThr, List())
@@ -306,16 +276,16 @@ object Visualizer {
             for (timing <- timingsToDisplay) yield {
               
               val (fileName, line, opName) = Profiler.sourceInfo.get(timing.component) match {
-                case None => ("<unknown file>", 0, timing.component + " [" + deliteOpType(timing.component) + "]")
+                case None => ("<unknown file>", 0, timing.component + " [" + Profiler.deliteOpType(timing.component) + "]")
                 case Some(tuple) => tuple
               }
-              val source = relativePath(fileName) + ":" + line
+              val source = Profiler.relativePath(fileName) + ":" + line
               val showHideAction = "showHide('" + source + "');return false;"
               
               <td>
                 <a href="#" onmouseover={ showHideAction } onmouseout={ showHideAction }>
                 { opName + " (" + timing.elapsedMicros + "us)" }<span>{
-                  "OpType: " + deliteOpType(timing.component) +
+                  "OpType: " + Profiler.deliteOpType(timing.component) +
                   "\nSource: " + source + (if (timing.isInstanceOf[MultiTiming]) {
                     val multiTiming = timing.asInstanceOf[MultiTiming]
                     "\nMultiLoop: " + multiTiming.timings.mkString(" ") +
@@ -336,17 +306,17 @@ object Visualizer {
       <div id="kernels" class="hidden">{ table }</div>
   }
   
-  def sourceViewHtml(stats: Map[String, List[Timing]]) = {
-    <div><h2>Sources</h2>
+  // symbolMap: name -> (fileName, opName, line)
+  def sourceViewHtml(symbolMap: Map[String, (String, String, Int)]) = {
+    <div class="span1">
+    <div id="source"><h2>Sources</h2>
     {
-      val sourceFiles = (stats.keys.flatMap(id => {
-        Profiler.sourceInfo.get(id) match {
-          case None =>
-            List()
-          case Some((fileName, line, opName)) =>
-            if (fileName.equals("<unknown file>")) List() else List(fileName)
-        }
-      })).toList.distinct
+      val sourceFiles = symbolMap.values.flatMap(sourceInfo => sourceInfo match {
+          case (fileName, opName, line) if !fileName.equals("<unknown file>") => List(fileName)
+          case _ => List()
+        })
+        .toList
+        .distinct
       // TODO: there must be a better way
       for (file <- sourceFiles;
            if !(file.contains("ppl/dsl") ||
@@ -357,7 +327,7 @@ object Visualizer {
 {
   // strip path from file name
   // id of single source line follows pattern "Source.scala:line"
-  val baseName = relativePath(file)
+  val baseName = Profiler.relativePath(file)
   
   val source = Source.fromFile(file)
   val sourceLines = for ((line, num) <- source.getLines zipWithIndex) yield {
@@ -371,7 +341,59 @@ object Visualizer {
 }
         </pre>
       }
-    }</div>
+    }</div></div>
+  }
+  
+  import scala.collection.mutable.ListBuffer
+  
+  def genSourceViewHtml() = {
+    <div class="span1">
+    <div id="source"><h2>Generated Sources</h2>
+    {
+    	val writer = new java.io.StringWriter
+    	val printer = new PrintWriter(writer)
+    	
+    	var allSourceLines: ListBuffer[String] = new ListBuffer()
+    	
+    	val dir = new File("generated/scala/kernels")
+    	if (!dir.isDirectory)
+    	  println(dir + " is not a dir")
+    	else {
+    	  val files = dir.listFiles.toList
+    	  println("found generated files:")
+    	  println(files)
+    	  for (file <- files) {
+            val source = Source.fromFile(file)
+            for (line <- source.getLines) {
+            	allSourceLines += line
+            }
+    	  }
+    	}
+    	
+        <pre>
+{
+  // strip path from file name
+  // id of single source line follows pattern "Source.scala:line"
+  //val baseName = relativePath(file)
+  
+  //val source = Source.fromFile(file)
+  /*
+  val sourceLines = for ((line, num) <- source.getLines zipWithIndex) yield {
+    val shownId =  baseName + ":" + (num + 1) + "-show"
+    val hiddenId = baseName + ":" + (num + 1)
+    <span id={ shownId }>{ (num + 1) + ":   " + line }</span>
+    <span id={ hiddenId } class="hidden">{ (num + 1) + ":   " + line }</span>
+    <br/>
+  }
+  */
+  val sourceLines = for ((line, num) <- allSourceLines.toList zipWithIndex) yield {
+    <span>{ (num + 1) + ":   " + line }</span>
+    <br/>
+  }
+  sourceLines
+}
+        </pre>
+    }</div></div>
   }
   
   def generateHtmlProfile(globalStart: Long, globalStartNanos: Long, stats: Map[String, List[Timing]]) = {
@@ -404,99 +426,11 @@ object Visualizer {
     }
   }
 
-  def iterableToJSArray[T](arrName: String, values: Iterable[T], quoted: Boolean = true): String = {
-    val arr = (for (v <- values) yield (if (quoted) "\"" + v + "\"" else v)
-               ).mkString("[", ", ", "]")
-    "var " + arrName + " = " + arr + ";"
-  }
-  
-  trait TaskInfo {
-    val fromTiming: Timing
-    val startNanos: Long
-    val duration: Long
-    val kernel: String
-    val location: Int
-    val line: String
-    val tooltip: String
-  }
-  
-  object TaskInfo {
-    def apply(timing: Timing, threadId: Int, globalStartNanos: Long): TaskInfo =
-      new TaskInfo {
-        val fromTiming = timing
-        val duration =   timing.elapsedMicros
-        val startNanos = (timing.startTime - globalStartNanos) / 1000
-        val kernel =     timing.component
-        val location =   threadId
-        val line = {
-          val (fileName, line, opName) = Profiler.sourceInfo.get(timing.component) match {
-            case None =>        ("&lt;unknown file&gt;", 0, timing.component)
-            case Some(tuple) => tuple
-          }
-          relativePath(fileName) + ":" + line
-        }
-        val tooltip = {
-          val html =
-          "<b>Start time:</b> " + ((timing.startTime - globalStartNanos) / 1000) + "us</br>" +
-          "<b>Duration:</b> " + timing.elapsedMicros + "us</br>" +
-          "<b>OPType:</b> " + deliteOpType(timing.component) + "</br>" +
-          "<b>Source:</b> " + line
-          "'" + html + "'"
-        }
-      }
-  }
-  
-  def emitDataArrays(globalStartNanos: Long, stats: Map[String, List[Timing]], writer: PrintWriter) {
-/*
-var duration = [280, 800, 400, 500, 1500, 600];
-var start = [1000, 10, 800, 820, 2, 200];
-var kernels = ["x174", "x277", "x107", "x135", "x108", "x99"];
-var location = [0, 1, 2, 1, 3, 0];
-var line_in_source = ['&lt;unknown file&gt;:0','HelloWorld4.scala:8','HelloWorld4.scala:9','HelloWorld4.scala:12','HelloWorld4.scala:14','&lt;unknown file&gt;:0'];
-var tooltip = ['<b>Start time: </b>1000us </br><b>Duration:</b> 280us</br><b>OPType:</b> OP_Single </br><b>Source:</b> HelloWorld4.scala:9','<b>Start time: </b>10us </br><b>Duration:</b> 800us</br><b>OPType:</b> OP_Single </br><b>Source:</b> HelloWorld4.scala:9','<b>Start time: </b>800us </br><b>Duration:</b> 400us</br><b>OPType:</b> OP_Single </br><b>Source:</b> HelloWorld4.scala:9','<b>Start time: </b>820us </br><b>Duration:</b> 500us</br><b>OPType:</b> OP_Single </br><b>Source:</b> HelloWorld4.scala:9','<b>Start time: </b>2us </br><b>Duration:</b> 1500us</br><b>OPType:</b> OP_Single </br><b>Source:</b> HelloWorld4.scala:9','<b>Start time: </b>200us </br><b>Duration:</b> 600us</br><b>OPType:</b> OP_Single </br><b>Source:</b> HelloWorld4.scala:9'];
-
-var res = ["T0", "T1", "T2", "T3", "T4", "T5"];
-*/
-    
-    val allTimings = (for (id <- stats.keys; timing <- stats(id)) yield timing).toList
-    val threads = (allTimings.flatMap { timing =>
-      timing.threadName :: (timing match {
-        case mt: MultiTiming => mt.timings.map(_.threadName).toList
-        case other => List()
-      })
-    }).distinct
-    val threadId: Map[String, Int] = Map() ++ (for (elem <- threads zipWithIndex) yield elem)
-    
-    // output res array (TODO: improve names)
-    val resJS = iterableToJSArray("res", (for ((t, i) <- threads.zipWithIndex) yield "T"+i))
-    writer.println(resJS)
-    
-    val initTaskInfos =  allTimings map { timing => TaskInfo(timing, threadId(timing.threadName), globalStartNanos) }
-    
-    // expand task infos to include chunk tasks
-    val taskInfos = initTaskInfos flatMap { taskInfo =>
-      taskInfo :: (taskInfo.fromTiming match {
-        case mt: MultiTiming =>
-          (mt.timings map { chunkTiming =>
-            TaskInfo(chunkTiming, threadId(chunkTiming.threadName), globalStartNanos)
-          }).toList
-        case other => List()
-      })
+  def copyFileTo(file: File, out: PrintWriter) {
+	val source = Source.fromFile(file)
+    for (line <- source.getLines) {
+      out.println(line)
     }
-    
-    val durationJS =   iterableToJSArray("duration", taskInfos.map(_.duration), false)
-    val startNanosJS = iterableToJSArray("start", taskInfos.map(_.startNanos), false)
-    val kernelsJS =    iterableToJSArray("kernels", taskInfos.map(_.kernel))
-    val locationsJS =  iterableToJSArray("location", taskInfos.map(_.location), false)
-    val linesJS =      iterableToJSArray("line_in_source", taskInfos.map(_.line).map("'" + _ + "'"), false)
-    val tooltipsJS =   iterableToJSArray("tooltip", taskInfos.map(_.tooltip), false)
-    
-    writer.println(durationJS)
-    writer.println(startNanosJS)
-    writer.println(kernelsJS)
-    writer.println(locationsJS)
-    writer.println(linesJS)
-    writer.println(tooltipsJS)
   }
 
   def kernelsData(show: Boolean = true, stats: Map[String, List[Timing]]) = {
@@ -528,16 +462,16 @@ var res = ["T0", "T1", "T2", "T3", "T4", "T5"];
             for (timing <- timingsToDisplay) yield {
               
               val (fileName, line, opName) = Profiler.sourceInfo.get(timing.component) match {
-                case None => ("<unknown file>", 0, timing.component + " [" + deliteOpType(timing.component) + "]")
+                case None => ("<unknown file>", 0, timing.component + " [" + Profiler.deliteOpType(timing.component) + "]")
                 case Some(tuple) => tuple
               }
-              val source = relativePath(fileName) + ":" + line
+              val source = Profiler.relativePath(fileName) + ":" + line
               val showHideAction = "showHide('" + source + "');return false;"
               
               <td>
                 <a href="#" onmouseover={ showHideAction } onmouseout={ showHideAction }>
                 { opName + " (" + timing.elapsedMicros + "us)" }<span>{
-                  "OpType: " + deliteOpType(timing.component) +
+                  "OpType: " + Profiler.deliteOpType(timing.component) +
                   "\nSource: " + source + (if (timing.isInstanceOf[MultiTiming]) {
                     val multiTiming = timing.asInstanceOf[MultiTiming]
                     "\nMultiLoop: " + multiTiming.timings.mkString(" ") +
@@ -558,14 +492,26 @@ var res = ["T0", "T1", "T2", "T3", "T4", "T5"];
       <div id="kernels" class="hidden">{ table }</div>
   }
 
-  def writeHtmlProfile(globalStart: Long, globalStartNanos: Long, stats: Map[String, List[Timing]], writer: PrintWriter) {
+  import java.util.Calendar
+  import java.text.DateFormat
+  
+  def writeHtmlProfile(writer: PrintWriter, symbolMap: Map[String, (String, String, Int)]) {
     copyFileTo("profile-viz-top.html", writer)
-    emitDataArrays(globalStartNanos, stats, writer)
-    copyFileTo("profile-viz-mid.html", writer)
-    val sourceHtmlNodes = sourceViewHtml(stats)
+    
+    val cal = Calendar.getInstance()
+    val df = DateFormat.getDateTimeInstance(DateFormat.FULL, DateFormat.MEDIUM)
+    writer.println("<p>profile generated on " + df.format(cal.getTime()) + "</p>")
+    
+    val sourceHtmlNodes = sourceViewHtml(symbolMap)
     val sourceHtmlAsString = sourceHtmlNodes.toString()
     // post process to replace <br></br>
     writer.println(replaceHtmlLineBreaks(sourceHtmlAsString))
+
+    val gensourceHtmlNodes = genSourceViewHtml()
+    val gensourceHtmlAsString = gensourceHtmlNodes.toString()
+    // post process to replace <br></br>
+    writer.println(replaceHtmlLineBreaks(gensourceHtmlAsString))
+
     copyFileTo("profile-viz-bot.html", writer)
     writer.flush()
   }

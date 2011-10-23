@@ -139,5 +139,4 @@ object Delite {
   // maps op ids to the op's source info (fileName, line, opName)
   // used in the profiler
   var sourceInfo: Map[String, (String, Int, String)] = Map()
-  
 }

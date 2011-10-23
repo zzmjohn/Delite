@@ -33,6 +33,8 @@ object Config {
 
   val noRegenerate: Boolean = if (System.getProperty("delite.debug.noregenerate") == null) false else true
 
+  var degFilename = System.getProperty("delite.deg.filename", "out.deg")
+  
   /**
    * DEG specific, set after its parsed
    * TODO: handle this more rigorously
