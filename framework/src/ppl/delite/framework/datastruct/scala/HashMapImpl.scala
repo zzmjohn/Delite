@@ -5,22 +5,23 @@ package ppl.delite.framework.datastruct.scala
 
 
 
-final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](_indices: Array[Int], _keys: Array[K], _values: Array[V], _sz: Int) extends HashMap[K, V] {
+// specialization bug on multiple ctors: (_indices: Array[Int], _keys: Array[K], _values: Array[V], _sz: Int)
+final class HashMapImpl[@specialized K: Manifest, @specialized V: Manifest](indsz: Int, datasz: Int) extends HashMap[K, V] {
   private val loadfactor_d2 = 0.4f / 2
-  private var indices = _indices
-  private var keys = _keys
-  private var values = _values
+  private var indices = Array.fill[Int](HashMapImpl.nextPow2(indsz))(-1)
+  private var keys = new Array[K](datasz)
+  private var values = new Array[V](datasz)
   private var blocksizes: Array[Int] = _
-  private var sz = _sz
+  private var sz = 0
   
   import HashMapImpl.nextPow2
   
-  def this() = this(Array.fill(128)(-1), new Array(52), new Array(52), 0)
-  def this(indsz: Int, datasz: Int) = this(
-    Array.fill[Int](HashMapImpl.nextPow2(indsz))(-1),
-    new Array[K](datasz),
-    new Array[V](datasz), 
-    0)
+  // def this(indsz: Int, datasz: Int) = this(
+  //   Array.fill[Int](HashMapImpl.nextPow2(indsz))(-1),
+  //   new Array[K](datasz),
+  //   new Array[V](datasz), 
+  //   0)
+  def this() = this(128, 52)
   
   @inline private def absolute(hc: Int) = {
     val mask = hc >> 31
