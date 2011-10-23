@@ -10,14 +10,22 @@ import ppl.delite.framework.ops.DeliteOpsExp
 
 
 
-trait HashMapEmitting {
+trait HashMapEmittingBase {
   
-  def hashMapEmitterFactory[K, V] = new EmitterFactory {
+  trait BaseEmitterFactory[K, V] extends EmitterFactory {
     def needsCombine = false
     def needsPostProcess = true
     def needsPostProcess2 = true
     
-    def scala = new ScalaEmitter {
+    trait BaseScalaEmitter extends ScalaEmitter {
+      def emitAdditionalDefs(basename: String, valtype: String)(implicit stream: PrintWriter)
+      def emitValueStoreDefinition(basename: String, valtype: String)(implicit stream: PrintWriter)
+      def emitAllocNewValueStore(basename: String, valtype: String, nvalsname: String, multiplier: String)(implicit stream: PrintWriter)
+      def emitValBufsInit(basename: String, valtype: String, size: String)(implicit stream: PrintWriter)
+      def emitValBufsAddNoCollision(basename: String, valname: String)(implicit stream: PrintWriter)
+      def emitValBufsAddCollision(basename: String, keyname: String, valname: String)(implicit stream: PrintWriter)
+      def emitIndexCopyCollisionResolution(indexArrayName: String, indexArrayPos: String, datapos: String, chunkIndex: String, basename: String, activationRead: String)(implicit stream: PrintWriter)
+      
       def emitBufferDefs(kernelname: String, basename: String, elemtype: String)(implicit stream: PrintWriter) {
         // a temporary hack
         val innertypes = elemtype.substring(13, elemtype.length - 1).split(", ")
@@ -27,7 +35,8 @@ trait HashMapEmitting {
         stream.println("// emitting hash map")
         stream.println("var " + basename + "_buf_ind: Array[Int] = _")
         stream.println("var " + basename + "_buf_keys: Array[" + keytype + "] = _")
-        stream.println("var " + basename + "_buf_vals: Array[" + valtype + "] = _")
+        /*stream.println("var " + basename + "_buf_vals: Array[" + valtype + "] = _") // !! different value type*/
+        emitValueStoreDefinition(basename, valtype)
         stream.println("var " + basename + "_buf_spills = new collection.mutable.ArrayBuffer[Int]()")
         stream.println("var " + basename + "_bufsz = 0")
         stream.println("var " + basename + "_chunkIdx: Int = _")
@@ -36,6 +45,8 @@ trait HashMapEmitting {
         stream.println("var " + basename + "_blkbits: Int = _")
         stream.println("var " + basename + "_offset: Int = 0")
         stream.println("var " + basename + "_activations: Array[activation_" + kernelname + "] = _")
+        
+        emitAdditionalDefs(basename, valtype)
         
         stream.println("def " + basename + "_nextPow2(x: Int) = {")
         stream.println("var c = x - 1")
@@ -51,7 +62,7 @@ trait HashMapEmitting {
         stream.println("if (%s_bufsz > (%s_buf_ind.length * 0.4f)) {".format(basename, basename))
         stream.println("val nindices = Array.fill[Int](%s_buf_ind.length * 2)(-1)".format(basename))
         stream.println("val nkeys = new Array[%s](%s_buf_keys.length * 2)".format(keytype, basename))
-        stream.println("val nvals = new Array[%s](%s_buf_keys.length * 2)".format(valtype, basename))
+        emitAllocNewValueStore(basename, valtype, "nvals", "2")
         stream.println("// copy raw data")
         stream.println("System.arraycopy(%s_buf_keys, 0, nkeys, 0, %s_bufsz)".format(basename, basename))
         stream.println("System.arraycopy(%s_buf_vals, 0, nvals, 0, %s_bufsz)".format(basename, basename))
@@ -94,7 +105,8 @@ trait HashMapEmitting {
         stream.println("val tablesize = " + basename + "_nextPow2((elemest / 0.4f).toInt) * 2")
         stream.println(basename + "_buf_ind = Array.fill[Int](tablesize)(-1)")
         stream.println(basename + "_buf_keys = new Array[" + keytype + "]((elemest * 1.2f).toInt)")
-        stream.println(basename + "_buf_vals = new Array[" + valtype + "]((elemest * 1.2f).toInt)")
+        /*stream.println(basename + "_buf_vals = new Array[" + valtype + "]((elemest * 1.2f).toInt)") // !! different value type*/
+        emitValBufsInit(basename, valtype, "(elemest * 1.2f).toInt")
         stream.println("}")
         
         stream.println("def " + basename + "_buf_append(x: " + elemtype + ") {")
@@ -117,13 +129,17 @@ trait HashMapEmitting {
         stream.println("%s_buf_ind(pos) = datapos".format(basename))
         stream.println("%s_buf_ind(pos + 1) = hc".format(basename))
         stream.println("%s_buf_keys(datapos) = x._1".format(basename))
-        stream.println("%s_buf_vals(datapos) = x._2".format(basename))
+        /*stream.println("%s_buf_vals(datapos) = x._2".format(basename)) // !! different ways to initialize the value container*/
+        emitValBufsAddNoCollision(basename, "x._2")
         stream.println("%s_bufsz += 1".format(basename))
         stream.println("%s_grow()".format(basename))
         stream.println("} else {")
         stream.println("val datapos = currelem")
-        stream.println("%s_buf_keys(datapos) = x._1".format(basename))
-        stream.println("%s_buf_vals(datapos) = x._2".format(basename))
+        /*
+        stream.println("%s_buf_keys(datapos) = x._1".format(basename)) // !! different ways to resolve collisions
+        stream.println("%s_buf_vals(datapos) = x._2".format(basename)) // !! different ways to resolve collisions
+        */
+        emitValBufsAddCollision(basename, "x._1", "x._2")
         stream.println("}")
         stream.println("}")
       }
@@ -202,14 +218,17 @@ trait HashMapEmitting {
         stream.println("placed = true")
         stream.println("tpos = tuntil")
         stream.println("} else if (%s.%s_activations(targetindices(tpos + 1)).%s_buf_keys(telem) == act.%s_buf_keys(currelem)) {".format(activname, basename, basename, basename))
-        stream.println("targetindices(tpos) = currelem")
-        stream.println("targetindices(tpos + 1) = chidx")
+        /*
+        stream.println("targetindices(tpos) = currelem") // !! different collision resolutions
+        stream.println("targetindices(tpos + 1) = chidx") // !! different collision resolutions
+        */
+        emitIndexCopyCollisionResolution("targetindices", "tpos", "currelem", "chidx", basename, "%s.%s_activations(targetindices(tpos + 1))".format(activname, basename, basename))
         stream.println("placed = true")
         stream.println("tpos = tuntil")
         stream.println("}")
         stream.println("tpos += 2")
         stream.println("}")
-        stream.println("if (!placed) act.%s_buf_spills += currelem".format(basename, basename, basename))
+        stream.println("if (!placed) act.%s_buf_spills += currelem".format(basename))
         //stream.println("println(currhash, act.%s_buf_spills, targetindices.mkString(\", \"))".format(basename))
         stream.println("}")
         stream.println("}")
@@ -257,8 +276,11 @@ trait HashMapEmitting {
         stream.println("tpos = (tpos + 2) % targetindices.length")
         stream.println("telem = targetindices(tpos)")
         stream.println("}")
-        stream.println("targetindices(tpos) = idx")
-        stream.println("targetindices(tpos + 1) = chidx")
+        /*
+        stream.println("targetindices(tpos) = idx") // !! different collision resolutions
+        stream.println("targetindices(tpos + 1) = chidx") // !! different collision resolutions
+        */
+        emitIndexCopyCollisionResolution("targetindices", "tpos", "idx", "chidx", basename, "%s.%s_activations(targetindices(tpos + 1))".format(activname, basename, basename))
         stream.println("if (telem == -1) targetsizes(32 * (hc >>> (32 - %s.%s_blkbits))) += 1".format(activname, basename))
         stream.println("}")
         stream.println("chidx += 1")
@@ -337,4 +359,68 @@ trait HashMapEmitting {
   
 }
 
+
+trait HashMapEmitting extends HashMapEmittingBase {
+  
+  def hashMapEmitterFactory[K, V] = new BaseEmitterFactory[K, V] {
+    def scala = new BaseScalaEmitter {
+      def emitAdditionalDefs(basename: String, valtype: String)(implicit stream: PrintWriter) {
+      }
+      def emitValueStoreDefinition(basename: String, valtype: String)(implicit stream: PrintWriter) {
+        stream.println("var " + basename + "_buf_vals: Array[" + valtype + "] = _")
+      }
+      def emitAllocNewValueStore(basename: String, valtype: String, nvalsname: String, multiplier: String)(implicit stream: PrintWriter) {
+        stream.println("val %s = new Array[%s](%s_buf_keys.length * %s)".format(nvalsname, valtype, basename, multiplier))
+      }
+      def emitValBufsInit(basename: String, valtype: String, size: String)(implicit stream: PrintWriter) {
+        stream.println(basename + "_buf_vals = new Array[" + valtype + "](" + size + ")")
+      }
+      def emitValBufsAddNoCollision(basename: String, valname: String)(implicit stream: PrintWriter) {
+        stream.println("%s_buf_vals(datapos) = %s".format(basename, valname))
+      }
+      def emitValBufsAddCollision(basename: String, keyname: String, valname: String)(implicit stream: PrintWriter) {
+        stream.println("%s_buf_keys(datapos) = %s".format(basename, keyname))
+        stream.println("%s_buf_vals(datapos) = %s".format(basename, valname))
+      }
+      def emitIndexCopyCollisionResolution(indexArrayName: String, indexArrayPos: String, datapos: String, chunkIndex: String, basename: String, activationRead: String)(implicit stream: PrintWriter) {
+        stream.println("%s(%s) = %s".format(indexArrayName, indexArrayPos, datapos))
+        stream.println("%s(%s + 1) = %s".format(indexArrayName, indexArrayPos, chunkIndex))
+      }
+    }
+  }
+  
+}
+
+
+trait HashMultiMapEmitting extends HashMapEmittingBase {
+  
+  def hashMultiMapEmitterFactory[K, V] = new BaseEmitterFactory[K, V] {
+    def scala = new BaseScalaEmitter {
+      def emitAdditionalDefs(basename: String, valtype: String)(implicit stream: PrintWriter) {
+        // TODO
+      }
+      def emitValueStoreDefinition(basename: String, valtype: String)(implicit stream: PrintWriter) {
+        // stream.println("var " + basename + "_buf_vals: Array[Array[" + valtype + "]] = _")
+      }
+      def emitAllocNewValueStore(basename: String, valtype: String, nvalsname: String, multiplier: String)(implicit stream: PrintWriter) {
+        // stream.println("val %s = new Array[%s](%s_buf_keys.length * %s)".format(nvalsname, valtype, basename, multiplier))
+      }
+      def emitValBufsInit(basename: String, valtype: String, size: String)(implicit stream: PrintWriter) {
+        // stream.println(basename + "_buf_vals = new Array[" + valtype + "](" + size + ")")
+      }
+      def emitValBufsAddNoCollision(basename: String, valname: String)(implicit stream: PrintWriter) {
+        // stream.println("%s_buf_vals(datapos) = %s".format(basename, valname))
+      }
+      def emitValBufsAddCollision(basename: String, keyname: String, valname: String)(implicit stream: PrintWriter) {
+        // stream.println("%s_buf_keys(datapos) = %s".format(basename, keyname))
+        // stream.println("%s_buf_vals(datapos) = %s".format(basename, valname))
+      }
+      def emitIndexCopyCollisionResolution(indexArrayName: String, indexArrayPos: String, datapos: String, chunkIndex: String, basename: String, activationRead: String)(implicit stream: PrintWriter) {
+        // stream.println("%s(%s) = %s".format(indexArrayName, indexArrayPos, datapos))
+        // stream.println("%s(%s + 1) = %s".format(indexArrayName, indexArrayPos, chunkIndex))
+      }
+    }
+  }
+  
+}
 
