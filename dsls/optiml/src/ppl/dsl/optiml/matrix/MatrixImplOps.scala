@@ -94,7 +94,7 @@ trait MatrixImplOpsStandard extends MatrixImplOps {
         val out = Matrix[A](numRows, numCols)
         for (i <- 0 until numRows){
           for (j <- 0 until numCols){
-            out(i,j) = xs(i)(implicitly[SourceContext])(j)(implicitly[SourceContext])
+            out(i,j) = xs(i)(j)
           }
         }
         out.unsafeImmutable
@@ -105,7 +105,7 @@ trait MatrixImplOpsStandard extends MatrixImplOps {
         val out = Matrix[A](numRows, numCols)
         for (i <- 0 until numCols){
           for (j <- 0 until numRows){
-            out(j,i) = xs(i)(implicitly[SourceContext])(j)(implicitly[SourceContext])
+            out(j,i) = xs(i)(j)
           }
         }
         out.unsafeImmutable

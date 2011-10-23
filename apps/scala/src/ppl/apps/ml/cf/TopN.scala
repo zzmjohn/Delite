@@ -113,6 +113,7 @@ trait TopN extends OptiMLApplication {
     val sorted = prefs.sort    
     val topScores = sorted take N
     //val topUsers = indices take N
+    /*
     val topUsers = topScores map { e => (prefs find { _ == e })(0) } // HACK! need to implement sortWithIndex above    
     
     toc(topUsers)
@@ -122,7 +123,8 @@ trait TopN extends OptiMLApplication {
     while (i < topUsers.length) {
       println("  match: " + topUsers(i) + ", score: " + topScores(i))
       i += 1
-    }      
+    }
+    */      
   }
 }
   

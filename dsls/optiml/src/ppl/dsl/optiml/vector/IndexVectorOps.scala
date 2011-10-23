@@ -54,8 +54,6 @@ trait IndexVectorOpsExp extends IndexVectorOps with EffectExp { this: OptiMLExp 
     def alloc = Vector[B](in.length, in.isRow)
 
     def m = manifest[B]
-    
-    override def sourceContext = Some(ctx)
   }
   
   // impl defs

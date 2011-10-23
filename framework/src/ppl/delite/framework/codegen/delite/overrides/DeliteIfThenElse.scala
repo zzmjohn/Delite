@@ -14,7 +14,7 @@ trait DeliteIfThenElseExp extends IfThenElseExp with BooleanOpsExp with EqualExp
 
   case class DeliteIfThenElse[T:Manifest](cond: Exp[Boolean], thenp: Exp[T], elsep: Exp[T], flat: Boolean) extends DeliteOpCondition[T]
 
-  override def __ifThenElse[T:Manifest](cond: Rep[Boolean], thenp: => Rep[T], elsep: => Rep[T]) = ifThenElse(cond, thenp, elsep, false)
+  override def __ifThenElse[T:Manifest](cond: Rep[Boolean], thenp: => Rep[T], elsep: => Rep[T])(implicit ctx: SourceContext) = ifThenElse(cond, thenp, elsep, false)
 
   // a 'flat' if is treated like any other statement in code motion, i.e. code will not be pushed explicitly into the branches
   def flatIf[T:Manifest](cond: Rep[Boolean])(thenp: => Rep[T])(elsep: => Rep[T]) = ifThenElse(cond, thenp, elsep, true)
@@ -208,6 +208,7 @@ trait DeliteCudaGenIfThenElse extends CudaGenEffect with DeliteBaseGenIfThenElse
           */
           val objRetType = (!isVoidType(sym.Type)) && (!isPrimitiveType(sym.Type))
           objRetType match {
+            /*
             case true =>   //TODO: Remove this case
               //Least check
               (kernelSymbol==sym) match {
@@ -237,6 +238,7 @@ trait DeliteCudaGenIfThenElse extends CudaGenEffect with DeliteBaseGenIfThenElse
               stream.println(addTab()+"}")
               saveLocalVar(sym,nextDimStr,outLocalVar)
 			        allocReference(sym,getBlockResult(a).asInstanceOf[Sym[_]])
+              */
             case _ =>
               isVoidType(sym.Type) match {
                 case true =>

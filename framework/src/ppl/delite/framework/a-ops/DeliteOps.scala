@@ -71,7 +71,6 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
   class DeliteOpSingleTask[A](block0: => Exp[A], val requireInputs: Boolean = false) extends DeliteOp[A] {
     type OpType <: DeliteOpSingleTask[A]
     final lazy val block: Exp[A] = copyTransformedOrElse(_.block)(block0)
-    def sourceContext: Option[SourceContext] = None
   }
 
   /**
@@ -1348,7 +1347,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
       emitAbstractFatLoopKernelExtra(op, symList)
     case ThinDef(op: AbstractLoop[_]) => 
       stream.println("//activation record for thin loop")
-      emitAbstractFatLoopKernelExtra(SimpleFatLoop(op.size, op.v, List(op.body), op.sourceContext), symList)
+      emitAbstractFatLoopKernelExtra(SimpleFatLoop(op.size, op.v, List(op.body)), symList)
     case _ => 
       super.emitFatNodeKernelExtra(symList, rhs)
   }
@@ -1380,7 +1379,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with BaseGenDeliteOps {
       // TODO: we'd like to always have fat loops but currently they are not allowed to have effects
       println("emitting AbstractLoop: "+op.getClass())
       stream.println("// a *thin* loop follows: " + quote(sym))
-      emitFatNode(List(sym), SimpleFatLoop(op.size, op.v, List(op.body), op.sourceContext))
+      emitFatNode(List(sym), SimpleFatLoop(op.size, op.v, List(op.body)))
 /*    
       if (!deliteKernel) { // FIXME cond!
         op.body match {
@@ -1535,7 +1534,7 @@ trait CudaGenDeliteOps extends CudaGenLoopsFat with BaseGenDeliteOps {
     case op: AbstractLoop[_] => 
       // TODO: we'd like to always have fat loops but currently they are not allowed to have effects
       stream.println("// a *thin* loop follows: " + quote(sym))
-      emitFatNode(List(sym), SimpleFatLoop(op.size, op.v, List(op.body), op.sourceContext))
+      emitFatNode(List(sym), SimpleFatLoop(op.size, op.v, List(op.body)))
     
     case foreach:DeliteOpForeach2[_,_] => {
       if(!isPrimitiveType(foreach.v.Type)) throw new GenerationFailedException("CudaGen: Only primitive Types are allowed for input of foreach.")

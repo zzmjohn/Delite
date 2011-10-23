@@ -3,7 +3,6 @@ package ppl.dsl.optiml.vector
 import ppl.dsl.optiml.datastruct.scala.{Vector,Matrix,EmptyVector,IndexVector}
 import scala.virtualization.lms.common.ScalaOpsPkg
 import scala.virtualization.lms.common.{BaseExp, Base}
-import scala.reflect.SourceContext
 import ppl.dsl.optiml.{OptiMLLift, OptiMLCompiler, OptiML}
 
 trait VectorImplOps { this: OptiML =>
@@ -26,7 +25,7 @@ trait VectorImplOps { this: OptiML =>
   def vector_pprint_impl[A:Manifest](v: Rep[Vector[A]]): Rep[Unit]
   def vector_repmat_impl[A:Manifest](m: Rep[Vector[A]], i: Rep[Int], j: Rep[Int]): Rep[Matrix[A]]
   def vector_trans_impl[A](v: Rep[Vector[A]])(implicit mA: Manifest[A], vA: Manifest[Vector[A]]): Rep[Vector[A]]
-  def vector_median_impl[A:Manifest:Ordering](v: Rep[Vector[A]])(implicit ctx: SourceContext): Rep[A]
+  def vector_median_impl[A:Manifest:Ordering](v: Rep[Vector[A]]): Rep[A]
   def vector_filter_impl[A:Manifest](v: Rep[Vector[A]], pred: Rep[A] => Rep[Boolean]): Rep[Vector[A]]
   def vector_partition_impl[A:Manifest](v: Rep[Vector[A]], pred: Rep[A] => Rep[Boolean]): (Rep[Vector[A]],Rep[Vector[A]])
   def vector_contains_impl[A:Manifest](v: Rep[Vector[A]], elem: Rep[A]): Rep[Boolean]
@@ -218,7 +217,7 @@ trait VectorImplOpsStandard extends VectorImplOps {
     out.unsafeImmutable
   }
 
-  def vector_median_impl[A:Manifest:Ordering](v: Rep[Vector[A]])(implicit ctx: SourceContext) = {
+  def vector_median_impl[A:Manifest:Ordering](v: Rep[Vector[A]]) = {
     // TODO: this isn't the proper definition of median
     val x = v.sort
     x(x.length / 2)

@@ -243,18 +243,18 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
     */
     printlog(outputSlotTypes)
 
+    val optContext = sym.find(!_.sourceContext.isEmpty).map(_.sourceContext.get)
     // emit task graph node
     rhs match {
-      case op: AbstractFatLoop => 
-        val optContext = sym.find(!_.sourceContext.isEmpty).map(_.sourceContext.get)
+      case op: AbstractFatLoop =>
         emitMultiLoop(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, op.size, op.body.exists (loopBodyNeedsCombine _), op.body.exists (loopBodyNeedsPostProcess _), optContext)
       case ThinDef(z) =>
         z match {
-          case op:AbstractLoop[_] => emitMultiLoop(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, op.size, loopBodyNeedsCombine(op.body), loopBodyNeedsPostProcess(op.body), op.sourceContext)
+          case op:AbstractLoop[_] => emitMultiLoop(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, op.size, loopBodyNeedsCombine(op.body), loopBodyNeedsPostProcess(op.body), optContext)
           case e:DeliteOpExternal[_] => emitExternal(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps)
           case c:DeliteOpCondition[_] => emitIfThenElse(c.cond, c.thenp, c.elsep, kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps)
           case w:DeliteOpWhileLoop => emitWhileLoop(w.cond, w.body, kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps)
-          case s:DeliteOpSingleTask[_] => emitSingleTask(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, s.sourceContext)
+          case s:DeliteOpSingleTask[_] => emitSingleTask(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, optContext)
           case f:DeliteOpForeach2[_,_] => emitForeach(z, kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps)
           case f:DeliteOpForeachBounded[_,_,_] => emitForeach(z, kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps)
           case _ => emitSingleTask(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, outputs(0).sourceContext) // things that are not specified as DeliteOPs, emit as SingleTask nodes
@@ -285,28 +285,6 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
    stream.println("},")
   }
 
-  def emitSourceContext(sourceContext: Option[SourceContext], stream: PrintWriter, id: String) {
-    // obtain root parent source context (if any)
-    val parentContext: Option[SourceContext] =
-      if (!sourceContext.isEmpty) {
-        var current = sourceContext.get
-        while (!current.parent.isEmpty)
-          current = current.parent.get
-        Some(current)
-      } else
-    	  sourceContext
-    
-    stream.print("  \"sourceContext\": {\n    ")
-    val (fileName, line, opName) =
-      if (parentContext.isEmpty) ("<unknown file>", 0, id) else {
-        val sc = parentContext.get
-        (sc.fileName, sc.line, sc.methodName)
-      }
-    stream.print("\"fileName\": \"" + fileName + "\",\n    ")
-    stream.print("\"opName\": \"" + opName + "\",\n    ")
-    stream.print("\"line\": \"" + line + "\" }")
-  }
-  
   def emitExternal(id: String, outputs: List[Exp[Any]], inputs: List[Exp[Any]], mutableInputs: List[Exp[Any]], controlDeps: List[Exp[Any]], antiDeps: List[Exp[Any]])
         (implicit stream: PrintWriter, supportedTgt: ListBuffer[String], returnTypes: ListBuffer[Pair[String, String]], outputSlotTypes: HashMap[String, ListBuffer[(String, String)]], metadata: ArrayBuffer[Pair[String,String]]) = {
     stream.print("{\"type\":\"External\"")

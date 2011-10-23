@@ -109,29 +109,29 @@ trait LanguageOps extends Base { this: OptiML =>
   /**
    * sum
    */
-  def sum[A:Manifest:Arith:Cloneable](start: Rep[Int], end: Rep[Int])(block: Rep[Int] => Rep[A]) = optiml_sum(start, end, block)
-  def sum[A:Manifest:Arith:Cloneable](vals: Rep[Vector[A]]) = repVecToVecOps(vals).sum
-  def sum[A](vals: Rep[Matrix[A]])(implicit mA: Manifest[A], a: Arith[A], c: Cloneable[A], o: Overloaded1) = repMatToMatOps(vals).sum
-  def sumIf[A:Manifest:Arith:Cloneable](start: Rep[Int], end: Rep[Int])(cond: Rep[Int] => Rep[Boolean])(block: Rep[Int] => Rep[A]) = optiml_sumif(start, end, cond, block)
+  def sum[A:Manifest:Arith:Cloneable](start: Rep[Int], end: Rep[Int])(block: Rep[Int] => Rep[A])(implicit ctx: SourceContext) = optiml_sum(start, end, block)
+  def sum[A:Manifest:Arith:Cloneable](vals: Rep[Vector[A]])(implicit ctx: SourceContext) = repVecToVecOps(vals).sum
+  def sum[A](vals: Rep[Matrix[A]])(implicit mA: Manifest[A], a: Arith[A], c: Cloneable[A], o: Overloaded1, ctx: SourceContext) = repMatToMatOps(vals).sum
+  def sumIf[A:Manifest:Arith:Cloneable](start: Rep[Int], end: Rep[Int])(cond: Rep[Int] => Rep[Boolean])(block: Rep[Int] => Rep[A])(implicit ctx: SourceContext) = optiml_sumif(start, end, cond, block)
   
-  def optiml_sum[A:Manifest:Arith:Cloneable](start: Rep[Int], end: Rep[Int], block: Rep[Int] => Rep[A]): Rep[A]
-  def optiml_sumif[A:Manifest:Arith:Cloneable](start: Rep[Int], end: Rep[Int], cond: Rep[Int] => Rep[Boolean], block: Rep[Int] => Rep[A]): Rep[A]
+  def optiml_sum[A:Manifest:Arith:Cloneable](start: Rep[Int], end: Rep[Int], block: Rep[Int] => Rep[A])(implicit ctx: SourceContext): Rep[A]
+  def optiml_sumif[A:Manifest:Arith:Cloneable](start: Rep[Int], end: Rep[Int], cond: Rep[Int] => Rep[Boolean], block: Rep[Int] => Rep[A])(implicit ctx: SourceContext): Rep[A]
 
   /**
    * min
    */
-  def min[A:Manifest:Ordering:HasMinMax](vals: Rep[Vector[A]]) = repVecToVecOps(vals).min
-  def min[A](vals: Rep[Matrix[A]])(implicit mA: Manifest[A], ord: Ordering[A], mx: HasMinMax[A], o: Overloaded1) = repMatToMatOps(vals).min
+  def min[A:Manifest:Ordering:HasMinMax](vals: Rep[Vector[A]])(implicit ctx: SourceContext) = repVecToVecOps(vals).min
+  def min[A](vals: Rep[Matrix[A]])(implicit mA: Manifest[A], ord: Ordering[A], mx: HasMinMax[A], o: Overloaded1, ctx: SourceContext) = repMatToMatOps(vals).min
   //def min[A:Manifest:Ordering:HasMinMax](vals: A*) = repVecToVecOps(Vector(vals: _*)).min
-  def min[A:Manifest:Ordering:HasMinMax](vals: Rep[A]*) = repVecToVecOps(Vector(vals: _*)).min
+  def min[A:Manifest:Ordering:HasMinMax](vals: Rep[A]*)(implicit ctx: SourceContext) = repVecToVecOps(Vector(vals: _*)).min
 
   /**
    * max
    */
-  def max[A:Manifest:Ordering:HasMinMax](vals: Rep[Vector[A]]) = repVecToVecOps(vals).max
-  def max[A](vals: Rep[Matrix[A]])(implicit mA: Manifest[A], ord: Ordering[A], mx: HasMinMax[A], o: Overloaded1) = repMatToMatOps(vals).max
+  def max[A:Manifest:Ordering:HasMinMax](vals: Rep[Vector[A]])(implicit ctx: SourceContext) = repVecToVecOps(vals).max
+  def max[A](vals: Rep[Matrix[A]])(implicit mA: Manifest[A], ord: Ordering[A], mx: HasMinMax[A], o: Overloaded1, ctx: SourceContext) = repMatToMatOps(vals).max
   //def max[A:Manifest:Ordering:HasMinMax](vals: A*) = repVecToVecOps(Vector(vals: _*)).max
-  def max[A:Manifest:Ordering:HasMinMax](vals: Rep[A]*) = repVecToVecOps(Vector(vals: _*)).max
+  def max[A:Manifest:Ordering:HasMinMax](vals: Rep[A]*)(implicit ctx: SourceContext) = repVecToVecOps(Vector(vals: _*)).max
 
 
   /**
@@ -538,13 +538,13 @@ trait LanguageOpsExp extends LanguageOps with BaseFatExp with EffectExp {
 
   // FIXME: peeling off the first iteration manually can prevent fusion because the LoopOp is 1 smaller than its cousins
   // TODO: what is the deired behavior if the range is empty?
-  def optiml_sum[A:Manifest:Arith:Cloneable](start: Exp[Int], end: Exp[Int], block: Exp[Int] => Exp[A]) = {
+  def optiml_sum[A:Manifest:Arith:Cloneable](start: Exp[Int], end: Exp[Int], block: Exp[Int] => Exp[A])(implicit ctx: SourceContext) = {
     val firstBlock = block(start)
     val out = reflectPure(Sum(start+1, end, block, firstBlock))
     out + firstBlock
   }
 
-  def optiml_sumif[A:Manifest:Arith:Cloneable](start: Exp[Int], end: Exp[Int], cond: Exp[Int] => Exp[Boolean], block: Exp[Int] => Exp[A]) = {
+  def optiml_sumif[A:Manifest:Arith:Cloneable](start: Exp[Int], end: Exp[Int], cond: Exp[Int] => Exp[Boolean], block: Exp[Int] => Exp[A])(implicit ctx: SourceContext) = {
     reflectPure(SumIf(start, end, cond, block))
 /*    val firstCond = cond(start)
     val firstBlock = block(start)
