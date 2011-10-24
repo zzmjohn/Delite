@@ -120,6 +120,27 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     def needsSpecialInit = emitterFactory.nonEmpty || cond.nonEmpty
     def emitterScala = emitterFactory.map(_.scala)
   }
+
+  case class DeliteHashElem[K,V1,V2, CR <: DeliteCollection[(K,V2)]]( 
+    alloc: Exp[CR],
+    func: Exp[(K,V1)],
+    //inner: Def[V2], TODO
+    convertToV2: Exp[V2],
+    cond: List[Exp[Boolean]] = Nil,
+    emitterFactory: Option[EmitterFactory] = None
+    // TODO: note that the alloc block right now directly references the size
+    // which is not part of DeliteCollectElem instance. we might want to fix that 
+  ) extends Def[CA] {
+    def needsCombine = emitterFactory.map(_.needsCombine).getOrElse(cond.nonEmpty)
+    def needsPostProcess = emitterFactory.map(_.needsPostProcess).getOrElse(cond.nonEmpty)
+    def needsPostProcess2 = emitterFactory.map(_.needsPostProcess2).getOrElse(false)
+    def needsSpecialCollect = emitterFactory.nonEmpty || cond.nonEmpty
+    def needsSpecialExtra = emitterFactory.nonEmpty || cond.nonEmpty
+    def needsSpecialInit = emitterFactory.nonEmpty || cond.nonEmpty
+    def emitterScala = emitterFactory.map(_.scala)
+  }
+
+
   
   case class DeliteReduceElem[A](
     func: Exp[A],
@@ -217,6 +238,37 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
    *    if stripFirst is set to false, i.e. for a mutable reduction, then the zero value is used
    *    to allocate the accumulator, and it IS used in the initial reduction.
    */
+
+   abstract class DeliteOpGroupBy[A:Manifest,
+                              K:Manifest, V:Manifest,
+                              CA <: DeliteCollection[A]:Manifest, CR <: DeliteCollection[(K,CV)], CV <: DeliteCollection[V]]
+    extends DeliteOpLoop[CR] {
+      type OpType <: DeliteOpMap[A,B,CB]
+
+      // supplied by subclass
+      val in: Exp[DeliteCollection[A]]
+      //val size: Exp[Int] // could be dc_size(in), but we want type-specific pattern matching to work
+      def func: Exp[A] => Exp[K]
+      def alloc: Exp[CB]
+      def emitterFactory: Option[EmitterFactory] = None
+
+      def convertToCV: Exp[Array[V]] => Exp[CV]
+      
+      final lazy val vC: Sym[Array[V]] = copyTransformedOrElse(_.vC)(fresh[Array[V]]).asInstanceOf[Sym[Array[V]]]
+      
+      // loop
+      lazy val body: Def[CB] = copyBodyOrElse(DeliteHashElem[K,V,CV,CR](
+        alloc = reifyEffects(this.alloc),
+        func = reifyEffects(this.func(dc_apply(in,v))),
+        convertToV2 = reifyEffects(this.convertToCV(vC)),
+        emitterFactory = emitterFactory
+      ))
+    }
+
+
+
+
+
 
 
   /**
