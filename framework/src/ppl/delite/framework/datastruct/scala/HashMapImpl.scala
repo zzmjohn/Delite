@@ -163,6 +163,13 @@ growth threshold: %d
 }
 
 
+final class Bucket[@specialized T] {
+  var array: Array[T] = _
+  var size = 0
+  var next: Bucket[T] = _
+}
+
+
 object HashMapImpl {
   def range(n: Int) = {
     val hm = new HashMapImpl[Int, Int](n * 5 + 1, n * 3)
