@@ -128,7 +128,7 @@ growth threshold: %d
   
   def dcUpdate(idx: Int, x: (K, V)) = throw new UnsupportedOperationException
   
-  override def toString = "HashMapImpl(sz: %d; indices: %s; keys: %s, values: %s)".format(sz, if (indices != null) indices.mkString(", ") else "null", if (keys != null) keys.mkString(", ") else "null", if (values != null) keys.mkString(", ") else "null")
+  override def toString = "HashMapImpl(sz: %d; indices: %s; keys: %s, values: %s)".format(sz, if (indices != null) indices.mkString(", ") else "null", if (keys != null) keys.mkString(", ") else "null", if (values != null) values.mkString(", ") else "null")
   
   def unsafeIndices: Array[Int] = indices
   
@@ -166,11 +166,13 @@ growth threshold: %d
 final class Bucket[@specialized T] extends DeliteCollection[T] {
   var array: Array[T] = _
   var size = 0
-  var next: Bucket[T] = _
+  //var next: Bucket[T] = _
   
   def dcSize = size
   def dcApply(idx: Int) = array(idx)
   def dcUpdate(idx: Int, x: T) = array(idx) = x
+  
+  override def toString = "Bucket(size: %d; values: %s)".format(size, array.take(size).mkString(", "))
 }
 
 

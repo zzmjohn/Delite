@@ -418,7 +418,9 @@ trait HashMultiMapEmitting extends HashMapEmittingBase {
         stream.println("%s_buf_vals = new Array[Bucket[%s]](%s)".format(basename, valtype, size))
       }
       def emitValBufsAddNoCollision(basename: String, valname: String)(implicit stream: PrintWriter) {
-        stream.println("%s_buf_vals(datapos) = new Bucket".format(basename))
+        stream.println("%s_buf_vals(datapos) = new Bucket".format(basename, basename))
+        stream.println("%s_buf_vals(datapos).array = new Array(16)".format(basename))
+        stream.println("%s_buf_vals(datapos).size = 0".format(basename))
         stream.println("%s_bucket_append(%s_buf_vals(datapos), %s)".format(basename, basename, valname))
       }
       def emitValBufsAddCollision(basename: String, keyname: String, valname: String)(implicit stream: PrintWriter) {
@@ -426,16 +428,20 @@ trait HashMultiMapEmitting extends HashMapEmittingBase {
       }
       def emitCollisionResolutionOnCopyIndex(indexArrayName: String, indexArrayPos: String, olddatapos: String, newdatapos: String, newChunkIndex: String, basename: String, existingKeyActivationRead: String, collidingValue: String)(implicit stream: PrintWriter) {
         stream.println("val %s_exact = %s".format(basename, existingKeyActivationRead))
-        stream.println("if (this.size + other.size > this.array.length) {")
-        stream.println("val oldarr = this.array")
-        stream.println("this.array = new Array((this.size + other.size) * 2)")
-        stream.println("System.arraycopy(oldarr, 0, this.array, 0, this.size)")
+        stream.println("val old = %s_exact.%s_buf_vals(%s)".format(basename, basename, olddatapos))
+        stream.println("val other = %s".format(collidingValue))
+        stream.println("if (old.size + other.size > old.array.length) {")
+        stream.println("val oldarr = old.array")
+        stream.println("old.array = new Array((old.size + other.size) * 2)")
+        stream.println("System.arraycopy(oldarr, 0, old.array, 0, old.size)")
         stream.println("}")
-        stream.println("System.arraycopy(other.array, 0, this.array, this.size, other.size)")
+        stream.println("System.arraycopy(other.array, 0, old.array, old.size, other.size)")
+        stream.println("old.size += other.size")
         
         // alternative:
-        // stream.println("v.next = %s_exact.%s_buf_vals(%s)".format(basename, basename))
-        // stream.println("%s_exact.%s_buf_vals(%s) = v".format(basename, basename))
+        // stream.println("val %s_exact = %s".format(basename, existingKeyActivationRead))
+        // stream.println("%s.next = %s_exact.%s_buf_vals(%s)".format(collidingValue, basename, basename, olddatapos))
+        // stream.println("%s_exact.%s_buf_vals(%s) = %s".format(basename, basename, olddatapos, collidingValue))
       }
     }
   }

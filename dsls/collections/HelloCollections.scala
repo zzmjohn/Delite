@@ -23,15 +23,15 @@ trait HelloCollections extends CollectionsApplication {
     
     // xs.map({ x => (x, x) })(hashMapCanBuild, manifest[(Int, Int)], manifest[HashMapImpl[Int, Int]])
     //val ms = HashMap[Int, String]()
-    val ms = HashMap.range(10)
-    println(ms)
-    val ms2 = ms.map(kv => kv)
-    println(ms2)
-    println(ms2.get(5))
+    // val ms = HashMap.range(10)
+    // println(ms)
+    // val ms2 = ms.map(kv => kv)
+    // println(ms2)
+    // println(ms2.get(5))
     
     val xs = ArraySeq[Int](6)
-    xs.groupBy(x => (x, x))
-    println(xs)
+    val mg = xs.groupBy(x => (x, x))
+    println(mg)
   }
 }
 

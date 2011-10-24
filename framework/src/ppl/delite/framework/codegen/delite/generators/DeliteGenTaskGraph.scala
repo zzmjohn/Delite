@@ -67,7 +67,7 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
 //        case _ => println(s)
 //      }}
       //println(used)
-      //focusFatBlock(used) { freeInScope(bound, used) } filter { case Def(r@Reflect(x,u,es)) => used contains r; case _ => true } // distinct
+      //focusFatBlock(used) { freeInScope(bound, used) } filter { case Def(r@Reflect(x,u,es)) => used contains r; case _ => true } /* distinct */
       focusFatBlock(used) { freeInScope(bound, used) } // distinct
       //syms(rhs).flatMap(s => focusBlock(s) { freeInScope(boundSyms(rhs), s) } ).distinct
     }
