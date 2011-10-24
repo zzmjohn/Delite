@@ -19,6 +19,9 @@ with SeqOps
 with ArraySeqOps
 with MapOps
 with HashMapOps
+with ArraySeqEmitting
+with HashMapEmitting
+with HashMultiMapEmitting
 
 
 trait CollectionsOpsExp
@@ -29,6 +32,7 @@ with ArraySeqEmitting
 with MapOpsExp
 with HashMapOpsExp
 with HashMapEmitting
+with HashMultiMapEmitting
 
 
 trait ScalaGenCollectionsOps

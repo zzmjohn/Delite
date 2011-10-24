@@ -37,7 +37,7 @@ trait ArraySeqOps extends SeqOps {
 
 
 trait ArraySeqOpsExp extends SeqOpsExp with ArraySeqOps {
-self: ArraySeqEmitting =>
+self: HashMapOpsExp with ArraySeqEmitting with HashMultiMapEmitting =>
   
   // TODO: remove later, but - the implicit conversion below _is_ resolved, unlike the one in the supertrait - why?
   //implicit def arraybufferrep2traversableops2[T: Manifest](t: Rep[ArraySeq[T]]): TraversableClsOps[T, ArraySeq[T]] = new TraversableClsOps[T, ArraySeq[T]](t)

@@ -27,7 +27,11 @@ trait HelloCollections extends CollectionsApplication {
     println(ms)
     val ms2 = ms.map(kv => kv)
     println(ms2)
-    println(ms2.get(10))
+    println(ms2.get(5))
+    
+    val xs = ArraySeq[Int](6)
+    xs.groupBy(x => (x, x))
+    println(xs)
   }
 }
 

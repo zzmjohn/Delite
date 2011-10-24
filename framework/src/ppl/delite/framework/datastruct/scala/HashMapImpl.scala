@@ -163,10 +163,14 @@ growth threshold: %d
 }
 
 
-final class Bucket[@specialized T] {
+final class Bucket[@specialized T] extends DeliteCollection[T] {
   var array: Array[T] = _
   var size = 0
   var next: Bucket[T] = _
+  
+  def dcSize = size
+  def dcApply(idx: Int) = array(idx)
+  def dcUpdate(idx: Int, x: T) = array(idx) = x
 }
 
 

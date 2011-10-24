@@ -27,6 +27,7 @@ trait TraversableOps extends GenericCollectionOps {
     def foreach(block: Rep[T] => Rep[Unit]) = traversable_foreach(t, block)
     def map[S, Target <: DeliteCollection[S]](f: Rep[T] => Rep[S])(implicit cbf: CanBuild[Coll, S, Target], ms: Manifest[S], mt: Manifest[Target]) = traversable_map[T, S, Coll, Target](t, f, cbf)
     def filter[Target <: DeliteCollection[T]](p: Rep[T] => Rep[Boolean])(implicit cbf: CanBuild[Coll, T, Target], ms: Manifest[Target]) = traversable_filter[T, Coll, Target](t, p, cbf)
+    def groupBy[K, V](f: Rep[T] => Rep[(K, V)])(implicit mk: Manifest[K], mv: Manifest[V]) = traversable_groupby[T, Coll, K, V](t, f)
   }
   
   /* class interface defs */
@@ -34,6 +35,7 @@ trait TraversableOps extends GenericCollectionOps {
   def traversable_foreach[T: Manifest, Coll <: Traversable[T]: Manifest](t: Rep[Coll], block: Rep[T] => Rep[Unit]): Rep[Unit]
   def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Rep[Coll], f: Rep[T] => Rep[S], cbf: CanBuild[Coll, S, Target]): Rep[Target]
   def traversable_filter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Rep[Coll], p: Rep[T] => Rep[Boolean], cbf: CanBuild[Coll, T, Target]): Rep[Target]
+  def traversable_groupby[T: Manifest, Coll <: Traversable[T]: Manifest, K: Manifest, V: Manifest](in: Rep[Coll], f: Rep[T] => Rep[(K, V)]): Rep[HashMap[K, Bucket[V]]]
   
   /* implicit rules */
   implicit def traversableCanBuild[T: Manifest, S: Manifest]: CanBuild[Traversable[T], S, Traversable[S]]
@@ -42,6 +44,7 @@ trait TraversableOps extends GenericCollectionOps {
 
 
 trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp with DeliteOpsExp {
+self: HashMapOpsExp with HashMultiMapEmitting =>
 //self: ArraySeqOpsExp with ArraySeqEmitting =>
   
   /* lifting */
@@ -54,7 +57,8 @@ trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp
     def sync = n => Const(List()) // ? why not: n => List() - where's the implicit to do this??
     val size = copyTransformedOrElse(_.size)(in.size)
   }
-  case class TraversableMap[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](in: Exp[Coll], func: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target])
+  case class TraversableMap[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest]
+  (in: Exp[Coll], func: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target])
   extends DeliteOpMap[T, S, Target] {
     val size = copyTransformedOrElse(_.size)(in.size)
     def alloc = cbf.alloc(in)
@@ -63,7 +67,8 @@ trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp
     val mA = manifest[T]
     val mB = manifest[S]
   }
-  case class TraversableFilter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](in: Exp[Coll], pred: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target])
+  case class TraversableFilter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest]
+  (in: Exp[Coll], pred: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target])
   extends DeliteOpFilter[T, T, Target] {
     def alloc = cbf.alloc(in)
     def func = e => e
@@ -73,15 +78,26 @@ trait TraversableOpsExp extends TraversableOps with VariablesExp with BaseFatExp
     
     def m = manifest[T]
   }
+  case class TraversableGroupBy[T: Manifest, K: Manifest, V: Manifest, Coll <: Traversable[T]: Manifest]
+  (in: Exp[Coll], f: Exp[T] => Exp[(K, V)])
+  extends DeliteOpGroupBy[T, K, V, Coll, Bucket[V], HashMap[K, Bucket[V]]] {
+    val size = in.size
+    def func: Exp[T] => Exp[(K, V)] = f
+    def alloc: Exp[HashMap[K, Bucket[V]]] = HashMapNew[K, Bucket[V]]()(manifest[HashMapImpl[K, Bucket[V]]])
+    def convertToCV: Exp[Bucket[V]] => Exp[Bucket[V]] = x => x
+    def emitterFactory: Option[EmitterFactory] = Some(hashMultiMapEmitterFactory)
+  }
   
   /* class interface */
   def traversable_size[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll]) = reflectPure(TraversableSize[T, Coll](t))
   def traversable_foreach[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll], block: Exp[T] => Rep[Unit]) = reflectEffect(TraversableForeach[T, Coll](t, block))
   def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Exp[Coll], f: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target]): Exp[Target] = reflectEffect(TraversableMap[T, S, Coll, Target](t, f, cbf))
   def traversable_filter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Exp[Coll], p: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target]): Exp[Target] = reflectEffect(TraversableFilter[T, Coll, Target](t, p, cbf))
+  def traversable_groupby[T: Manifest, Coll <: Traversable[T]: Manifest, K: Manifest, V: Manifest](in: Exp[Coll], f: Exp[T] => Exp[(K, V)]): Exp[HashMap[K, Bucket[V]]] = reflectEffect(TraversableGroupBy[T, K, V, Coll](in, f))
   
   /* implicit rules */
   implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
+    // TODO
     def alloc(source: Exp[Traversable[T]]) = null //ArraySeq.apply[S](travrep2traversableops(source).size)
     def emptyAlloc(source: Exp[Traversable[T]]) = null //ArraySeq[S](Const(0))
     def emitterFactory(source: Exp[Traversable[T]]) = null //scalaArraySeqEmitter[T]

@@ -29,7 +29,7 @@ trait SeqOps extends TraversableOps {
 
 
 trait SeqOpsExp extends TraversableOpsExp {
-self: ArraySeqOpsExp with ArraySeqEmitting =>
+self: HashMapOpsExp with ArraySeqOpsExp with ArraySeqEmitting with HashMultiMapEmitting =>
   
   /* nodes */
   

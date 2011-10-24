@@ -11,6 +11,7 @@ import java.io.PrintWriter
 
 
 trait HashMapOps extends MapOps {
+self: ArraySeqOps with ArraySeqEmitting =>
   
   /* ctors */
   object HashMap {
@@ -34,7 +35,7 @@ trait HashMapOps extends MapOps {
 
 
 trait HashMapOpsExp extends MapOpsExp with HashMapOps {
-self: HashMapOpsExp with HashMapEmitting =>
+self: HashMapOpsExp with HashMapEmitting with ArraySeqOps with ArraySeqEmitting with HashMultiMapEmitting =>
   
   /* nodes */
   case class HashMapNew[K, V]()(val mV: Manifest[HashMapImpl[K, V]]) extends Def[HashMap[K, V]]
