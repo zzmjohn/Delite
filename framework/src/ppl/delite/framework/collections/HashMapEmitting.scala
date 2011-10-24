@@ -426,16 +426,16 @@ trait HashMultiMapEmitting extends HashMapEmittingBase {
       }
       def emitCollisionResolutionOnCopyIndex(indexArrayName: String, indexArrayPos: String, olddatapos: String, newdatapos: String, newChunkIndex: String, basename: String, existingKeyActivationRead: String, collidingValue: String)(implicit stream: PrintWriter) {
         stream.println("val %s_exact = %s".format(basename, existingKeyActivationRead))
-        stream.println("v.next = %s_exact.%s_buf_vals(%s)".format(basename, basename))
-        stream.println("%s_exact.%s_buf_vals(%s) = v".format(basename, basename))
+        stream.println("if (this.size + other.size > this.array.length) {")
+        stream.println("val oldarr = this.array")
+        stream.println("this.array = new Array((this.size + other.size) * 2)")
+        stream.println("System.arraycopy(oldarr, 0, this.array, 0, this.size)")
+        stream.println("}")
+        stream.println("System.arraycopy(other.array, 0, this.array, this.size, other.size)")
         
         // alternative:
-        // stream.println("if (this.size + other.size > this.array.length) {")
-        // stream.println("val oldarr = this.array")
-        // stream.println("this.array = new Array(this.size + other.size)")
-        // stream.println("System.arraycopy(oldarr, 0, this.array, 0, this.size)")
-        // stream.println("}")
-        // stream.println("System.arraycopy(other.array, 0, this.array, this.size, other.size)")
+        // stream.println("v.next = %s_exact.%s_buf_vals(%s)".format(basename, basename))
+        // stream.println("%s_exact.%s_buf_vals(%s) = v".format(basename, basename))
       }
     }
   }
