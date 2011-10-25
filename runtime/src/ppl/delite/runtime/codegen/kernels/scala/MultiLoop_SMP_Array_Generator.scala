@@ -136,7 +136,8 @@ object MultiLoop_SMP_Array_Generator {
       out.append("head.closure.postProcess2(acc)\n")
     }
     
-    if (chunkIdx == 0) out.append("acc\n")    
+    if (chunkIdx == 0) out.append("head.closure.finalize(acc)\n")
+    if (chunkIdx == 0) out.append("acc\n")
     out.append("}\n")
   }
 

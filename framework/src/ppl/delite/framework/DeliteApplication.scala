@@ -40,7 +40,7 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile {
   // generators created by getCodeGenPkg will use the 'current' scope of the deliteGenerator as global scope
   val deliteGenerator = new DeliteCodeGenPkg { val IR : DeliteApplication.this.type = DeliteApplication.this;
                                                val generators = DeliteApplication.this.generators }
-
+                                               
   var args: Rep[Array[String]] = _
 
   var staticDataMap: Map[String,_] = _
@@ -115,8 +115,6 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile {
     val g = compile(liftedMain)
     g(args)
   }
-
-  def registerDSLType(name: String): DSLTypeRepresentation = nop
 
   /**
    * this is the entry method for our applications, user implement this method. Note, that it is missing the
