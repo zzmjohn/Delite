@@ -122,9 +122,9 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     def emitterScala = emitterFactory.map(_.scala)
   }
 
-  case class DeliteHashElem[K,V1,V2, CR <: DeliteCollection[(K,V2)]]( 
+  case class DeliteHashElem[K, V1, V2, CR]( 
     alloc: Exp[CR],
-    func: Exp[(K,V1)],
+    func: Exp[(K, V1)],
     //inner: Def[V2], TODO
     convertToV2: Exp[V2], // TODO
     cond: List[Exp[Boolean]] = Nil,
@@ -247,7 +247,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
                                  V: Manifest,
                                  CA <: DeliteCollection[A]: Manifest,
                                  CV <: DeliteCollection[V]: Manifest,
-                                 CR <: DeliteCollection[(K,CV)]: Manifest]
+                                 CR: Manifest]
   extends DeliteOpLoop[CR] {
     type OpType <: DeliteOpGroupBy[A, K, V, CA, CV, CR]
     
