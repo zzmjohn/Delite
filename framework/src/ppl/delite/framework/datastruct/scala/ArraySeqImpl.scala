@@ -40,3 +40,17 @@ final class ArraySeqImpl[@specialized T: Manifest](__length: Int) extends ArrayS
   
 }
 
+
+object ArraySeqImpl {
+  def range(__length: Int) = {
+    val as = new ArraySeqImpl[Int](__length)
+    
+    var i = 0
+    while (i < __length) {
+      as(i) = i
+      i += 1
+    }
+    
+    as
+  }
+}

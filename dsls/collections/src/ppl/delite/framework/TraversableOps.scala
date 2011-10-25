@@ -8,10 +8,11 @@ import ppl.delite.framework.datastruct.scala.DeliteCollection
 import scala.virtualization.lms.common._
 import ppl.delite.framework.datastruct.scala._
 import ppl.delite.framework.ops.DeliteOpsExp
+import ppl.delite.framework.ops.DeliteCollectionOps
 
 
 
-trait TraversableOps extends GenericCollectionOps {
+trait TraversableOps extends GenericCollectionOps with DeliteCollectionOps {
   
   /* ctors */
   object Traversable {
@@ -22,7 +23,7 @@ trait TraversableOps extends GenericCollectionOps {
   implicit def travrep2traversableops[T: Manifest](t: Rep[Traversable[T]]) = new TraversableClsOps[T, Traversable[T]](t)
   implicit def liftUnit(u: Unit): Rep[Unit]
   
-  class TraversableClsOps[T: Manifest, Coll <: Traversable[T]: Manifest](t: Rep[Coll]) {
+  class TraversableClsOps[T: Manifest, Coll <: DeliteCollection[T]: Manifest](t: Rep[Coll]) {
     def size: Rep[Int] = traversable_size[T, Coll](t)
     def foreach(block: Rep[T] => Rep[Unit]) = traversable_foreach(t, block)
     def map[S, Target <: DeliteCollection[S]](f: Rep[T] => Rep[S])(implicit cbf: CanBuild[Coll, S, Target], ms: Manifest[S], mt: Manifest[Target]) = traversable_map[T, S, Coll, Target](t, f, cbf)
@@ -31,11 +32,11 @@ trait TraversableOps extends GenericCollectionOps {
   }
   
   /* class interface defs */
-  def traversable_size[T: Manifest, Coll <: Traversable[T]: Manifest](t: Rep[Coll]): Rep[Int]
-  def traversable_foreach[T: Manifest, Coll <: Traversable[T]: Manifest](t: Rep[Coll], block: Rep[T] => Rep[Unit]): Rep[Unit]
-  def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Rep[Coll], f: Rep[T] => Rep[S], cbf: CanBuild[Coll, S, Target]): Rep[Target]
-  def traversable_filter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Rep[Coll], p: Rep[T] => Rep[Boolean], cbf: CanBuild[Coll, T, Target]): Rep[Target]
-  def traversable_groupby[T: Manifest, Coll <: Traversable[T]: Manifest, K: Manifest, V: Manifest](in: Rep[Coll], f: Rep[T] => Rep[(K, V)]): Rep[HashMap[K, Bucket[V]]]
+  def traversable_size[T: Manifest, Coll <: DeliteCollection[T]: Manifest](t: Rep[Coll]): Rep[Int]
+  def traversable_foreach[T: Manifest, Coll <: DeliteCollection[T]: Manifest](t: Rep[Coll], block: Rep[T] => Rep[Unit]): Rep[Unit]
+  def traversable_map[T: Manifest, S: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Rep[Coll], f: Rep[T] => Rep[S], cbf: CanBuild[Coll, S, Target]): Rep[Target]
+  def traversable_filter[T: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Rep[Coll], p: Rep[T] => Rep[Boolean], cbf: CanBuild[Coll, T, Target]): Rep[Target]
+  def traversable_groupby[T: Manifest, Coll <: DeliteCollection[T]: Manifest, K: Manifest, V: Manifest](in: Rep[Coll], f: Rep[T] => Rep[(K, V)]): Rep[HashMap[K, Bucket[V]]]
   
   /* implicit rules */
   implicit def traversableCanBuild[T: Manifest, S: Manifest]: CanBuild[Traversable[T], S, Traversable[S]]
@@ -51,13 +52,13 @@ self: HashMapOpsExp with HashMultiMapEmitting =>
   implicit def liftUnit(u: Unit): Exp[Unit] = Const(())
   
   /* nodes */
-  case class TraversableSize[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll]) extends Def[Int]
-  case class TraversableForeach[T: Manifest, Coll <: Traversable[T]: Manifest](in: Exp[Coll], func: Exp[T] => Exp[Unit])
+  case class TraversableSize[T: Manifest, Coll <: DeliteCollection[T]: Manifest](t: Exp[Coll]) extends Def[Int]
+  case class TraversableForeach[T: Manifest, Coll <: DeliteCollection[T]: Manifest](in: Exp[Coll], func: Exp[T] => Exp[Unit])
   extends DeliteOpForeach[T] {
     def sync = n => Const(List()) // ? why not: n => List() - where's the implicit to do this??
     val size = copyTransformedOrElse(_.size)(in.size)
   }
-  case class TraversableMap[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest]
+  case class TraversableMap[T: Manifest, S: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[S]: Manifest]
   (in: Exp[Coll], func: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target])
   extends DeliteOpMap[T, S, Target] {
     val size = copyTransformedOrElse(_.size)(in.size)
@@ -67,7 +68,7 @@ self: HashMapOpsExp with HashMultiMapEmitting =>
     val mA = manifest[T]
     val mB = manifest[S]
   }
-  case class TraversableFilter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest]
+  case class TraversableFilter[T: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[T]: Manifest]
   (in: Exp[Coll], pred: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target])
   extends DeliteOpFilter[T, T, Target] {
     def alloc = cbf.alloc(in)
@@ -78,7 +79,7 @@ self: HashMapOpsExp with HashMultiMapEmitting =>
     
     def m = manifest[T]
   }
-  case class TraversableGroupBy[T: Manifest, K: Manifest, V: Manifest, Coll <: Traversable[T]: Manifest]
+  case class TraversableGroupBy[T: Manifest, K: Manifest, V: Manifest, Coll <: DeliteCollection[T]: Manifest]
   (in: Exp[Coll], f: Exp[T] => Exp[(K, V)])
   extends DeliteOpGroupBy[T, K, V, Coll, Bucket[V], HashMap[K, Bucket[V]]] {
     val size = in.size
@@ -89,11 +90,11 @@ self: HashMapOpsExp with HashMultiMapEmitting =>
   }
   
   /* class interface */
-  def traversable_size[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll]) = reflectPure(TraversableSize[T, Coll](t))
-  def traversable_foreach[T: Manifest, Coll <: Traversable[T]: Manifest](t: Exp[Coll], block: Exp[T] => Rep[Unit]) = reflectEffect(TraversableForeach[T, Coll](t, block))
-  def traversable_map[T: Manifest, S: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Exp[Coll], f: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target]): Exp[Target] = reflectEffect(TraversableMap[T, S, Coll, Target](t, f, cbf))
-  def traversable_filter[T: Manifest, Coll <: Traversable[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Exp[Coll], p: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target]): Exp[Target] = reflectEffect(TraversableFilter[T, Coll, Target](t, p, cbf))
-  def traversable_groupby[T: Manifest, Coll <: Traversable[T]: Manifest, K: Manifest, V: Manifest](in: Exp[Coll], f: Exp[T] => Exp[(K, V)]): Exp[HashMap[K, Bucket[V]]] = reflectEffect(TraversableGroupBy[T, K, V, Coll](in, f))
+  def traversable_size[T: Manifest, Coll <: DeliteCollection[T]: Manifest](t: Exp[Coll]) = reflectPure(TraversableSize[T, Coll](t))
+  def traversable_foreach[T: Manifest, Coll <: DeliteCollection[T]: Manifest](t: Exp[Coll], block: Exp[T] => Rep[Unit]) = reflectEffect(TraversableForeach[T, Coll](t, block))
+  def traversable_map[T: Manifest, S: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Exp[Coll], f: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target]): Exp[Target] = reflectEffect(TraversableMap[T, S, Coll, Target](t, f, cbf))
+  def traversable_filter[T: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Exp[Coll], p: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target]): Exp[Target] = reflectEffect(TraversableFilter[T, Coll, Target](t, p, cbf))
+  def traversable_groupby[T: Manifest, Coll <: DeliteCollection[T]: Manifest, K: Manifest, V: Manifest](in: Exp[Coll], f: Exp[T] => Exp[(K, V)]): Exp[HashMap[K, Bucket[V]]] = reflectEffect(TraversableGroupBy[T, K, V, Coll](in, f))
   
   /* implicit rules */
   implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {

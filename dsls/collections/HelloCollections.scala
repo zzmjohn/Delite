@@ -29,8 +29,8 @@ trait HelloCollections extends CollectionsApplication {
     // println(ms2)
     // println(ms2.get(5))
     
-    val xs = ArraySeq[Int](6)
-    val mg = xs.groupBy(x => (x, x))
+    val xs = ArraySeq.range(6)
+    val mg = xs.groupBy(x => (x % 2, x))
     println(mg)
   }
 }

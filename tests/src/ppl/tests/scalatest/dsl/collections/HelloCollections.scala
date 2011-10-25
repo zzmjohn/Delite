@@ -9,7 +9,7 @@ import ppl.tests.scalatest._
 
 
 
-trait HelloCollections extends CollectionsApplication with DeliteTestModule {
+trait HashMapMap extends CollectionsApplication with DeliteTestModule {
   def main() {
     implicit val collector = ArrayBuffer[Boolean]()
     
@@ -65,12 +65,38 @@ trait HelloCollections extends CollectionsApplication with DeliteTestModule {
 }
 
 
-object HelloCollectionsRunner extends CollectionsApplicationRunner with HelloCollections with DeliteTestRunner
+object HashMapMapRunner extends CollectionsApplicationRunner with HashMapMap with DeliteTestRunner
+
+
+trait ArraySeqGroupBy extends CollectionsApplication with DeliteTestModule {
+  def main() {
+    implicit val collector = ArrayBuffer[Boolean]()
+    
+    val sz = 6
+    val xs = ArraySeq.range(6)
+    val mg = xs.groupBy(x => (x % 2, x))
+    collect(mg.size == 2)
+    for (k <- 0 until 2) {
+      val b = mg.get(k)
+      dcToDcOps(b).size
+      collect(b.size == 3)
+      for (i <- 0 until 3) collect(b(i) == (2 * i + k))
+    }
+    
+    mkReport
+  }
+}
+
+
+object ArraySeqGroupByRunner extends CollectionsApplicationRunner with ArraySeqGroupBy with DeliteTestRunner
 
 
 class HelloCollectionsOpsSuite extends DeliteSuite {
-  def testHelloCollections() { compileAndTest(HelloCollectionsRunner) }
+  def testHashMapMap() { compileAndTest(HashMapMapRunner) }
+  def testArraySeqGroupBy() { compileAndTest(ArraySeqGroupByRunner) }
 }
+
+
 
 
 
