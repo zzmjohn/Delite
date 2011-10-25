@@ -3,6 +3,7 @@ package ppl.delite.runtime.codegen
 import collection.mutable.ArrayBuffer
 import ppl.delite.runtime.graph.ops.{OP_Nested, DeliteOP}
 import ppl.delite.runtime.graph.targets.Targets
+import java.lang.annotation.Target
 
 /**
  * Author: Kevin J. Brown
@@ -55,7 +56,7 @@ abstract class NestedGenerator(nested: OP_Nested, location: Int) extends Executa
   }
 }
 
-abstract class GPUNestedGenerator(nested: OP_Nested, location: Int) extends GPUExecutableGenerator {
+abstract class GPUNestedGenerator(nested: OP_Nested, location: Int, target: Targets.Value) extends GPUExecutableGenerator {
 
   protected val baseId = nested.id.slice(0, nested.id.indexOf('_'))
 
@@ -68,7 +69,7 @@ abstract class GPUNestedGenerator(nested: OP_Nested, location: Int) extends GPUE
   override protected def getScalaSym(op: DeliteOP, name: String) = NestedCommon.getSym(baseId, op, name)
 
   protected def writeFunctionHeader(out: StringBuilder) {
-    out.append(nested.outputType(Targets.Cuda))
+    out.append(nested.outputType(target))
     out.append(' ')
     out.append(kernelName)
     out.append('(')
@@ -78,11 +79,14 @@ abstract class GPUNestedGenerator(nested: OP_Nested, location: Int) extends GPUE
 
   protected def writeInputs(out: StringBuilder) {
     var first = true
+
+    val metadata = nested.getGPUMetadata(target)
+
     for ((in, sym) <- nested.getInputs) {
-      if (nested.cudaMetadata.inputs.contains((in,sym))) {
+      if (metadata.inputs.contains((in,sym))) {
         if (!first) out.append(',')
         first = false
-        out.append(nested.cudaMetadata.inputs((in,sym)).resultType)
+        out.append(metadata.inputs((in,sym)).resultType)
         out.append("* ")
         out.append(getSymGPU(sym))
         if ((nested.getMutableInputs. contains (in,sym)) && (in.getConsumers.filter(_.scheduledResource!=in.scheduledResource).nonEmpty)) {
@@ -103,7 +107,7 @@ abstract class GPUNestedGenerator(nested: OP_Nested, location: Int) extends GPUE
   }
 }
 
-abstract class GPUScalaNestedGenerator(nested: OP_Nested, location: Int) extends GPUScalaExecutableGenerator {
+abstract class GPUScalaNestedGenerator(nested: OP_Nested, location: Int, target: Targets.Value) extends GPUScalaExecutableGenerator(target) {
 
   protected val baseId = nested.id.slice(0, nested.id.indexOf('_'))
 

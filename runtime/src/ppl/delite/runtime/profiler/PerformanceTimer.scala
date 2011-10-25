@@ -5,11 +5,6 @@ import java.io.{BufferedWriter, File, PrintWriter, FileWriter}
 import java.util.concurrent.ConcurrentHashMap
 import ppl.delite.runtime.Config
 
-/** Measures execution times of various components.
-  * 
-  * @author Anand Atreya
-  * @author Philipp Haller
-  */
 object PerformanceTimer
 {
   val currentTimer = new mutable.HashMap[String, Long]

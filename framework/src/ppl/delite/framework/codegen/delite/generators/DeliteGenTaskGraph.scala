@@ -130,15 +130,24 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
             case foreach: DeliteOpForeachBounded[_,_,_] => "generated.scala.DeliteOpForeach[" + gen.remap(foreach.v.Type) + "]"
             case _ => gen.remap(sym.head.Type)
           }
-		  case ("cuda", op: AbstractFatLoop) =>
-			  hasOutputSlotTypes = true
-			  "void"
-		  case ("cuda", ThinDef(z)) => z match {
-            case op: AbstractLoop[_] => 
+          case ("cuda", op: AbstractFatLoop) =>
+            hasOutputSlotTypes = true
+            "void"
+          case ("cuda", ThinDef(z)) => z match {
+                case op: AbstractLoop[_] =>
+                  hasOutputSlotTypes = true
+            "void"
+                case _ => "void"
+          }
+          case ("opencl", op: AbstractFatLoop) =>
+            hasOutputSlotTypes = true
+            "void"
+          case ("opencl", ThinDef(z)) => z match {
+            case op: AbstractLoop[_] =>
             	hasOutputSlotTypes = true
-				"void"
+              "void"
             case _ => "void"
-		  }
+          }
           case _ => 
             assert(sym.length == 1) // if not set hasOutputSlotTypes and use activation record
             gen.remap(sym.head.Type)
@@ -189,9 +198,10 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
       } catch {
         case e:GenerationFailedException => // no generator found
           gen.exceptionHandler(e, outFile, kstream)
-          //println(gen.toString + ":" + (sym map(quote)))
-          //e.printStackTrace
-          
+          if(Config.dumpException) {
+            println(gen.toString + ":" + (sym map(quote)))
+            e.printStackTrace
+          }
           //if(gen.nested > 1) {
           //  nestedNode = gen.lastNodeAttempted
           //}
@@ -243,7 +253,7 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
     */
     printlog(outputSlotTypes)
 
-    val optContext = sym.find(!_.sourceContext.isEmpty).map(_.sourceContext.get)
+    val optContext = sym.find(!_.sourceContexts.isEmpty).map(_.sourceContexts.head)
     // emit task graph node
     rhs match {
       case op: AbstractFatLoop =>
@@ -257,7 +267,7 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
           case s:DeliteOpSingleTask[_] => emitSingleTask(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, optContext)
           case f:DeliteOpForeach2[_,_] => emitForeach(z, kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps)
           case f:DeliteOpForeachBounded[_,_,_] => emitForeach(z, kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps)
-          case _ => emitSingleTask(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, outputs(0).sourceContext) // things that are not specified as DeliteOPs, emit as SingleTask nodes
+          case _ => emitSingleTask(kernelName, outputs, inputs, inMutating, inControlDeps, antiDeps, if (outputs(0).sourceContexts.isEmpty) None else Some(outputs(0).sourceContexts.head)) // things that are not specified as DeliteOPs, emit as SingleTask nodes
         }
     }
 

@@ -104,14 +104,14 @@ trait DeliteCodegen extends GenericFatCodegen with ppl.delite.framework.codegen.
     for (TP(sym, _) <- globalDefs) {
       if (first) { first = false }
       else stream.print(", ")
-      stream.print("{\"symbol\": \"" + sym.name + "\",")
-      emitSourceContext(sym.sourceContext, stream, sym.name)
+      stream.print("{\"symbol\": \"x" + sym.id + "\",")
+      emitSourceContext(if (sym.sourceContexts.isEmpty) None else Some(sym.sourceContexts.head), stream, "x"+sym.id)
       stream.println("}")
     }
     stream.println("] }")
   }
   
-  def emitSource[A,B](f: Exp[A] => Exp[B], className: String, stream: PrintWriter)(implicit mA: Manifest[A], mB: Manifest[B]): Unit = {
+  def emitSource[A,B](f: Exp[A] => Exp[B], className: String, stream: PrintWriter)(implicit mA: Manifest[A], mB: Manifest[B]): List[(Sym[Any],Any)] = {
 
     val x = fresh[A]
     val y = reifyEffects(f(x))
@@ -144,6 +144,7 @@ trait DeliteCodegen extends GenericFatCodegen with ppl.delite.framework.codegen.
     }
     
     stream.flush
+    Nil
   }
 
   /**
