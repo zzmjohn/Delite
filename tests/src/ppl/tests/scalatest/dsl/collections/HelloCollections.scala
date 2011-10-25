@@ -74,7 +74,7 @@ trait ArraySeqGroupBy extends CollectionsApplication with DeliteTestModule {
     
     val sz = 6
     val mod = 2
-    val mg = ArraySeq.range(sz).groupBy(x => (x % mod, x))
+    val mg = ArraySeq.range(sz).groupBy(x => x % mod)
     collect(mg.size == mod)
     for (k <- 0 until mod) {
       val b = mg.get(k)
@@ -85,7 +85,7 @@ trait ArraySeqGroupBy extends CollectionsApplication with DeliteTestModule {
     
     val sz1 = 1000
     val mod1 = 2
-    val mg1 = ArraySeq.range(sz1).groupBy(x => (x % mod1, x))
+    val mg1 = ArraySeq.range(sz1).groupBy(x => x % mod1)
     collect(mg1.size == mod1)
     for (k <- 0 until mod1) {
       val b = mg1.get(k)
@@ -96,7 +96,7 @@ trait ArraySeqGroupBy extends CollectionsApplication with DeliteTestModule {
     
     val sz2 = 1000
     val mod2 = 100
-    val mg2 = ArraySeq.range(sz2).groupBy(x => (x % mod2, x))
+    val mg2 = ArraySeq.range(sz2).groupBy(x => x % mod2)
     collect(mg2.size == mod2)
     for (k <- 0 until mod2) {
       val b = mg2.get(k)
