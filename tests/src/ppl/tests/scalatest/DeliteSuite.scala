@@ -74,6 +74,7 @@ trait DeliteSuite extends Suite with DeliteTestConfig {
   private def execTest(app: DeliteTestRunner, args: Array[String]) = {
     println("EXECUTING...")
     val name = "test.tmp"
+    System.setProperty("delite.threads", "2")
     Console.withOut(new PrintStream(new FileOutputStream(name))) {
       println("test output for: "+app.toString)
       ppl.delite.runtime.Delite.embeddedMain(args, app.staticDataMap)
@@ -96,6 +97,7 @@ trait DeliteSuite extends Suite with DeliteTestConfig {
       // println("scala vanilla: " + scalaHome)
       // println("scala library: " + scalaLibrary)
       val javaArgs = "-server -d64 -XX:+UseCompressedOops -XX:+DoEscapeAnalysis -Xmx16g -Ddelite.threads=" + threads + " -cp " + runtimeClasses + ":" + scalaLibrary + ":" + scalaCompiler
+      println("running: " + javaArgs)
       val cmd = Array(javaProc) ++ javaArgs.split(" ") ++ Array("ppl.delite.runtime.Delite") ++ args
       val pb = new ProcessBuilder(java.util.Arrays.asList(cmd: _*))
       p = pb.start()

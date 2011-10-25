@@ -73,14 +73,36 @@ trait ArraySeqGroupBy extends CollectionsApplication with DeliteTestModule {
     implicit val collector = ArrayBuffer[Boolean]()
     
     val sz = 6
-    val xs = ArraySeq.range(6)
-    val mg = xs.groupBy(x => (x % 2, x))
-    collect(mg.size == 2)
-    for (k <- 0 until 2) {
+    val mod = 2
+    val mg = ArraySeq.range(sz).groupBy(x => (x % mod, x))
+    collect(mg.size == mod)
+    for (k <- 0 until mod) {
       val b = mg.get(k)
       dcToDcOps(b).size
-      collect(b.size == 3)
-      for (i <- 0 until 3) collect(b(i) == (2 * i + k))
+      collect(b.size == (sz / mod))
+      for (i <- 0 until (sz / mod)) collect(b(i) == (mod * i + k))
+    }
+    
+    val sz1 = 1000
+    val mod1 = 2
+    val mg1 = ArraySeq.range(sz1).groupBy(x => (x % mod1, x))
+    collect(mg1.size == mod1)
+    for (k <- 0 until mod1) {
+      val b = mg1.get(k)
+      dcToDcOps(b).size
+      collect(b.size == (sz1 / mod1))
+      for (i <- 0 until (sz1 / mod1)) collect(b(i) == (mod1 * i + k))
+    }
+    
+    val sz2 = 1000
+    val mod2 = 100
+    val mg2 = ArraySeq.range(sz2).groupBy(x => (x % mod2, x))
+    collect(mg2.size == mod2)
+    for (k <- 0 until mod2) {
+      val b = mg2.get(k)
+      dcToDcOps(b).size
+      collect(b.size == (sz2 / mod2))
+      for (i <- 0 until (sz2 / mod2)) collect(b(i) == (mod2 * i + k))
     }
     
     mkReport
