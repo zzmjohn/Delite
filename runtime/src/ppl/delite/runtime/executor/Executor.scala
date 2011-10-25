@@ -1,12 +1,27 @@
 package ppl.delite.runtime.executor
 
+import ppl.delite.runtime.scheduler.StaticSchedule
+
 /**
  * Author: Kevin J. Brown
- * Date: Sep 1, 2010
- * Time: 3:47:10 AM
+ * Date: Dec 4, 2010
+ * Time: 2:41:22 AM
  * 
  * Pervasive Parallelism Laboratory (PPL)
  * Stanford University
  */
 
-class Executor
+/**
+ * The base class of all executors
+ * Defines the public interface for the rest of the Delite Runtime
+ */
+
+abstract class Executor {
+
+  def run(schedule: StaticSchedule)
+
+  def init()
+
+  def shutdown()
+
+}
