@@ -3,7 +3,7 @@ package ppl.delite.framework.collections
 
 
 import java.io.PrintWriter
-import ppl.delite.framework.{DeliteApplication, DSLType}
+import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.datastruct.scala.DeliteCollection
 import scala.virtualization.lms.common._
 import ppl.delite.framework.datastruct.scala._
@@ -83,7 +83,7 @@ self: HashMapOpsExp with HashMultiMapEmitting =>
   (in: Exp[Coll], f: Exp[T] => Exp[K])
   extends DeliteOpGroupBy[T, K, T, Coll, Bucket[T], HashMap[K, Bucket[T]]] {
     val size = in.size
-    def func: Exp[T] => Exp[(K, T)] = x=> make_tuple2(f(x), x)
+    def func: Exp[T] => Exp[(K, T)] = x => make_tuple2(f(x), x)
     def alloc: Exp[HashMap[K, Bucket[T]]] = HashMapNew[K, Bucket[T]]()(manifest[HashMapImpl[K, Bucket[T]]])
     def convertToCV: Exp[Bucket[T]] => Exp[Bucket[T]] = x => x
     def emitterFactory: Option[EmitterFactory] = Some(hashMultiMapEmitterFactory)

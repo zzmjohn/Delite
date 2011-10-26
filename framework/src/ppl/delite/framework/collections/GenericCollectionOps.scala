@@ -3,14 +3,14 @@ package ppl.delite.framework.collections
 
 
 import java.io.PrintWriter
-import ppl.delite.framework.{DeliteApplication, DSLType}
+import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.datastruct.scala.DeliteCollection
 import scala.virtualization.lms.common._
 import ppl.delite.framework.ops.DeliteOpsExp
 
 
 
-trait GenericCollectionOps extends DSLType with Variables {
+trait GenericCollectionOps extends Variables {
   
   /** Definition of the CanBuild evidence */
   trait CanBuild[-Coll, -S, +Target] {
@@ -50,5 +50,6 @@ trait ScalaEmitter {
   def emitPostCombine2(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter)
   def emitPostProcInit2(basename: String, activname: String)(implicit stream: PrintWriter)
   def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter)
+  def emitDataDeclaration(basename: String, activname: String, dataname: String)(implicit stream: PrintWriter)
 }
 

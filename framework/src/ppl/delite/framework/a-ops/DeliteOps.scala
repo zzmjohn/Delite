@@ -135,7 +135,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     emitterFactory: Option[EmitterFactory] = None
     // TODO: note that the alloc block right now directly references the size
     // which is not part of DeliteCollectElem instance. we might want to fix that 
-  ) extends Def[CA] {
+  ) extends Def[CR] {
     def needsCombine = emitterFactory.map(_.needsCombine).getOrElse(cond.nonEmpty)
     def needsPostProcess = emitterFactory.map(_.needsPostProcess).getOrElse(cond.nonEmpty)
     def needsPostProcess2 = emitterFactory.map(_.needsPostProcess2).getOrElse(false)
@@ -313,7 +313,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     lazy val body: Def[CB] = copyBodyOrElse(DeliteCollectElem[B, CB](
       aV = this.aV,
       alloc = reifyEffects(this.allocWithArray(aV)),
-      func = reifyEffects(this.func(dc_apply(in,v)))
+      func = reifyEffects(this.func(dc_apply(in,v))),
       emitterFactory = emitterFactory
     ))
   }
@@ -375,7 +375,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     lazy val body: Def[CR] = copyBodyOrElse(DeliteCollectElem[R, CR](
       aV = this.aV,
       alloc = reifyEffects(this.allocWithArray(aV)),
-      func = reifyEffects(this.func(dc_apply(inA,v), dc_apply(inB,v)))
+      func = reifyEffects(this.func(dc_apply(inA,v), dc_apply(inB,v))),
       emitterFactory = None
     ))
   }
@@ -1034,6 +1034,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     } else {
       stream.println(prefixSym + quote(sym) + "_data(" + quote(op.v) + ") = " + quote(getBlockResult(elem.func)))
     }
+  }
   
   /**
    * MultiLoop components
@@ -1308,6 +1309,9 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     }
     def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter) {
     }
+    def emitDataDeclaration(basename: String, activname: String, dataname: String)(implicit stream: PrintWriter) {
+      stream.println("val " + dataname + " = " + activname + "." + basename + "_data")
+    }
   }
   
   def emitAbstractFatLoopKernelExtra(op: AbstractFatLoop, symList: List[Sym[Any]])(implicit stream: PrintWriter): Unit = {
@@ -1554,6 +1558,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         val emitter = elem.emitterScala.getOrElse(standardScalaEmitter)
         if (elem.needsPostProcess) {
           emitter.emitPostProcInit(quote(sym), "__act")
+        }
         /* TODO ?
         if (elem.cond.nonEmpty) {
           // aks: this optimization can result in writing a too-large output array as the result of the delite op.
@@ -1584,6 +1589,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         if (elem.needsPostProcess) {
           //calculate start offset from rhs.offset + rhs.size
           emitter.emitPostProcess(quote(sym), "__act")
+        }
       /* TODO ?
       case (sym, elem: DeliteCollectElem[_,_]) => //FIXME: get rid of .data and adapt to new alloc style
         if (elem.cond.nonEmpty) {
@@ -1659,11 +1665,18 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     stream.println("def finalize(__act: " + actType + "): Unit = {"/*}*/)
     (symList zip op.body) foreach {
       case (sym, elem: DeliteCollectElem[_,_]) =>
-        stream.println("val " + quote(elem.aV) + " = " + "__act." + quote(sym) + "_data")
+        val emitter = elem.emitterScala.getOrElse(standardScalaEmitter)
+        emitter.emitDataDeclaration(quote(sym), "__act", quote(elem.aV))
         stream.println("__act." + quote(sym) + " = {"/*}*/)
         emitBlock(elem.alloc)
         stream.println(quote(getBlockResult(elem.alloc)))
         stream.println(/*{*/"}")
+      case (sym, elem: DeliteForeachElem[_]) =>
+      case (sym, elem: DeliteReduceElem[_]) =>
+      case (sym, elem: DeliteReduceTupleElem[_,_]) =>
+    }
+    stream.println(/*{*/"}")
+    
     stream.println(/*{*/"}")
     //deliteKernel = true
   }

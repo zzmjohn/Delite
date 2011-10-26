@@ -3,7 +3,7 @@ package ppl.delite.framework.collections
 
 
 import java.io.PrintWriter
-import ppl.delite.framework.{DeliteApplication, DSLType}
+import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.datastruct.scala.DeliteCollection
 import scala.virtualization.lms.common._
 import ppl.delite.framework.ops.DeliteOpsExp
@@ -357,6 +357,9 @@ trait HashMapEmittingBase {
         stream.println("}")
         stream.println("}")
         //stream.println("println(%s.%s)".format(activname, basename))
+      }
+      def emitDataDeclaration(basename: String, activname: String, dataname: String)(implicit stream: PrintWriter) {
+        // TODO
       }
     }
   }

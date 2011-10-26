@@ -2,7 +2,7 @@ package ppl.delite.framework.collections
 
 
 
-import ppl.delite.framework.{DeliteApplication, DSLType}
+import ppl.delite.framework.DeliteApplication
 import scala.virtualization.lms.common._
 import ppl.delite.framework.datastruct.scala._
 import ppl.delite.framework.datastruct.scala.DeliteCollection
