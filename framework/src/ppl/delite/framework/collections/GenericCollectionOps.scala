@@ -51,5 +51,6 @@ trait ScalaEmitter {
   def emitPostProcInit2(basename: String, activname: String)(implicit stream: PrintWriter)
   def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter)
   def emitDataDeclaration(basename: String, activname: String, dataname: String)(implicit stream: PrintWriter)
+  def emitInitializeDataStructure(basename: String, activname: String, collectionname: String, dataname: String)(implicit stream: PrintWriter)
 }
 

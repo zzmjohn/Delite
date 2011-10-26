@@ -358,8 +358,13 @@ trait HashMapEmittingBase {
         stream.println("}")
         //stream.println("println(%s.%s)".format(activname, basename))
       }
-      def emitDataDeclaration(basename: String, activname: String, dataname: String)(implicit stream: PrintWriter) {
+      def emitDataDeclaration(basename: String, prefix: String, dataname: String)(implicit stream: PrintWriter) {
         // TODO
+        stream.println("// TODO")
+      }
+      def emitInitializeDataStructure(basename: String, prefix: String, collectionname: String, dataname: String)(implicit stream: PrintWriter) {
+        // TODO
+        stream.println("// TODO")
       }
     }
   }

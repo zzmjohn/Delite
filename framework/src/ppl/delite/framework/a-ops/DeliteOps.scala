@@ -111,6 +111,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
   case class DeliteCollectElem[A, CA]( 
     aV: Sym[Array[A]],
     alloc: Exp[CA],
+    allocDataStructure: Exp[CA],
     func: Exp[A],
     cond: List[Exp[Boolean]] = Nil,
     emitterFactory: Option[EmitterFactory] = None
@@ -275,18 +276,19 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     ))
   }
   
+
+  abstract class DeliteOpMapLike[A:Manifest, CA:Manifest] extends DeliteOpLoop[CA] {
+    type OpType <: DeliteOpMapLike[A,CA]
+
+    def alloc: Exp[CA]
+    def allocWithArray: Exp[Array[A]] => Exp[CA] = { data => val res = alloc; dc_unsafeSetData(res.asInstanceOf[Exp[DeliteCollection[A]]], data); res }
+    def emitterFactory: Option[EmitterFactory] = None
+    
+    //final lazy val allocVal: Exp[CA] = copyTransformedOrElse(_.allocVal)(reifyEffects(alloc))
+    final lazy val aV: Sym[Array[A]] = copyTransformedOrElse(_.aV)(fresh[Array[A]]).asInstanceOf[Sym[Array[A]]]
+  }
   
-
-   abstract class DeliteOpMapLike[A:Manifest, CA:Manifest] extends DeliteOpLoop[CA] {
-     type OpType <: DeliteOpMapLike[A,CA]
-
-     def alloc: Exp[CA]
-     def allocWithArray: Exp[Array[A]] => Exp[CA] = { data => val res = alloc; dc_unsafeSetData(res.asInstanceOf[Exp[DeliteCollection[A]]], data); res }
-     
-     //final lazy val allocVal: Exp[CA] = copyTransformedOrElse(_.allocVal)(reifyEffects(alloc))
-     final lazy val aV: Sym[Array[A]] = copyTransformedOrElse(_.aV)(fresh[Array[A]]).asInstanceOf[Sym[Array[A]]]
-   }
-
+  
   /**
    * Parallel map from DeliteCollection[A] => DeliteCollection[B]. Input functions can depend on free
    * variables, but they cannot depend on other elements of the input or output collection (disjoint access).
@@ -307,13 +309,13 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     //val size: Exp[Int] // could be dc_size(in), but we want type-specific pattern matching to work
     def func: Exp[A] => Exp[B]
     def alloc: Exp[CB]
-    def emitterFactory: Option[EmitterFactory] = None
 
     // loop
     lazy val body: Def[CB] = copyBodyOrElse(DeliteCollectElem[B, CB](
       aV = this.aV,
       alloc = reifyEffects(this.allocWithArray(aV)),
-      func = reifyEffects(this.func(dc_apply(in,v))),
+      allocDataStructure = reifyEffects(this.alloc),
+      func = reifyEffects(this.func(dc_apply(in, v))),
       emitterFactory = emitterFactory
     ))
   }
@@ -334,12 +336,12 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     def func: Exp[A] => Exp[B]
     def alloc: Exp[CB]
     def cond: Exp[A] => Exp[Boolean] // does this need to be more general (i.e. a List?)
-    def emitterFactory: Option[EmitterFactory] = None
 
     // loop
     lazy val body: Def[CB] = copyBodyOrElse(DeliteCollectElem[B, CB](
       aV = this.aV,
       alloc = reifyEffects(this.allocWithArray(aV)),
+      allocDataStructure = reifyEffects(this.alloc),
       func = reifyEffects(this.func(dc_apply(in,v))),
       cond = reifyEffects(this.cond(dc_apply(in,v)))::Nil,
       emitterFactory = emitterFactory
@@ -375,6 +377,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     lazy val body: Def[CR] = copyBodyOrElse(DeliteCollectElem[R, CR](
       aV = this.aV,
       alloc = reifyEffects(this.allocWithArray(aV)),
+      allocDataStructure = reifyEffects(this.alloc),
       func = reifyEffects(this.func(dc_apply(inA,v), dc_apply(inB,v))),
       emitterFactory = None
     ))
@@ -773,6 +776,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
         DeliteCollectElem[a,ca]( // need to be a case class for equality (do we rely on equality?)
           aV = f(e.aV).asInstanceOf[Sym[Array[a]]],
           alloc = f(e.alloc),
+          allocDataStructure = f(e.allocDataStructure),
           func = f(e.func),
           cond = f(e.cond),
           emitterFactory = e.emitterFactory
@@ -1241,9 +1245,15 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     (symList zip op.body) foreach {
       case (sym, elem: DeliteCollectElem[_,_]) =>
         emitValDef(elem.aV, quote(sym) + "_data")
+        elem.emitterFactory.map(_.scala).getOrElse(standardScalaEmitter).emitDataDeclaration(quote(sym), "", quote(sym) + "_data")
         stream.println("val " + quote(sym) + " = {"/*}*/)
-        emitBlock(elem.alloc)
-        stream.println(quote(getBlockResult(elem.alloc)))
+        if (elem.emitterFactory.isEmpty) {
+          emitBlock(elem.alloc) 
+          stream.println(quote(getBlockResult(elem.alloc)))
+        } else {
+          emitBlock(elem.allocDataStructure)
+          elem.emitterFactory.get.scala.emitInitializeDataStructure(quote(sym), "", quote(elem.allocDataStructure), quote(sym) + "_data")
+        }
         stream.println(/*{*/"}")
       case (sym, elem: DeliteForeachElem[_]) => 
       case (sym, elem: DeliteReduceElem[_]) =>
@@ -1309,8 +1319,10 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     }
     def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter) {
     }
-    def emitDataDeclaration(basename: String, activname: String, dataname: String)(implicit stream: PrintWriter) {
-      stream.println("val " + dataname + " = " + activname + "." + basename + "_data")
+    def emitDataDeclaration(basename: String, prefix: String, dataname: String)(implicit stream: PrintWriter) {
+      stream.println("val " + dataname + " = " + prefix + basename + "_data")
+    }
+    def emitInitializeDataStructure(basename: String, prefix: String, collectionname: String, dataname: String)(implicit stream: PrintWriter) {
     }
   }
   
@@ -1666,10 +1678,15 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     (symList zip op.body) foreach {
       case (sym, elem: DeliteCollectElem[_,_]) =>
         val emitter = elem.emitterScala.getOrElse(standardScalaEmitter)
-        emitter.emitDataDeclaration(quote(sym), "__act", quote(elem.aV))
+        elem.emitterFactory.map(_.scala).getOrElse(standardScalaEmitter).emitDataDeclaration(quote(sym), "__act.", quote(elem.aV))
         stream.println("__act." + quote(sym) + " = {"/*}*/)
-        emitBlock(elem.alloc)
-        stream.println(quote(getBlockResult(elem.alloc)))
+        if (elem.emitterScala.isEmpty) {
+          emitBlock(elem.alloc)
+          stream.println(quote(getBlockResult(elem.alloc)))
+        } else {
+          emitBlock(elem.allocDataStructure)
+          emitter.emitInitializeDataStructure(quote(sym), "__act.", quote(elem.allocDataStructure), quote(elem.aV))
+        }
         stream.println(/*{*/"}")
       case (sym, elem: DeliteForeachElem[_]) =>
       case (sym, elem: DeliteReduceElem[_]) =>

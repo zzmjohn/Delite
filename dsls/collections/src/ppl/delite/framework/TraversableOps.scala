@@ -63,7 +63,7 @@ self: HashMapOpsExp with HashMultiMapEmitting =>
   extends DeliteOpMap[T, S, Target] {
     val size = copyTransformedOrElse(_.size)(in.size)
     def alloc = cbf.alloc(in)
-    override def emitterFactory = if (cbf.noPrealloc) Some(cbf.emitterFactory(in)) else None
+    override def emitterFactory = Some(cbf.emitterFactory(in))
     
     val mA = manifest[T]
     val mB = manifest[S]

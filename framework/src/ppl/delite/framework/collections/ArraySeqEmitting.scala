@@ -66,8 +66,12 @@ trait ArraySeqEmitting {
       }
       def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter) {
       }
-      def emitDataDeclaration(basename: String, activname: String, dataname: String)(implicit stream: PrintWriter) {
-        // TODO
+      def emitDataDeclaration(basename: String, prefix: String, dataname: String)(implicit stream: PrintWriter) {
+        stream.println("val " + dataname + " = " + prefix + basename + "_buf_data")
+      }
+      def emitInitializeDataStructure(basename: String, prefix: String, collectionname: String, dataname: String)(implicit stream: PrintWriter) {
+        stream.println("%s.unsafeSetData(%s)".format(collectionname, dataname))
+        stream.println("%s".format(collectionname))
       }
     }
   }
