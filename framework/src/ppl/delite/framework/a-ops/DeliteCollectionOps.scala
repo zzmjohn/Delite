@@ -65,11 +65,12 @@ trait DeliteCollectionOpsExp extends DeliteCollectionOps with BaseFatExp with Ef
   //////////////
   // mirroring
 
-  override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit ctx: SourceContext): Exp[A] = (e match {
+  override def mirror[A:Manifest](e: Def[A], f: Transformer): Exp[A] = (e match {
     case DeliteCollectionApply(x, n) => dc_apply(f(x), f(n))
     case DeliteCollectionSize(x) => dc_size(f(x))
     case Reflect(DeliteCollectionApply(l,r), u, es) => reflectMirrored(Reflect(DeliteCollectionApply(f(l),f(r)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case Reflect(DeliteCollectionSize(l), u, es) => reflectMirrored(Reflect(DeliteCollectionSize(f(l)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(DeliteCollectionUpdate(l,i,r), u, es) => reflectMirrored(Reflect(DeliteCollectionUpdate(f(l),f(i),f(r)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case Reflect(dc@DeliteCollectionUnsafeSetData(x, d), u, es) => reflectMirrored(Reflect(DeliteCollectionUnsafeSetData(f(x),f(d))(dc.m), mapOver(f,u), f(es)))(mtype(manifest[Unit]))
     case _ => super.mirror(e, f)
   }).asInstanceOf[Exp[A]]
