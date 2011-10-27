@@ -2,6 +2,7 @@ package ppl.delite.runtime.codegen
 
 import ppl.delite.runtime.graph.ops._
 import ppl.delite.runtime.scheduler.PartialSchedule
+import ppl.delite.runtime.Config
 import java.util.ArrayDeque
 import collection.mutable.{ArrayBuffer, HashSet}
 
@@ -112,7 +113,7 @@ abstract class ExecutableGenerator {
     def resultName = if (returnsResult) getSym(op, op.getOutputs.head) else "op_" + getSym(op, op.id)
 
     if (op.task == null) return //dummy op
-    if (!op.isInstanceOf[OP_MultiLoop])
+    if (Config.profile && !op.isInstanceOf[OP_MultiLoop])
       out.append("PerformanceTimer.start(\""+op.id+"\", Thread.currentThread.getName(), false)\n")
     out.append("val ")
     out.append(resultName)
@@ -128,7 +129,7 @@ abstract class ExecutableGenerator {
       out.append(getSym(input, name))
     }
     out.append(")\n")
-    if (!op.isInstanceOf[OP_MultiLoop])
+    if (Config.profile && !op.isInstanceOf[OP_MultiLoop])
       out.append("PerformanceTimer.stop(\""+op.id+"\", false)\n")
 
     if (!returnsResult) {
