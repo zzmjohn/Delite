@@ -25,10 +25,11 @@ trait HashMapEmittingBase {
       def emitValBufsAddNoCollision(basename: String, valname: String)(implicit stream: PrintWriter)
       def emitValBufsAddCollision(basename: String, keyname: String, valname: String)(implicit stream: PrintWriter)
       def emitCollisionResolutionOnCopyIndex(indexArrayName: String, indexArrayPos: String, olddatapos: String, newdatapos: String, newChunkIndex: String, basename: String, existingKeyActivationRead: String, collidingValue: String)(implicit stream: PrintWriter)
+      def valueStoreType(valtype: String): String
       
       def emitBufferDefs(kernelname: String, basename: String, elemtype: String)(implicit stream: PrintWriter) {
         // a temporary hack
-        val innertypes = elemtype.substring(13, elemtype.length - 1).split(", ")
+        val innertypes = elemtype.substring(elemtype.indexOf("Tuple2") + 7, elemtype.length - 1).split(", ")
         val keytype = innertypes(0)
         val valtype = innertypes(1)
         
@@ -49,7 +50,7 @@ trait HashMapEmittingBase {
         stream.println("var " + basename + "_indices: Array[Int] = _")
         stream.println("var " + basename + "_blocksizes: Array[Int] = _")
         stream.println("var " + basename + "_keys: Array[" + keytype + "] = _")
-        stream.println("var " + basename + "_values: Array[" + valtype + "] = _")
+        stream.println("var " + basename + "_values: Array[" + valueStoreType(valtype) + "] = _")
         stream.println("var " + basename + "_size: Int = _")
         
         emitAdditionalDefs(basename, valtype)
@@ -425,6 +426,7 @@ trait HashMapEmitting extends HashMapEmittingBase {
         stream.println("%s(%s) = %s".format(indexArrayName, indexArrayPos, newdatapos))
         stream.println("%s(%s + 1) = %s".format(indexArrayName, indexArrayPos, newChunkIndex))
       }
+      def valueStoreType(valtype: String) = valtype
     }
   }
   
@@ -435,6 +437,7 @@ trait HashMultiMapEmitting extends HashMapEmittingBase {
   
   def hashMultiMapEmitterFactory[K, V] = new BaseEmitterFactory[K, V] {
     def scala = new BaseScalaEmitter {
+      def valueStoreType(valtype: String) = "Bucket[" + valtype + "]"
       def emitAdditionalDefs(basename: String, valtype: String)(implicit stream: PrintWriter) {
         stream.println("def %s_bucket_append(bucket: Bucket[%s], elem: %s) {".format(basename, valtype, valtype))
         stream.println("bucket.array(bucket.size) = elem")

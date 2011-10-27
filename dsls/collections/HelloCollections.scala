@@ -32,7 +32,7 @@ trait HelloCollections extends CollectionsApplication {
     println(ys)
     val ms = HashMap.range(6).map(x => x)
     println(ms)
-    val mg = ArraySeq.range(6).groupBy(x => (x % 2, x))
+    val mg = ArraySeq.range(6).groupBy(x => x % 2)
     println(mg)
   }
 }

@@ -1243,6 +1243,12 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     stream.println(/*{*/"} // end fat loop " + symList.map(quote).mkString(","))
     // finalize
     (symList zip op.body) foreach {
+      case (sym, elem: DeliteHashElem[_,_,_,_]) =>
+        elem.emitterFactory.map(_.scala).get.emitDataDeclaration(quote(sym), "", quote(sym) + "_data")
+        stream.println("val " + quote(sym) + " = {")
+        emitBlock(elem.alloc)
+        elem.emitterFactory.get.scala.emitInitializeDataStructure(quote(sym), "", quote(getBlockResult(elem.alloc)), quote(sym) + "_data")
+        stream.println("}")
       case (sym, elem: DeliteCollectElem[_,_]) =>
         emitValDef(elem.aV, quote(sym) + "_data")
         elem.emitterFactory.map(_.scala).getOrElse(standardScalaEmitter).emitDataDeclaration(quote(sym), "", quote(sym) + "_data")
@@ -1252,7 +1258,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
           stream.println(quote(getBlockResult(elem.alloc)))
         } else {
           emitBlock(elem.allocDataStructure)
-          elem.emitterFactory.get.scala.emitInitializeDataStructure(quote(sym), "", quote(elem.allocDataStructure), quote(sym) + "_data")
+          elem.emitterFactory.get.scala.emitInitializeDataStructure(quote(sym), "", quote(getBlockResult(elem.allocDataStructure)), quote(sym) + "_data")
         }
         stream.println(/*{*/"}")
       case (sym, elem: DeliteForeachElem[_]) => 
@@ -1697,6 +1703,12 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     
     stream.println("def finalize(__act: " + actType + "): Unit = {"/*}*/)
     (symList zip op.body) foreach {
+      case (sym, elem: DeliteHashElem[_,_,_,_]) =>
+        elem.emitterFactory.map(_.scala).get.emitDataDeclaration(quote(sym), "__act.", quote(sym) + "_data")
+        stream.println("val " + quote(sym) + " = {")
+        emitBlock(elem.alloc)
+        elem.emitterFactory.get.scala.emitInitializeDataStructure(quote(sym), "__act.", quote(getBlockResult(elem.alloc)), quote(sym) + "_data")
+        stream.println("}")
       case (sym, elem: DeliteCollectElem[_,_]) =>
         val emitter = elem.emitterScala.getOrElse(standardScalaEmitter)
         elem.emitterFactory.map(_.scala).getOrElse(standardScalaEmitter).emitDataDeclaration(quote(sym), "__act.", quote(elem.aV))
