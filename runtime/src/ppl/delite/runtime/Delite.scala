@@ -2,7 +2,7 @@ package ppl.delite.runtime
 
 import codegen._
 import executor._
-import graph.ops.{EOP, Arguments}
+import graph.ops.{EOP_Global, Arguments}
 import graph.targets.Targets
 import graph.{TestGraph, DeliteTaskGraph}
 import profiler.{PerformanceTimer, Profiler}
@@ -20,7 +20,7 @@ import tools.nsc.io._
 
 object Delite {
 
-  private val mainThread = Thread.currentThread
+  private var mainThread: Thread = null
 
   private def printArgs(args: Array[String]) {
     if(args.length == 0) {
@@ -36,12 +36,18 @@ object Delite {
   }
 
   def main(args: Array[String]) {
-    printArgs(args)
+    embeddedMain(args, Map())
+  }
 
+  def embeddedMain(args: Array[String], staticData: Map[String,_]) {
+    mainThread = Thread.currentThread
+    
+    printArgs(args)
     printConfig()
 
     //extract application arguments
     Arguments.args = args.drop(1)
+    Arguments.staticDataMap = staticData
 
     val scheduler = Config.scheduler match {
       case "SMP" => new SMPStaticScheduler
@@ -100,7 +106,8 @@ object Delite {
         val globalStartNanos = System.nanoTime()
         PerformanceTimer.start("all", false)
         executor.run(executable)
-        EOP.await //await the end of the application program
+        println("awaiting EOP")
+        EOP_Global.await //await the end of the application program
         PerformanceTimer.stop("all", false)
         PerformanceTimer.print("all", globalStart, globalStartNanos)
         // check if we are timing another component
@@ -109,6 +116,8 @@ object Delite {
 	    System.gc()
       }
 
+      println("Done Executing " + numTimes + " Runs")
+      
       if(Config.dumpStats)
         PerformanceTimer.dumpStats()
 
@@ -117,6 +126,10 @@ object Delite {
     catch {
       case i: InterruptedException => abnormalShutdown(); exit(1) //a worker thread threw the original exception        
       case e: Exception => abnormalShutdown(); throw e       
+    }
+    finally {
+      Arguments.args = null
+      Arguments.staticDataMap = null
     }
     
 

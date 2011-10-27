@@ -2,15 +2,14 @@ package ppl.dsl.optiml.vector
 
 import ppl.dsl.optiml.{CudaGenDataStruct, OpenCLGenDataStruct}
 import java.io.{PrintWriter}
-
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.{DeliteOpsExp, DeliteCollectionOpsExp}
 import ppl.delite.framework.datastruct.scala.DeliteCollection
 import scala.reflect.Manifest
-import scala.reflect.SourceContext
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal.{GenerationFailedException, GenericFatCodegen}
 import ppl.dsl.optiml._
+import scala.reflect.SourceContext
 
 trait OptiMLDenseVectorOps extends VectorOps with ppl.dsl.optila.vector.DenseVectorOps {
   this: OptiML =>
@@ -20,7 +19,6 @@ trait OptiMLDenseVectorOps extends VectorOps with ppl.dsl.optila.vector.DenseVec
   // overrides for OptiLA types - we have to override each OptiLA type conversion, otherwise the implicit priorities tie :(
   implicit def denseToVecOverrides[A:Manifest](x: Rep[DenseVector[A]]) = new OptiMLVecOpsOverrides(x)  
 }
-
 
 trait OptiMLVectorViewOps extends VectorOps with ppl.dsl.optila.vector.VectorViewOps {
   this: OptiML =>
@@ -104,6 +102,19 @@ trait VectorOpsExp extends ppl.dsl.optila.vector.VectorOpsExp with VectorOps wit
   /////////////////////
   // object interface
 
+/*
+  def vector_obj_new[A:Manifest](len: Exp[Int], isRow: Exp[Boolean]) = reflectMutable(VectorNew[A](len, isRow)(manifest[VectorImpl[A]])) //XXX
+  def vector_obj_fromseq[A:Manifest](xs: Exp[Seq[A]]) = reflectPure(VectorObjectFromSeq(xs)) //XXX
+  def vector_obj_ones(len: Exp[Int]) = reflectPure(VectorObjectOnes(len))
+  def vector_obj_onesf(len: Exp[Int]) = reflectPure(VectorObjectOnesF(len))
+  def vector_obj_zeros(len: Exp[Int]) = reflectPure(VectorObjectZeros(len))
+  def vector_obj_zerosf(len: Exp[Int]) = reflectPure(VectorObjectZerosF(len))
+  def vector_obj_rand(len: Exp[Int]) = reflectEffect(VectorObjectRand(len)) // somehow causes recursive schedules -- looks like a lazy eval problem: internal IndexVectorConstruct depends on enclosing VectorObjectRand
+  def vector_obj_randf(len: Exp[Int]) = reflectEffect(VectorObjectRandF(len)) // same here
+  def vector_obj_range(start: Exp[Int], end: Exp[Int], stride: Exp[Int], isRow: Exp[Boolean]) = reflectPure(VectorObjectRange(start, end, stride, isRow))
+  def vector_obj_uniform(start: Exp[Double], step_size: Exp[Double], end: Exp[Double], isRow: Exp[Boolean]) = reflectPure(VectorObjectUniform(start, step_size, end, isRow))
+  def vector_obj_flatten[A:Manifest](pieces: Exp[Vector[Vector[A]]]) = reflectPure(VectorObjectFlatten(pieces))
+*/
 
 
   /////////////////////
@@ -190,7 +201,7 @@ trait VectorOpsExpOpt extends ppl.dsl.optila.vector.VectorOpsExp with VectorOpsE
   //     case Def(StreamChunkRow(x, i, offset)) => Some(stream_chunk_elem(x,i,n))
   //     //case Def(StreamChunkRowFusable(x, i, offset)) => Some(stream_chunk_elem(x,i,n)) <-- enabling this will remove the computation altogether
   //     case _ => super.vector_optimize_apply(x,n)
-  //   }  
+  //   }
 }
 
 trait BaseGenVectorOps extends GenericFatCodegen {

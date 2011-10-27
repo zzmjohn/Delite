@@ -9,6 +9,10 @@ import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.dsl.optiml._
 
+import ppl.delite.framework.DeliteApplication
+import ppl.delite.framework.ops.DeliteOpsExp
+import ppl.dsl.optiml._
+
 // TODO: should TrainingSet be a Stream instead of a Matrix?
 
 trait TrainingSetOps extends Variables with OverloadHack {

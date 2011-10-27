@@ -134,17 +134,17 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
             hasOutputSlotTypes = true
             "void"
           case ("cuda", ThinDef(z)) => z match {
-                case op: AbstractLoop[_] =>
-                  hasOutputSlotTypes = true
-            "void"
-                case _ => "void"
+            case op: AbstractLoop[_] =>
+              hasOutputSlotTypes = true
+              "void"
+            case _ => "void"
           }
           case ("opencl", op: AbstractFatLoop) =>
             hasOutputSlotTypes = true
             "void"
           case ("opencl", ThinDef(z)) => z match {
             case op: AbstractLoop[_] =>
-            	hasOutputSlotTypes = true
+              hasOutputSlotTypes = true
               "void"
             case _ => "void"
           }
@@ -302,7 +302,7 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
     emitExecutionOpCommon(id, outputs, inputs, mutableInputs, controlDeps, antiDeps)
     stream.println("},")
   }
-  
+
   def emitSingleTask(id: String, outputs: List[Exp[Any]], inputs: List[Exp[Any]], mutableInputs: List[Exp[Any]], controlDeps: List[Exp[Any]], antiDeps: List[Exp[Any]], sourceContext: Option[SourceContext])
         (implicit stream: PrintWriter, supportedTgt: ListBuffer[String], returnTypes: ListBuffer[Pair[String, String]], outputSlotTypes: HashMap[String, ListBuffer[(String, String)]], metadata: ArrayBuffer[Pair[String,String]]) = {
     stream.print("{\"type\":\"SingleTask\",")

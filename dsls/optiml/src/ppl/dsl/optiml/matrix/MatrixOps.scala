@@ -17,14 +17,12 @@ import ppl.delite.framework.extern.lib._
 trait MatrixOps extends ppl.dsl.optila.matrix.MatrixOps  {
   this: OptiML =>
 
-
 }
 
 
 trait MatrixOpsExp extends ppl.dsl.optila.matrix.MatrixOpsExp with MatrixOps with VariablesExp {
   this: OptiMLExp  =>
   
-
 }
 
 /**
