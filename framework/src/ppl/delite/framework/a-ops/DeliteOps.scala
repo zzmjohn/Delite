@@ -87,8 +87,6 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
    * The base class for most data parallel Delite ops.
    */
   abstract class DeliteOpLoop[A] extends AbstractLoop[A] with DeliteOp[A] {
-    //println("creating DeliteOpLoop with context "+sourceContext)
-    //println("dynamic type of op: "+this.getClass())
     type OpType <: DeliteOpLoop[A]
     def copyBodyOrElse(e: => Def[A]): Def[A] = original.map(p=>mirrorLoopBody(p._2.asInstanceOf[OpType].body,p._1)).getOrElse(e)
     final lazy val v: Sym[Int] = copyTransformedOrElse(_.v)(fresh[Int]).asInstanceOf[Sym[Int]]
@@ -1207,8 +1205,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     val kernelName = symList.map(quote).mkString("")
     val actType = "activation_"+kernelName
     //deliteKernel = false
-    scala.reflect.SourceContext.debug = true
-    stream.println("val " + kernelName + " = new generated.scala.DeliteOpMultiLoop[" + actType + "] {")
+    stream.println("val " + kernelName + " = new generated.scala.DeliteOpMultiLoop[" + actType + "] {"/*}*/)
     // TODO: if there are conditions, the output size is not known (but for now it is known to be smaller than the input size)
     // two options:
     // - combine (reduce step) using concat <-- simpler to implement but slow
@@ -1470,7 +1467,6 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     }
     case op: AbstractLoop[_] => 
       // TODO: we'd like to always have fat loops but currently they are not allowed to have effects
-      println("emitting AbstractLoop: "+op.getClass())
       stream.println("// a *thin* loop follows: " + quote(sym))
       emitFatNode(List(sym), SimpleFatLoop(op.size, op.v, List(op.body)))
 /*    
