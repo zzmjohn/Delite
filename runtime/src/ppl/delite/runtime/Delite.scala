@@ -131,8 +131,6 @@ object Delite {
       Arguments.args = null
       Arguments.staticDataMap = null
     }
-    
-
   }
 
   def loadDeliteDEG(filename: String) = {
