@@ -22,7 +22,13 @@ trait ArraySeqEmitting {
         stream.println("var " + basename + "_buf: Array[" + elemtype + "] = _")
         stream.println("var " + basename + "_size = 0")
         stream.println("var " + basename + "_offset = 0")
-        stream.println("def " + basename + "_buf_init: Unit = {"/*}*/)
+        stream.println("var " + basename + "_chunkIdx: Int = _")
+        stream.println("var " + basename + "_numChunks: Int = _")
+        stream.println("var " + basename + "_activations: Array[activation_" + kernelname + "] = _")
+        
+        stream.println("def " + basename + "_buf_init(chunkIdx: Int, numChunks: Int): Unit = {"/*}*/)
+        stream.println(basename + "_chunkIdx = chunkIdx")
+        stream.println(basename + "_numChunks = numChunks")
         stream.println(basename + "_buf = new Array(128)")
         stream.println(/*{*/"}")
         stream.println("def " + basename + "_buf_append(x: " + elemtype + "): Unit = {"/*}*/)
@@ -36,7 +42,7 @@ trait ArraySeqEmitting {
         stream.println(/*{*/"}")
       }
       def emitInitSubActivation(basename: String, activname: String, chunkIdxVar: String, numChunksVar: String)(implicit stream: PrintWriter) {
-        stream.println(activname + "." + basename + "_buf_init")
+        stream.println(activname + "." + basename + "_buf_init(" + chunkIdxVar + ", " + numChunksVar + ")")
       }
       def emitAddToBuffer(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
         stream.println(prefixSym + basename + "_buf_append(" + elemname + ")")
@@ -46,6 +52,16 @@ trait ArraySeqEmitting {
       }
       def emitPostCombine(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {
         stream.println(activname + "." + basename + "_offset = " + lhsname + "." + basename + "_offset + " + lhsname + "." + basename + "_size")
+        
+        // init first block
+        stream.println("if (%s.%s_chunkIdx == 0) {".format(lhsname, basename))
+        stream.println("%s.%s_activations = new Array(%s.%s_numChunks)".format(lhsname, basename, lhsname, basename))
+        stream.println("%s.%s_activations(0) = %s".format(lhsname, basename, lhsname))
+        stream.println("}")
+        
+        // copy and update the array
+        stream.println("%s.%s_activations = %s.%s_activations".format(activname, basename, lhsname, basename))
+        stream.println("%s.%s_activations(%s.%s_chunkIdx) = %s".format(activname, basename, activname, basename, activname))
       }
       def emitPostProcInit(basename: String, activname: String)(implicit stream: PrintWriter) {
         stream.println("if (" + activname + "." + basename + "_offset > 0) {"/*}*/) // set data array for result object
@@ -58,8 +74,11 @@ trait ArraySeqEmitting {
         stream.println(/*{*/"}")
       }
       def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter) {
+        // initialize the data buffer
+        stream.println("%s.%s_data = %s.%s_activations(%s.%s_numChunks - 1).%s_data".format(activname, basename, activname, basename, activname, basename, basename))
+        
         stream.println("if (" + activname + "." + basename + "_data ne " + activname + "." + basename + "_buf)")
-        stream.println("System.arraycopy(" + activname + "." + basename + "_buf, 0, " + activname + "." + basename + ".unsafeData, " + activname + "." + basename + "_offset, " + activname + "." + basename + "_size)")
+        stream.println("System.arraycopy(" + activname + "." + basename + "_buf, 0, " + activname + "." + basename + "_data, " + activname + "." + basename + "_offset, " + activname + "." + basename + "_size)")
         stream.println("" + activname + "." + basename + "_buf = null")
       }
       def emitPostCombine2(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {

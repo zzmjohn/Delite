@@ -1312,7 +1312,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     }
     def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter) {
       stream.println("if (" + activname + "." + basename + "_data ne " + activname + "." + basename + "_buf)")
-      stream.println("System.arraycopy(" + activname + "." + basename + "_buf, 0, " + activname + "." + basename + ".data, " + activname + "." + basename + "_offset, " + activname + "." + basename + "_size)")
+      stream.println("System.arraycopy(" + activname + "." + basename + "_buf, 0, " + activname + "." + basename + "_data, " + activname + "." + basename + "_offset, " + activname + "." + basename + "_size)")
       stream.println("" + activname + "." + basename + "_buf = null")
     }
     def emitPostCombine2(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {
