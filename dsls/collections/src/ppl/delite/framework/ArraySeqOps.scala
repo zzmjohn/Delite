@@ -49,8 +49,8 @@ self: HashMapOpsExp with ArraySeqEmitting with HashMultiMapEmitting =>
   case class ArraySeqNewRange(len: Exp[Int])(val mV: Manifest[ArraySeqImpl[Int]]) extends Def[ArraySeq[Int]]
   
   /* class interface */
-  def arrayseq_obj_new[T: Manifest](length: Exp[Int]) = reflectPure(ArraySeqNew[T](length)(manifest[ArraySeqImpl[T]]))
-  def arrayseq_obj_new_range(length: Exp[Int]) = reflectPure(ArraySeqNewRange(length)(manifest[ArraySeqImpl[Int]]))
+  def arrayseq_obj_new[T: Manifest](length: Exp[Int]) = reflectMutable(ArraySeqNew[T](length)(manifest[ArraySeqImpl[T]]))
+  def arrayseq_obj_new_range(length: Exp[Int]) = reflectMutable(ArraySeqNewRange(length)(manifest[ArraySeqImpl[Int]]))
   
   /* can-build rules */
   implicit def arraySeqCanBuild[T: Manifest, S: Manifest] = new CanBuild[ArraySeq[T], S, ArraySeq[S]] {

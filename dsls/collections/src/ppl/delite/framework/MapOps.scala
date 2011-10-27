@@ -45,8 +45,8 @@ self: HashMapOpsExp with HashMapEmitting with HashMultiMapEmitting =>
   
   /* implicit rules */
   implicit def mapCanBuild[K: Manifest, V: Manifest, P: Manifest, Q: Manifest]: CanBuild[Map[K, V], (P, Q), Map[P, Q]] = new CanBuild[Map[K, V], (P, Q), Map[P, Q]] {
-    def alloc(source: Exp[Map[K, V]]) = HashMap.apply[P, Q]()
-    def emptyAlloc(source: Exp[Map[K, V]]) = HashMap[P, Q]()
+    def alloc(source: Exp[Map[K, V]]) = reflectEffect(HashMap.apply[P, Q]().asInstanceOf[Def[Map[P, Q]]])
+    def emptyAlloc(source: Exp[Map[K, V]]) = reflectEffect(HashMap[P, Q]().asInstanceOf[Def[Map[P, Q]]])
     def emitterFactory(source: Exp[Map[K, V]]) = hashMapEmitterFactory[K, V]
     def noPrealloc = true
   }

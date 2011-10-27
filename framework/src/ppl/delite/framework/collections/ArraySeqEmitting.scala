@@ -50,13 +50,15 @@ trait ArraySeqEmitting {
       def emitPostProcInit(basename: String, activname: String)(implicit stream: PrintWriter) {
         stream.println("if (" + activname + "." + basename + "_offset > 0) {"/*}*/) // set data array for result object
         stream.println("val len = " + activname + "." + basename + "_offset + " + activname + "." + basename + "_size")
-        stream.println("" + activname + "." + basename + ".unsafeSetData(new Array(len), len)")
+        //stream.println("" + activname + "." + basename + ".unsafeSetData(new Array(len), len)")
+        stream.println(activname + "." + basename + "_data = new Array(len)")
         stream.println(/*{*/"} else {"/*}*/)
-        stream.println("" + activname + "." + basename + ".unsafeSetData(" + activname + "." +basename + "_buf, " + activname + "." + basename + "_size)")
+        //stream.println("" + activname + "." + basename + ".unsafeSetData(" + activname + "." +basename + "_buf, " + activname + "." + basename + "_size)")
+        stream.println(activname + "." + basename + "_data = " + activname + "." + basename + "_buf")
         stream.println(/*{*/"}")
       }
       def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter) {
-        stream.println("if (" + activname + "." + basename + ".unsafeData ne " + activname + "." + basename + "_buf)")
+        stream.println("if (" + activname + "." + basename + "_data ne " + activname + "." + basename + "_buf)")
         stream.println("System.arraycopy(" + activname + "." + basename + "_buf, 0, " + activname + "." + basename + ".unsafeData, " + activname + "." + basename + "_offset, " + activname + "." + basename + "_size)")
         stream.println("" + activname + "." + basename + "_buf = null")
       }
@@ -67,10 +69,10 @@ trait ArraySeqEmitting {
       def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter) {
       }
       def emitDataDeclaration(basename: String, prefix: String, dataname: String)(implicit stream: PrintWriter) {
-        stream.println("val " + dataname + " = " + prefix + basename + "_buf_data")
+        stream.println("val " + dataname + " = " + prefix + basename + "_data")
       }
       def emitInitializeDataStructure(basename: String, prefix: String, collectionname: String, dataname: String)(implicit stream: PrintWriter) {
-        stream.println("%s.unsafeSetData(%s)".format(collectionname, dataname))
+        stream.println("%s.unsafeSetData(%s%s_data, %s%s_size)".format(collectionname, prefix, basename, prefix, basename))
         stream.println("%s".format(collectionname))
       }
     }

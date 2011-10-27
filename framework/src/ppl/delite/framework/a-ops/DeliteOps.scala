@@ -820,7 +820,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     case s: DeliteOpSingleTask[_] if s.requireInputs => syms(s.block) ++ super.syms(e) // super call: add case class syms (iff flag is set)
     case s: DeliteOpSingleTask[_] => syms(s.block)
     case e: DeliteOpExternal[_] => syms(e.allocVal) ++ super.syms(e)
-    case op: DeliteCollectElem[_,_] => syms(op.func) ++ syms(op.cond) ++ syms(op.alloc)
+    case op: DeliteCollectElem[_,_] => syms(op.func) ++ syms(op.cond) ++ syms(op.alloc) ++ syms(op.allocDataStructure)
     case op: DeliteHashElem[_,_,_,_] => syms(op.func) ++ syms(op.cond) ++ syms(op.alloc)
 //    case op: DeliteForeachElem[_] => syms(op.func) ++ syms(op.cond) ++ syms(op.sync)
     case op: DeliteForeachElem[_] => syms(op.func) ++ syms(op.sync)
@@ -835,7 +835,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     case s: DeliteOpSingleTask[_] if s.requireInputs => syms(s.block) ++ super.syms(e) // super call: add case class syms (iff flag is set)
     case s: DeliteOpSingleTask[_] => syms(s.block)
     case e: DeliteOpExternal[_] => syms(e.allocVal) ++ super.syms(e)
-    case op: DeliteCollectElem[_,_] => syms(op.func) ++ syms(op.cond) ++ syms(op.alloc)
+    case op: DeliteCollectElem[_,_] => syms(op.func) ++ syms(op.cond) ++ syms(op.alloc) ++ syms(op.allocDataStructure)
     case op: DeliteHashElem[_,_,_,_] => syms(op.func) ++ syms(op.cond) ++ syms(op.alloc)
 //    case op: DeliteForeachElem[_] => syms(op.func) ++ syms(op.cond) ++ syms(op.sync)
     case op: DeliteForeachElem[_] => syms(op.func) ++ syms(op.sync)
@@ -850,7 +850,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     case s: DeliteOpSingleTask[_] => effectSyms(s.block)
     case e: DeliteOpExternal[_] => effectSyms(e.allocVal) /*++ super.effectSyms(e) */
     case op: DeliteHashElem[_,_,_,_] => effectSyms(op.func) ++ effectSyms(op.cond) ++ effectSyms(op.alloc)
-    case op: DeliteCollectElem[_,_] => effectSyms(op.func) ++ effectSyms(op.cond) ++ syms(op.aV) ++ effectSyms(op.alloc)
+    case op: DeliteCollectElem[_,_] => effectSyms(op.func) ++ effectSyms(op.cond) ++ syms(op.aV) ++ effectSyms(op.alloc) ++ effectSyms(op.allocDataStructure)
 //    case op: DeliteForeachElem[_] => effectSyms(op.func) ++ effectSyms(op.cond) ++ effectSyms(op.sync)
     case op: DeliteForeachElem[_] => effectSyms(op.func) ++ effectSyms(op.sync)
     case op: DeliteReduceElem[_] => List(op.rV._1, op.rV._2) ++ effectSyms(op.func) ++ effectSyms(op.cond) ++ effectSyms(op.zero) ++ effectSyms(op.rFunc)
@@ -865,7 +865,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     case s: DeliteOpSingleTask[_] if s.requireInputs => freqNormal(s.block) ++ super.symsFreq(e) // super call: add case class syms (iff flag is set)
     case s: DeliteOpSingleTask[_] => freqNormal(s.block)
     case e: DeliteOpExternal[_] => freqNormal(e.allocVal) ++ super.symsFreq(e)
-    case op: DeliteCollectElem[_,_] => freqNormal(op.alloc) ++ freqHot(op.cond) ++ freqHot(op.func)
+    case op: DeliteCollectElem[_,_] => freqNormal(op.alloc) ++ freqHot(op.cond) ++ freqHot(op.func) ++ freqNormal(op.allocDataStructure)
     case op: DeliteHashElem[_,_,_,_] => freqNormal(op.alloc) ++ freqHot(op.cond) ++ freqHot(op.func)
 //    case op: DeliteForeachElem[_] => freqNormal(op.sync) ++ freqHot(op.cond) ++ freqHot(op.func)
     case op: DeliteForeachElem[_] => freqNormal(op.sync) ++ freqHot(op.func)
@@ -921,7 +921,7 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
   override def copySyms(e: Any): List[Sym[Any]] = e match {
     case s: DeliteOpSingleTask[_] => Nil
     case e: DeliteOpExternal[_] => syms(e.allocVal)
-    case op: DeliteCollectElem[_,_] => syms(op.alloc)
+    case op: DeliteCollectElem[_,_] => syms(op.alloc) ++ syms(op.allocDataStructure)
     case op: DeliteHashElem[_,_,_,_] => syms(op.alloc)
     case op: DeliteForeachElem[_] => Nil
     case op: DeliteReduceElem[_] => Nil
@@ -1303,13 +1303,15 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     def emitPostProcInit(basename: String, activname: String)(implicit stream: PrintWriter) {
       stream.println("if (" + activname + "." + basename + "_offset > 0) {"/*}*/) // set data array for result object
       stream.println("val len = " + activname + "." + basename + "_offset + " + activname + "." + basename + "_size")
-      stream.println("" + activname + "." + basename + ".unsafeSetData(new Array(len), len)")
+      //stream.println("" + activname + "." + basename + ".unsafeSetData(new Array(len), len)")
+      stream.println(activname + "." + basename + "_data = new Array(len)")
       stream.println(/*{*/"} else {"/*}*/)
-      stream.println("" + activname + "." + basename + ".unsafeSetData(" + activname + "." +basename + "_buf, " + activname + "." + basename + "_size)")
+      //stream.println("" + activname + "." + basename + ".unsafeSetData(" + activname + "." +basename + "_buf, " + activname + "." + basename + "_size)")
+      stream.println(activname + "." + basename + "_data = " + activname + "." + basename + "_buf")
       stream.println(/*{*/"}")
     }
     def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter) {
-      stream.println("if (" + activname + "." + basename + ".data ne " + activname + "." + basename + "_buf)")
+      stream.println("if (" + activname + "." + basename + "_data ne " + activname + "." + basename + "_buf)")
       stream.println("System.arraycopy(" + activname + "." + basename + "_buf, 0, " + activname + "." + basename + ".data, " + activname + "." + basename + "_offset, " + activname + "." + basename + "_size)")
       stream.println("" + activname + "." + basename + "_buf = null")
     }
@@ -1323,6 +1325,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
       stream.println("val " + dataname + " = " + prefix + basename + "_data")
     }
     def emitInitializeDataStructure(basename: String, prefix: String, collectionname: String, dataname: String)(implicit stream: PrintWriter) {
+      // emitted directly
     }
   }
   
@@ -1685,7 +1688,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
           stream.println(quote(getBlockResult(elem.alloc)))
         } else {
           emitBlock(elem.allocDataStructure)
-          emitter.emitInitializeDataStructure(quote(sym), "__act.", quote(elem.allocDataStructure), quote(elem.aV))
+          emitter.emitInitializeDataStructure(quote(sym), "__act.", quote(getBlockResult(elem.allocDataStructure)), quote(elem.aV))
         }
         stream.println(/*{*/"}")
       case (sym, elem: DeliteForeachElem[_]) =>

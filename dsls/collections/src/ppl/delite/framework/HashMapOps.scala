@@ -47,8 +47,8 @@ self: HashMapOpsExp with HashMapEmitting with ArraySeqOps with ArraySeqEmitting 
   
   /* implicit rules */
   implicit def hashMapCanBuild[K: Manifest, V: Manifest, P: Manifest, Q: Manifest]: CanBuild[HashMap[K, V], (P, Q), HashMap[P, Q]] = new CanBuild[HashMap[K, V], (P, Q), HashMap[P, Q]] {
-    def alloc(source: Exp[HashMap[K, V]]) = HashMap.apply[P, Q]()
-    def emptyAlloc(source: Exp[HashMap[K, V]]) = HashMap[P, Q]()
+    def alloc(source: Exp[HashMap[K, V]]) = reflectMutable(HashMap.apply[P, Q]().asInstanceOf[Def[HashMap[P, Q]]])
+    def emptyAlloc(source: Exp[HashMap[K, V]]) = reflectMutable(HashMap[P, Q]().asInstanceOf[Def[HashMap[P, Q]]])
     def emitterFactory(source: Exp[HashMap[K, V]]) = hashMapEmitterFactory[K, V]
     def noPrealloc = true
   }
