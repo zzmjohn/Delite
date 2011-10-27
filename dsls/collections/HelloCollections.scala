@@ -30,8 +30,8 @@ trait HelloCollections extends CollectionsApplication {
     println(xs)
     val ys = ArraySeq.range(6).filter(x => x % 2 == 0)
     println(ys)
-    // val ms = HashMap.range(6).map(x => x)
-    // println(ms)
+    val ms = HashMap.range(6).map(x => x)
+    println(ms)
     // val mg = xs.groupBy(x => (x % 2, x))
     // println(mg)
   }

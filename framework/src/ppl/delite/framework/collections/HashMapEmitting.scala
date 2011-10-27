@@ -45,6 +45,12 @@ trait HashMapEmittingBase {
         stream.println("var " + basename + "_blkbits: Int = _")
         stream.println("var " + basename + "_offset: Int = 0")
         stream.println("var " + basename + "_activations: Array[activation_" + kernelname + "] = _")
+        // the internal data structures of the final hash table:
+        stream.println("var " + basename + "_indices: Array[Int] = _")
+        stream.println("var " + basename + "_blocksizes: Array[Int] = _")
+        stream.println("var " + basename + "_keys: Array[" + keytype + "] = _")
+        stream.println("var " + basename + "_values: Array[" + valtype + "] = _")
+        stream.println("var " + basename + "_size: Int = _")
         
         emitAdditionalDefs(basename, valtype)
         
@@ -170,12 +176,19 @@ trait HashMapEmittingBase {
         stream.println("val elemest = " + activname + "." + basename + "_offset + " + activname + "." + basename + "_bufsz")
         stream.println("val tablesize = %s.%s_nextPow2((elemest / 0.4f).toInt + 1)".format(activname, basename))
         stream.println("val indextable = Array.fill[Int](tablesize)(-1)")
-        stream.println("%s.%s.unsafeSetInternal(indextable, %s.%s.unsafeKeys, %s.%s.unsafeValues, 0)".format(activname, basename, activname, basename, activname, basename))
-        stream.println("%s.%s.unsafeSetBlockSizes(new Array[Int](%s.%s_blocks * 32))".format(activname, basename, activname, basename))
+        //stream.println("%s.%s.unsafeSetInternal(indextable, %s.%s.unsafeKeys, %s.%s.unsafeValues, 0)".format(activname, basename, activname, basename, activname, basename))
+        //stream.println("%s.%s.unsafeSetBlockSizes(new Array[Int](%s.%s_blocks * 32))".format(activname, basename, activname, basename))
+        stream.println("%s.%s_indices = indextable".format(activname, basename))
+        stream.println("%s.%s_blocksizes = new Array[Int](%s.%s_blocks * 32)".format(activname, basename, activname, basename))
         //stream.println("Console.err.println('atProcInit, indextable.toList)")
         stream.println("} else {")
-        stream.println("%s.%s.unsafeSetInternal(%s.%s_buf_ind, %s.%s_buf_keys, %s.%s_buf_vals, %s.%s_bufsz)".format(activname, basename, activname, basename, activname, basename, activname, basename, activname, basename))
-        stream.println("%s.%s.unsafeSetBlockSizes(new Array[Int](%s.%s_blocks * 32))".format(activname, basename, activname, basename))
+        // stream.println("%s.%s.unsafeSetInternal(%s.%s_buf_ind, %s.%s_buf_keys, %s.%s_buf_vals, %s.%s_bufsz)".format(activname, basename, activname, basename, activname, basename, activname, basename, activname, basename))
+        // stream.println("%s.%s.unsafeSetBlockSizes(new Array[Int](%s.%s_blocks * 32))".format(activname, basename, activname, basename))
+        stream.println("%s.%s_indices = %s.%s_buf_ind".format(activname, basename, activname, basename))
+        stream.println("%s.%s_keys = %s.%s_buf_keys".format(activname, basename, activname, basename))
+        stream.println("%s.%s_values = %s.%s_buf_vals".format(activname, basename, activname, basename))
+        stream.println("%s.%s_size = %s.%s_bufsz".format(activname, basename, activname, basename))
+        stream.println("%s.%s_blocksizes = new Array[Int](%s.%s_blocks * 32)".format(activname, basename, activname, basename))
         stream.println("}")
         
         // stream.println("Console.err.println('atProcInit, %s.%s)".format(activname, basename))
@@ -183,13 +196,19 @@ trait HashMapEmittingBase {
         //stream.println("println(\"----------------------------------------------\")")
       }
       def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter) {
+        // read in indices and blocksizes from the last chunk
+        stream.println("%s.%s_indices = %s.%s_activations(%s.%s_numChunks - 1).%s_indices".format(activname, basename, activname, basename, activname, basename, basename))
+        stream.println("%s.%s_blocksizes = %s.%s_activations(%s.%s_numChunks - 1).%s_blocksizes".format(activname, basename, activname, basename, activname, basename, basename))
+        
         // process all chunks
         stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
         stream.println("val mychunk = %s.%s_chunkIdx".format(activname, basename))
         stream.println("var chidx = 0")
-        stream.println("val targetindices = %s.%s.unsafeIndices".format(activname, basename))
+        //stream.println("val targetindices = %s.%s.unsafeIndices".format(activname, basename))
+        stream.println("val targetindices = %s.%s_indices".format(activname, basename))
+        // stream.println("val targetsizes = %s.%s.unsafeBlockSizes".format(activname, basename))
+        stream.println("val targetsizes = %s.%s_blocksizes".format(activname, basename))
         // stream.println("Console.err.println('previous, %s.%s)".format(activname, basename))
-        stream.println("val targetsizes = %s.%s.unsafeBlockSizes".format(activname, basename))
         stream.println("val relbits = Integer.numberOfTrailingZeros(targetindices.length / 2)".format(basename))
         stream.println("while (chidx < %s.%s_numChunks) {".format(activname, basename))
         stream.println("val act = %s.%s_activations(chidx)".format(activname, basename))
@@ -262,8 +281,8 @@ trait HashMapEmittingBase {
         stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
         // 1) put all the spills in proper blocks, and update the count
         stream.println("var chidx = 0")
-        stream.println("val targetindices = %s.%s.unsafeIndices".format(activname, basename))
-        stream.println("val targetsizes = %s.%s.unsafeBlockSizes".format(activname, basename))
+        stream.println("val targetindices = %s.%s_indices".format(activname, basename))
+        stream.println("val targetsizes = %s.%s_blocksizes".format(activname, basename))
         stream.println("while (chidx < %s.%s_numChunks) {".format(activname, basename))
         stream.println("val curract = %s.%s_activations(chidx)".format(activname, basename))
         stream.println("val relbits = Integer.numberOfTrailingZeros(targetindices.length / 2)")
@@ -314,22 +333,31 @@ trait HashMapEmittingBase {
         
         // 3) allocate the data table and set size
         // stream.println("scala.Console.err.println(Thread.currentThread, elemcount, %s.%s)".format(activname, basename))
-        stream.println("%s.%s.unsafeSetKeys(new Array((1.25 * elemcount).toInt))".format(activname, basename))
-        stream.println("%s.%s.unsafeSetValues(new Array((1.25 * elemcount).toInt))".format(activname, basename))
-        stream.println("%s.%s.unsafeSetSize(elemcount)".format(activname, basename))
-        stream.println("%s.%s.unsafeSetBlockSizes(null)".format(activname, basename))
+        // stream.println("%s.%s.unsafeSetKeys(new Array((1.25 * elemcount).toInt))".format(activname, basename))
+        // stream.println("%s.%s.unsafeSetValues(new Array((1.25 * elemcount).toInt))".format(activname, basename))
+        // stream.println("%s.%s.unsafeSetSize(elemcount)".format(activname, basename))
+        // stream.println("%s.%s.unsafeSetBlockSizes(null)".format(activname, basename))
+        stream.println("%s.%s_keys = new Array((1.25 * elemcount).toInt)".format(activname, basename))
+        stream.println("%s.%s_values = new Array((1.25 * elemcount).toInt)".format(activname, basename))
+        stream.println("%s.%s_size = elemcount".format(activname, basename))
+        stream.println("%s.%s_blocksizes = null".format(activname, basename))
         stream.println("")
         stream.println("}")
         //stream.println("println(\"-------------------------------------------\")")
         //stream.println("println(%s.%s)".format(activname, basename))
       }
       def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter) {
+        stream.println("%s.%s_keys = %s.%s_activations(%s.%s_numChunks - 1).%s_keys".format(activname, basename, activname, basename, activname, basename, basename))
+        stream.println("%s.%s_values = %s.%s_activations(%s.%s_numChunks - 1).%s_values".format(activname, basename, activname, basename, activname, basename, basename))
+        stream.println("%s.%s_size = %s.%s_activations(%s.%s_numChunks - 1).%s_size".format(activname, basename, activname, basename, activname, basename, basename))
+        stream.println("%s.%s_blocksizes = %s.%s_activations(%s.%s_numChunks - 1).%s_blocksizes".format(activname, basename, activname, basename, activname, basename, basename))
+        
         // update the references to the data table and hashcodes in each block
         stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
         // go through your blocks, copy each element into the data table, and store its hashcode
-        stream.println("val tindices = %s.%s.unsafeIndices".format(activname, basename))
-        stream.println("val tkeys = %s.%s.unsafeKeys".format(activname, basename))
-        stream.println("val tvals = %s.%s.unsafeValues".format(activname, basename))
+        stream.println("val tindices = %s.%s_indices".format(activname, basename))
+        stream.println("val tkeys = %s.%s_keys".format(activname, basename))
+        stream.println("val tvals = %s.%s_values".format(activname, basename))
         //stream.println("println(tdata)")
         stream.println("var blkidx = %s.%s_chunkIdx".format(activname, basename))
         stream.println("var datapos = %s.%s_offset".format(activname, basename))
@@ -359,10 +387,10 @@ trait HashMapEmittingBase {
         //stream.println("println(%s.%s)".format(activname, basename))
       }
       def emitDataDeclaration(basename: String, prefix: String, dataname: String)(implicit stream: PrintWriter) {
-        stream.println("val " + dataname + " = " + prefix + basename + "_data")
+        //stream.println("val " + basename + "_ = " + prefix + basename + "_data")
       }
       def emitInitializeDataStructure(basename: String, prefix: String, collectionname: String, dataname: String)(implicit stream: PrintWriter) {
-        stream.println("%s.unsafeSetData(%s%s_data, %s%s_size)".format(collectionname, prefix, basename, prefix, basename))
+        stream.println("%s.unsafeSetInternal(%s%s_indices, %s%s_keys, %s%s_values, %s%s_size)".format(collectionname, prefix, basename, prefix, basename, prefix, basename, prefix, basename))
         stream.println("%s".format(collectionname))
       }
     }

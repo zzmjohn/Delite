@@ -74,7 +74,7 @@ trait ArraySeqEmitting {
         stream.println(/*{*/"}")
       }
       def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter) {
-        // initialize the data buffer
+        // initialize the data buffer by setting it to the data buffer of the last chunk
         stream.println("%s.%s_data = %s.%s_activations(%s.%s_numChunks - 1).%s_data".format(activname, basename, activname, basename, activname, basename, basename))
         
         stream.println("if (" + activname + "." + basename + "_data ne " + activname + "." + basename + "_buf)")
