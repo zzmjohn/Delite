@@ -27,8 +27,7 @@ class StaticSchedule(val resources: Array[ArrayDeque[DeliteExecutable]]) {
 
 object PartialSchedule {
   def apply(numResources: Int) = {
-    val r = new Array[ArrayDeque[DeliteOP]](numResources)
-    for (i <- 0 until numResources) r(i) = new ArrayDeque[DeliteOP]
+    val r = Array.fill(numResources)(new ArrayDeque[DeliteOP])
     new PartialSchedule(r)
   }
 
