@@ -173,7 +173,7 @@ trait HashMapEmittingBase {
         stream.println("%s.%s_activations(%s.%s_chunkIdx) = %s".format(activname, basename, activname, basename, activname))
       }
       def emitPostProcInit(basename: String, activname: String)(implicit stream: PrintWriter) {
-        stream.println("if (" + activname + "." + basename + "_numChunks > 0) {")
+        stream.println("if (" + activname + "." + basename + "_numChunks > 1) {")
         stream.println("val elemest = " + activname + "." + basename + "_offset + " + activname + "." + basename + "_bufsz")
         stream.println("val tablesize = %s.%s_nextPow2((elemest / 0.4f).toInt + 1)".format(activname, basename))
         stream.println("val indextable = Array.fill[Int](tablesize)(-1)")
@@ -198,8 +198,10 @@ trait HashMapEmittingBase {
       }
       def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter) {
         // read in indices and blocksizes from the last chunk
+        stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
         stream.println("%s.%s_indices = %s.%s_activations(%s.%s_numChunks - 1).%s_indices".format(activname, basename, activname, basename, activname, basename, basename))
         stream.println("%s.%s_blocksizes = %s.%s_activations(%s.%s_numChunks - 1).%s_blocksizes".format(activname, basename, activname, basename, activname, basename, basename))
+        stream.println("}")
         
         // process all chunks
         stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
@@ -348,10 +350,12 @@ trait HashMapEmittingBase {
         //stream.println("println(%s.%s)".format(activname, basename))
       }
       def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter) {
+        stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
         stream.println("%s.%s_keys = %s.%s_activations(%s.%s_numChunks - 1).%s_keys".format(activname, basename, activname, basename, activname, basename, basename))
         stream.println("%s.%s_values = %s.%s_activations(%s.%s_numChunks - 1).%s_values".format(activname, basename, activname, basename, activname, basename, basename))
         stream.println("%s.%s_size = %s.%s_activations(%s.%s_numChunks - 1).%s_size".format(activname, basename, activname, basename, activname, basename, basename))
         stream.println("%s.%s_blocksizes = %s.%s_activations(%s.%s_numChunks - 1).%s_blocksizes".format(activname, basename, activname, basename, activname, basename, basename))
+        stream.println("}")
         
         // update the references to the data table and hashcodes in each block
         stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))

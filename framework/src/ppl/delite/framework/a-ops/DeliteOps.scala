@@ -1250,8 +1250,11 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         elem.emitterFactory.get.scala.emitInitializeDataStructure(quote(sym), "", quote(getBlockResult(elem.alloc)), quote(sym) + "_data")
         stream.println("}")
       case (sym, elem: DeliteCollectElem[_,_]) =>
-        emitValDef(elem.aV, quote(sym) + "_data")
-        elem.emitterFactory.map(_.scala).getOrElse(standardScalaEmitter).emitDataDeclaration(quote(sym), "", quote(sym) + "_data")
+        if (elem.emitterFactory.isEmpty) {
+          emitValDef(elem.aV, quote(sym) + "_data")
+        } else {
+          elem.emitterFactory.map(_.scala).getOrElse(standardScalaEmitter).emitDataDeclaration(quote(sym), "", quote(sym) + "_data")
+        }
         stream.println("val " + quote(sym) + " = {"/*}*/)
         if (elem.emitterFactory.isEmpty) {
           emitBlock(elem.alloc) 
@@ -1333,7 +1336,9 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
       stream.println(/*{*/"}")
     }
     def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter) {
+      stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
       stream.println("%s.%s_data = %s.%s_activations(%s.%s_numChunks - 1).%s_data".format(activname, basename, activname, basename, activname, basename, basename))
+      stream.println("}")
       
       stream.println("if (" + activname + "." + basename + "_data ne " + activname + "." + basename + "_buf)")
       stream.println("System.arraycopy(" + activname + "." + basename + "_buf, 0, " + activname + "." + basename + "_data, " + activname + "." + basename + "_offset, " + activname + "." + basename + "_size)")
