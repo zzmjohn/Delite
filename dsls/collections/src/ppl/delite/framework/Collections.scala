@@ -10,6 +10,7 @@ import ppl.delite.framework.ops._
 import codegen.delite.overrides._
 import codegen.scala.TargetScala
 import java.io.File
+import java.io.PrintWriter
 
 
 
@@ -21,7 +22,13 @@ with MapOps
 with HashMapOps
 with ArraySeqEmitting
 with HashMapEmitting
-with HashMultiMapEmitting
+with HashMultiMapEmitting {
+  def tic(deps: Rep[Any]*) = profile_start(deps)
+  def toc(deps: Rep[Any]*) = profile_stop(deps)
+
+  def profile_start(deps: Seq[Rep[Any]]): Rep[Unit]
+  def profile_stop(deps: Seq[Rep[Any]]): Rep[Unit]
+}
 
 
 trait CollectionsOpsExp
@@ -32,7 +39,13 @@ with ArraySeqEmitting
 with MapOpsExp
 with HashMapOpsExp
 with HashMapEmitting
-with HashMultiMapEmitting
+with HashMultiMapEmitting {
+  case class ProfileStart(deps: List[Exp[Any]]) extends Def[Unit]
+  case class ProfileStop(deps: List[Exp[Any]]) extends Def[Unit]
+
+  def profile_start(deps: Seq[Exp[Any]]) = reflectEffect(ProfileStart(deps.toList))
+  def profile_stop(deps: Seq[Exp[Any]]) = reflectEffect(ProfileStop(deps.toList))
+}
 
 
 trait ScalaGenCollectionsOps
@@ -43,8 +56,18 @@ with ScalaGenMapOps
 with ScalaGenHashMapOps
 {
   val IR: CollectionsOpsExp
+  import IR._
+  
+  override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = {
+    rhs match {
+      case ProfileStart(deps) =>
+        emitValDef(sym, "ppl.delite.runtime.profiler.PerformanceTimer.start(\"app\", true)")
+      case ProfileStop(deps) =>
+        emitValDef(sym, "{ ppl.delite.runtime.profiler.PerformanceTimer.stop(\"app\", true); ppl.delite.runtime.profiler.PerformanceTimer.totalTime(\"app\") }")
+      case _ => super.emitNode(sym, rhs)
+    }
+  }
 }
-
 
 
 trait CollScalaOpsPkg extends Base

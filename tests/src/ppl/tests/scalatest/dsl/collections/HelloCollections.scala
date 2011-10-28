@@ -9,6 +9,23 @@ import ppl.tests.scalatest._
 
 
 
+trait BasicExamples extends CollectionsApplication with DeliteTestModule {
+  def main() {
+    val xs = ArraySeq.range(6).map(x => x)
+    println(xs)
+    val ys = ArraySeq.range(6).filter(x => x % 2 == 0)
+    println(ys)
+    val ms = HashMap.range(6).map(x => x)
+    println(ms)
+    val mg = ArraySeq.range(6).groupBy(x => x % 2)
+    println(mg)
+  }
+}
+
+
+object BasicExamplesRunner extends CollectionsApplicationRunner with BasicExamples with DeliteTestRunner
+
+
 trait HashMapMap extends CollectionsApplication with DeliteTestModule {
   def main() {
     implicit val collector = ArrayBuffer[Boolean]()

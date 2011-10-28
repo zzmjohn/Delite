@@ -9,31 +9,20 @@ import ppl.delite.framework.collections._
 // HashMap.fill[Int, String](xs)(x => x.toString)
 trait HelloCollections extends CollectionsApplication {
   def main() {
-    // val xs = ArraySeq[Int](6)
-    // println("hello array: " + xs.size)
-    // println("Now printing in foreach.")
-    // for (x <- xs) println(x)
-    // println("Now mapping and printing in foreach.")
-    // val ys = xs.map(_ + 1)
-    // for (y <- ys) println(y)
-    // println("Now some filtering.")
-    // val zs = ys.filter(_ % 2 == 1)
-    // println("Elements left after filter: " + zs.size)
-    // for (z <- zs) println(z)
+    // val xs = ArraySeq.range(6).map(x => x)
+    // println(xs)
+    // val ys = ArraySeq.range(6).filter(x => x % 2 == 0)
+    // println(ys)
+    // val ms = HashMap.range(6).map(x => x)
+    // println(ms)
+    // val mg = ArraySeq.range(6).groupBy(x => x % 2)
+    // println(mg)
     
-    // xs.map({ x => (x, x) })(hashMapCanBuild, manifest[(Int, Int)], manifest[HashMapImpl[Int, Int]])
-    //val ms = HashMap[Int, String]()
-    // val ms = HashMap.range(256)
-    // val ms2 = ms.map(kv => kv)
+    val xs = HashMap.range(25000)
     
-    val xs = ArraySeq.range(6).map(x => x)
-    println(xs)
-    val ys = ArraySeq.range(6).filter(x => x % 2 == 0)
-    println(ys)
-    val ms = HashMap.range(6).map(x => x)
-    println(ms)
-    val mg = ArraySeq.range(6).groupBy(x => x % 2)
-    println(mg)
+    tic(xs)
+    val ys = xs.map(x => x)
+    toc(ys)
   }
 }
 
