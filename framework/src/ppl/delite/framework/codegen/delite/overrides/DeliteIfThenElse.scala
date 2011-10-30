@@ -104,7 +104,6 @@ trait DeliteScalaGenIfThenElse extends ScalaGenEffect with DeliteBaseGenIfThenEl
       }
       stream.println("}")
       //deliteKernel = save
-
     case _ => super.emitNode(sym, rhs)
   }
 
@@ -151,7 +150,7 @@ trait DeliteScalaGenIfThenElse extends ScalaGenEffect with DeliteBaseGenIfThenEl
   }
 
   def wrapMethod(sym: Sym[Any], block: Block[Any], postfix: String)(implicit stream: PrintWriter) = {
-    stream.println("def " + quote(sym) + postfix + "(): " + remap(getBlockResult(block).Type) + " = {")
+    stream.println("def " + quote(sym) + postfix + "(): " + stripGen(getBlockResult(block).Type) + " = {")
     emitBlock(block)
     stream.println(quote(getBlockResult(block)))
     stream.println("}")
