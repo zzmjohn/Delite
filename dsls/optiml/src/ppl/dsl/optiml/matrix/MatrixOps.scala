@@ -648,14 +648,24 @@ trait MatrixOpsExp extends MatrixOps with VariablesExp {
     val size = x.numRows
     val zero = EmptyVector[A]
     
-    lazy val body: Def[Vector[A]] = copyBodyOrElse(DeliteReduceElem[Vector[A]](
-      func = reifyEffects(x(v)),
-      Nil,
-      zero = reifyEffects(this.zero),
-      rV = this.rV,
-      rFunc = reifyEffects(this.func(rV._1, rV._2)),
-      true
-    ))
+    lazy val body: Def[Vector[A]] = copyBodyOrElse({
+      var g: Exp[Gen[Vector[A]]] = null
+      val y: Block[Gen[Vector[A]]] = reifyEffects {
+        // TODO (VJ) fix priority 1
+        g = null
+//        g = Yield(List(v), x(v))
+	      g
+      }
+
+      DeliteReduceElem[Vector[A]](
+        gen = g,
+	      func = y,
+        zero = reifyEffects(this.zero),
+        rV = this.rV,
+        rFunc = reifyEffects(this.func(rV._1, rV._2)),
+        true
+      )
+    })
   }
 
   case class MatrixCount[A:Manifest](in: Exp[Matrix[A]], cond: Exp[A] => Exp[Boolean]) 

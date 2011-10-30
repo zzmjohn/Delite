@@ -683,6 +683,7 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
     def func = (a,b) => a ++ b    
   } 
 
+  // TODO (VJ) replace with DeliteOpFlatMap
   case class VectorFlatMap[A:Manifest,B:Manifest](in: Exp[Vector[A]], map: Exp[A] => Exp[Vector[B]])
     extends DeliteOpMapReduce[A,Vector[B]] {
 

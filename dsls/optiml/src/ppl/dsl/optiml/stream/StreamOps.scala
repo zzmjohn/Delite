@@ -268,17 +268,26 @@ trait StreamOpsExpOpt extends StreamOpsExp {
       printerr("warning: fusable chunked stream rows are currently not supported FIXME")
       
       return super.stream_init_and_chunk_row(st,row,offset)
-      
+
       val r: Def[StreamRow[A]] = new StreamChunkRowFusable(st, row, offset) {
         val size = numCols
-        val body: Def[StreamRow[A]] = new DeliteCollectElem[A,StreamRow[A]](
-          aV = fresh[Array[A]],
-          alloc = reifyEffects(stream_chunk_row(st,row,offset)), // <--- will ignore the actual data array. stream rows do not have unsafeSetData
-          func = reifyEffects(stfunc(offset*chunkSize+row,v))
-        )
+        val body: Def[StreamRow[A]] = copyBodyOrElse({
+          var g: Exp[Gen[A]] = null
+          val y: Block[Gen[A]] = reifyEffects {
+            // TODO VJ fix
+//            g = Yield(List(v), xstfunc(offset * chunkSize + row, v))
+            g = null
+            g
+          }
+          DeliteCollectElem[A, StreamRow[A]](
+            aV = fresh[Array[A]],
+            alloc = reifyEffects(stream_chunk_row(st, row, offset)), // <--- will ignore the actual data array. stream rows do not have unsafeSetData
+            gen = g,
+            func = y
+          )
+        })
       }
       r
-      
     case _ => super.stream_init_and_chunk_row(st,row,offset)
   }
   
