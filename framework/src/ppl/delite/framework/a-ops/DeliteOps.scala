@@ -255,7 +255,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
       var g: Exp[Gen[B]] = null
       val y: Block[Gen[B]] = reifyEffects {
         val x = dc_apply(in, v)
-        g = Yield(List(v), this.func(x))
+        g = toAtom(Yield(List(v), this.func(x)))
         g
       }
 
@@ -289,7 +289,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
       var g: Exp[Gen[B]] = null
       val y: Block[Gen[B]] = reifyEffects {
         val x = dc_apply(in, v)
-        g = Yield(List(v), this.func(x))
+        g = toAtom(Yield(List(v), this.func(x)))
         if (cond(x)) g else Skip(List(v))
       }
 
@@ -1005,32 +1005,6 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
     tp.sym
   }
 
-  /*def plugInHelper[A,T:Manifest,U:Manifest](oldGen: Exp[Gen[A]], context: Block[Gen[T]], plug: Block[Gen[U]]): Block[Gen[U]] = context match {
-    case Block(`oldGen`) => plug
-    case Block(Def(IfThenElse(c,a,b@Block(Def(Skip(x)))))) => Block(toAtom2(IfThenElse(c,plugInHelper(oldGen,a,plug),Block(toAtom2(Skip(x))))))
-    case Block(Def(SimpleLoop(sh,x,ForeachElem(y)))) => Block(toAtom2(SimpleLoop(sh,x,ForeachElem(plugInHelper(oldGen,y,plug)))))
-    case Block(Def(x)) => error("Missed me => " + x + " should find " + oldGen); throw new RuntimeException("Missed me => " + x + " should find " + oldGen)
-  }
-
-  override def applyPlugIntoContext(d: Def[Any], r: Def[Any], newGen: Exp[Any]) = (d, r) match {
-    case (ArrayElem(g, a), ArrayElem(g2, b)) => ArrayElem(newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
-    case (ReduceElem(g, a), ArrayElem(g2, b)) => ArrayElem(newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
-    case (ArrayElem(g, a), ReduceElem(g2, b)) => ReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b))
-    case (ReduceElem(g, a), ReduceElem(g2, b)) => ReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b))
-    case _ => super.applyPlugIntoContext(d, r, newGen)
-  }
-
-  override def applyExtendGenerator[A](d: Def[Any], r: Def[Any]) = (d, r) match {
-    case (ArrayElem(g@Def(Yield(varList, _)), _), ArrayElem(g2@Def(Yield(l, y)), _)) =>
-      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
-    case (ReduceElem(g@Def(Yield(varList, _)), _), ReduceElem(g2@Def(Yield(l, y)), _)) =>
-      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
-    case (ArrayElem(g@Def(Yield(varList, _)), _), ReduceElem(g2@Def(Yield(l, y)), _)) =>
-      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
-    case (ReduceElem(g@Def(Yield(varList, _)), _), ArrayElem(g2@Def(Yield(l, y)), _)) =>
-      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
-  }*/
-
   def plugInHelper[A,T:Manifest,U:Manifest](oldGen: Exp[Gen[A]], context: Block[Gen[T]], plug: Block[Gen[U]]): Block[Gen[U]] = context match {
     case Block(`oldGen`) => plug
     case Block(Def(IfThenElse(c,a,b@Block(Def(Skip(x)))))) => Block(toAtom2(IfThenElse(c,plugInHelper(oldGen,a,plug),Block(toAtom2(Skip(x))))))
@@ -1039,20 +1013,34 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
   }
 
   override def applyPlugIntoContext(d: Def[Any], r: Def[Any], newGen: Exp[Any]) = (d, r) match {
-//    case (DeliteCollectElem(g, a, _), DeliteCollectElem(g2, b, _)) => DeliteCollectElem(newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
-//    case (DeliteReduceElem(g, a, _, _, _, _), DeliteCollectElem(g2, b, _)) => DeliteCollectElem(newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
-//    case (DeliteCollectElem(g, a, _), DeliteReduceElem(g2, b, _, _, _, _)) => DeliteReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b))
-//    case (DeliteReduceElem(g, a, _, _, _, _), DeliteReduceElem(g2, b, _, _, _, _)) => DeliteReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b))
+    // case (ArrayElem(g, a), ArrayElem(g2, b)) => ArrayElem(newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
+    case (DeliteCollectElem(av, alloc, g, a), DeliteCollectElem(av2, alloc2, g2, b)) =>
+      DeliteCollectElem(av, alloc, newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
+
+    // case (ReduceElem(g, a), ArrayElem(g2, b)) => ArrayElem(newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
+    case (DeliteReduceElem(g, a, _, _, _, _), DeliteCollectElem(av, alloc, g2, b)) =>
+      DeliteCollectElem(av, alloc, newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
+
+    // TODO(VJ) rFunc can not stay the same. See the tests and fix the code generation and plugging!!!
+    // case (ArrayElem(g, a), ReduceElem(g2, b)) => ReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b))
+    case (DeliteCollectElem(_, _, g, a), DeliteReduceElem(g2, b, zero, rV, rFunc, stripFirst)) =>
+      DeliteReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b), zero, rV, rFunc, stripFirst)
+
+    // TODO(VJ) rFunc can not stay the same. See the tests and fix the code generation and plugging!!!
+    // case (ReduceElem(g, a), ReduceElem(g2, b)) => ReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b))
+    case (DeliteReduceElem(g, a, _, _, _, _), DeliteReduceElem(g2, b, zero, rV, rFunc, stripFirst)) =>
+      DeliteReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b), zero, rV, rFunc, stripFirst)
+
     case _ => super.applyPlugIntoContext(d, r, newGen)
   }
 
   override def applyExtendGenerator[A](d: Def[Any], r: Def[Any]) = (d, r) match {
-//    case (DeliteCollectElem(g@Def(Yield(varList, _)), _), DeliteCollectElem(g2@Def(Yield(l, y)), _)) =>
-//      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
-//    case (DeliteReduceElem(g@Def(Yield(varList, _)),_, _, _, _), DeliteReduceElem(g2@Def(Yield(l, y)),_, _, _, _)) =>
-//      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
-//    case (DeliteCollectElem(g@Def(Yield(varList, _)), _), DeliteReduceElem(g2@Def(Yield(l, y)),_, _, _, _)) =>
-//      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
+    case (DeliteCollectElem(_, _, g@Def(Yield(varList, _)), _), DeliteCollectElem(_, _, g2@Def(Yield(l, y)), _)) =>
+      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
+    case (DeliteReduceElem(g@Def(Yield(varList, _)), _, _, _, _, _), DeliteReduceElem(g2@Def(Yield(l, y)), _, _, _, _, _)) =>
+      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
+    case (DeliteCollectElem(_, _, g@Def(Yield(varList, _)), _), DeliteReduceElem(g2@Def(Yield(l, y)), _, _, _, _, _)) =>
+      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
     case (DeliteReduceElem(g@Def(Yield(varList, _)), _, _, _, _, _), DeliteCollectElem(_, _, g2@Def(Yield(l, y)), _)) =>
       (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
   }
@@ -1109,12 +1097,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
   }
   
   def emitForeachElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteForeachElem[_])(implicit stream: PrintWriter) {
-    // if (elem.cond.nonEmpty)
-    //   stream.println("if (" + elem.cond.map(c=>quote(getBlockResult(c))).mkString(" && ") + ") {")
     stream.println(quote(getBlockResult(elem.func)))
-    // if (elem.cond.nonEmpty) {
-    //   stream.println("}")                         
-    // }
   }
   
   // -- begin emit reduce
