@@ -1453,18 +1453,20 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     //out.append("val acc = head.closure.processRange(out,idx,end)\n")
 
     stream.println("def init(__act: " + actType + ", " + quotearg(op.v) + "): " + actType + " = {" /*}*/)
+    stream.println("val __act2 = new " + actType)
+
     if (op.body exists (loopBodyNeedsCombine _)) {
       val gens = for ((sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]]) yield elem match {
         case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
+          stream.println("__act2." + quote(sym) + "_buf_init")
           (g, (s: String) => {
-            stream.println("__act." + quote(sym) + "_buf_init")
-            stream.println("__act." + quote(sym) + "_buf_append(" + s + ")")
+            stream.println("__act2." + quote(sym) + "_buf_append(" + s + ")")
             emitValDef(elem.resultSym(sym), "()")
           })
         case elem@DeliteCollectElem(_, _, g, Block(y)) =>
           (g, (s: String) => {
             stream.println("__act2." + quote(sym) + "_data = " + "__act." + quote(sym) + "_data")
-            stream.println("__act." + quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s)
+            stream.println("__act2." + quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s)
             emitValDef(elem.resultSym(sym), "()")
           })
         case elem@DeliteReduceElem(g, y, _, _, _, _) =>
@@ -1487,7 +1489,6 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
             emitReduceElemYield(op, sym, elem, "__act2.", s, result.toString)
           })
       }
-      stream.println("val __act2 = new " + actType)
 
       withGens(gens) {
         emitMultiLoopFuncs(op, symList)
@@ -1514,7 +1515,6 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     }
     stream.println(/*{*/"}")
     stream.println("def process(__act: " + actType + ", " + quotearg(op.v) + "): Unit = {"/*}*/)
-    stream.println("println(" + quote(op.v) + " + \", \")")
 
     val gens = for ((sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]]) yield elem match {
       case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
