@@ -53,4 +53,13 @@ object ArraySeqImpl {
     
     as
   }
+  def fillArray(sz: Int)(value: Int) = {
+    val arr = new Array[Int](sz)
+    var i = 0
+    while (i < arr.length) {
+      arr(i) = value
+      i += 1
+    }
+    arr
+  }
 }

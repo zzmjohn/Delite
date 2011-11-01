@@ -67,7 +67,7 @@ trait HashMapEmittingBase {
         
         stream.println("def " + basename + "_grow() {")
         stream.println("if (%s_bufsz > (%s_buf_ind.length * 0.4f)) {".format(basename, basename))
-        stream.println("val nindices = Array.fill[Int](%s_buf_ind.length * 2)(-1)".format(basename))
+        stream.println("val nindices = ArraySeqImpl.fillArray(%s_buf_ind.length * 2)(-1)".format(basename))
         stream.println("val nkeys = new Array[%s](%s_buf_keys.length * 2)".format(keytype, basename))
         emitAllocNewValueStore(basename, valtype, "nvals", "2")
         stream.println("// copy raw data")
@@ -110,7 +110,7 @@ trait HashMapEmittingBase {
         stream.println(basename + "_blkbits = Integer.numberOfTrailingZeros(" + basename + "_blocks)")
         stream.println("val elemest = math.max(" + basename + "_blocks * 8, numElems / numChunks)")
         stream.println("val tablesize = " + basename + "_nextPow2((elemest / 0.4f).toInt) * 2")
-        stream.println(basename + "_buf_ind = Array.fill[Int](tablesize)(-1)")
+        stream.println(basename + "_buf_ind = ArraySeqImpl.fillArray(tablesize)(-1)")
         stream.println(basename + "_buf_keys = new Array[" + keytype + "]((elemest * 1.2f).toInt)")
         /*stream.println(basename + "_buf_vals = new Array[" + valtype + "]((elemest * 1.2f).toInt)") // !! different value type*/
         emitValBufsInit(basename, valtype, "(elemest * 1.2f).toInt")
@@ -176,7 +176,7 @@ trait HashMapEmittingBase {
         stream.println("if (" + activname + "." + basename + "_numChunks > 1) {")
         stream.println("val elemest = " + activname + "." + basename + "_offset + " + activname + "." + basename + "_bufsz")
         stream.println("val tablesize = %s.%s_nextPow2((elemest / 0.4f).toInt + 1)".format(activname, basename))
-        stream.println("val indextable = Array.fill[Int](tablesize)(-1)")
+        stream.println("val indextable = ArraySeqImpl.fillArray(tablesize)(-1)")
         //stream.println("%s.%s.unsafeSetInternal(indextable, %s.%s.unsafeKeys, %s.%s.unsafeValues, 0)".format(activname, basename, activname, basename, activname, basename))
         //stream.println("%s.%s.unsafeSetBlockSizes(new Array[Int](%s.%s_blocks * 32))".format(activname, basename, activname, basename))
         stream.println("%s.%s_indices = indextable".format(activname, basename))
@@ -382,10 +382,7 @@ trait HashMapEmittingBase {
         stream.println("tindices(pos) = datapos")
         stream.println("tkeys(datapos) = k")
         stream.println("tvals(datapos) = v")
-        
-        // convert the bucket
         if (convertKeyBucketToCollection != null) stream.println("tvals(datapos) = " + convertKeyBucketToCollection("k", "v"))
-        
         stream.println("datapos += 1")
         stream.println("}")
         stream.println("pos += 2")
@@ -394,6 +391,23 @@ trait HashMapEmittingBase {
         stream.println("}")
         stream.println("}")
         //stream.println("println(%s.%s)".format(activname, basename))
+        
+        // convert the buckets
+        if (convertKeyBucketToCollection != null) {
+          stream.println("if (%s.%s_numChunks == 1) {".format(activname, basename))
+          stream.println("var datapos = 0")
+          stream.println("val tkeys = %s.%s_keys".format(activname, basename))
+          stream.println("val tvals = %s.%s_values".format(activname, basename))
+          stream.println("while (datapos < tvals.length) {")
+          stream.println("val k = tkeys(datapos)")
+          stream.println("val v = tvals(datapos)")
+          stream.println("if (v != null) {")
+          stream.println("tvals(datapos) = " + convertKeyBucketToCollection("k", "v"))
+          stream.println("}")
+          stream.println("datapos += 1")
+          stream.println("}")
+          stream.println("}")
+        }
       }
       def emitDataDeclaration(basename: String, prefix: String, dataname: String)(implicit stream: PrintWriter) {
         //stream.println("val " + basename + "_ = " + prefix + basename + "_data")
