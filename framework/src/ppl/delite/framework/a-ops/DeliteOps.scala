@@ -135,7 +135,6 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     def condNonEmpty() = getBlockResult(func) != gen
   }
 
-  // TODO (VJ) integrate this creature into society
   case class DeliteForeachGenElem[A](
     func: Block[Gen[A]]
   ) extends Def[Gen[A]]
@@ -235,6 +234,15 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
      final lazy val aV: Sym[Array[A]] = copyTransformedOrElse(_.aV)(fresh[Array[A]]).asInstanceOf[Sym[Array[A]]]
    }
 
+  abstract class DeliteOpFlatMapLike[A:Manifest, CA <: DeliteCollection[A]:Manifest] extends DeliteOpLoop[CA] {
+     type OpType <: DeliteOpFlatMapLike[A,CA]
+
+     def alloc: Exp[CA]
+     def allocWithArray: Exp[Array[A]] => Exp[CA] = { data => val res = alloc; dc_unsafeSetData(res, data, array_length(data)); res }
+
+     final lazy val aV: Sym[Array[A]] = copyTransformedOrElse(_.aV)(fresh[Array[A]]).asInstanceOf[Sym[Array[A]]]
+   }
+
   /**
    * Parallel map from DeliteCollection[A] => DeliteCollection[B]. Input functions can depend on free
    * variables, but they cannot depend on other elements of the input or output collection (disjoint access).
@@ -262,6 +270,50 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
       val y: Block[Gen[B]] = reifyEffects {
         val x = dc_apply(in, v)
         g = toAtom(Yield(List(v), this.func(x)))
+        g
+      }
+
+      DeliteCollectElem[B, CB](
+        aV = this.aV,
+        alloc = reifyEffects(this.allocWithArray(aV)),
+        gen = g,
+        func = y
+      )
+    })
+  }
+
+  /**
+   * Parallel flatMap from DeliteCollection[A] => DeliteCollection[B]. Input functions can depend on free
+   * variables, but they cannot depend on other elements of the input or output collection (disjoint access).
+   *
+   * @param  in    the input collection
+   * @param  size  the size of the input collection
+   * @param  func  the mapping function Exp[A] => Exp[Array[B]]
+   * @param  alloc function returning the output collection. if it is the same as the input collection,
+   *               the operation is mutable; (=> DeliteCollection[B]).
+   */
+  abstract class DeliteOpFlatMap[A:Manifest,
+                             B:Manifest, CB <: DeliteCollection[B]:Manifest]
+    extends DeliteOpFlatMapLike[B,CB] {
+    type OpType <: DeliteOpFlatMap[A,B,CB]
+
+    // supplied by subclass
+    val in: Exp[DeliteCollection[A]]
+    def func: Exp[A] => Exp[DeliteCollection[B]]
+    def alloc: Exp[CB]
+
+    // loop
+    lazy val body: Def[CB] = copyBodyOrElse({
+      var g: Exp[Gen[B]] = null
+      val y: Block[Gen[B]] = reifyEffects {
+        val array = func(dc_apply(in, v))
+        val innShape = dc_size(array)
+        val innVar = fresh[Int]
+        g = toAtom(Yield(List(innVar, v), dc_apply(array, innVar)))
+        val y2 = reifyEffects {
+          g
+        }
+        SimpleLoop(innShape, innVar, DeliteForeachGenElem(y2).asInstanceOf[Def[Gen[B]]])
         g
       }
 
@@ -404,10 +456,10 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     
     // supplied by subclass   
     val in: Exp[DeliteCollection[A]]
-    def zero: Exp[R] 
+    def zero: Exp[R]
     def map: Exp[A] => Exp[R]
     def reduce: (Exp[R], Exp[R]) => Exp[R]
-    
+
     // loop
     lazy val body: Def[R] = copyBodyOrElse({
       var g: Exp[Gen[R]] = null
@@ -697,6 +749,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
 
   def summarizeBody[A](d: Def[A]) = d match {
     case e: DeliteForeachElem[_] => summarizeEffects(e.func).star
+    case e: DeliteForeachGenElem[_] => summarizeEffects(e.func).star
     case e: DeliteCollectElem[_,_] => summarizeEffects(e.func).star
     //case e: DeliteReduceElem[_] => (summarizeEffects(e.func) andThen summarizeEffects(e.rFunc)).star
     case e: DeliteReduceElem[_] => 
@@ -791,8 +844,9 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
         DeliteForeachElem[a](
           func = f(e.func),
           sync = f(e.sync)
-//          cond = f(e.cond)
         ).asInstanceOf[Def[A]] // reasonable?
+      case e: DeliteForeachGenElem[a] =>
+        DeliteForeachGenElem[a](func = f(e.func)).asInstanceOf[Def[A]] // reasonable?
       case e: DeliteReduceElem[a] => 
         DeliteReduceElem[a](
           func = f(e.func),
@@ -829,6 +883,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     case op: DeliteCollectElem[_,_] => syms(op.func) ++ syms(op.alloc)
 //    case op: DeliteForeachElem[_] => syms(op.func) ++ syms(op.sync)
     case op: DeliteForeachElem[_] => syms(op.func) ++ syms(op.sync)
+    case op: DeliteForeachGenElem[_] => syms(op.func)
     case op: DeliteReduceElem[_] => syms(op.func) ++ syms(op.zero) ++ syms(op.rFunc)
     case op: DeliteReduceTupleElem[_,_] => syms(op.func) ++ syms(op.cond) ++ syms(op.zero) ++ syms(op.rFuncSeq) ++ syms(op.rFuncPar) // should be ok for tuples...
     case foreach: DeliteOpForeach2[_,_] => /*if (shallow) syms(foreach.in) else*/ syms(foreach.in) ++ syms(foreach.func) ++ syms(foreach.sync)
@@ -841,7 +896,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     case s: DeliteOpSingleTask[_] => syms(s.block)
     case e: DeliteOpExternal[_] => syms(e.allocVal) ++ super.syms(e)
     case op: DeliteCollectElem[_,_] => syms(op.func) ++ syms(op.alloc)
-//    case op: DeliteForeachElem[_] => syms(op.func) ++ syms(op.sync)
+    case op: DeliteForeachGenElem[_] => syms(op.func)
     case op: DeliteForeachElem[_] => syms(op.func) ++ syms(op.sync)
     case op: DeliteReduceElem[_] => syms(op.func) ++ syms(op.zero) ++ syms(op.rFunc)
     case op: DeliteReduceTupleElem[_,_] => syms(op.func) ++ syms(op.cond) ++ syms(op.zero) ++ syms(op.rFuncSeq) ++ syms(op.rFuncPar)
@@ -854,7 +909,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     case s: DeliteOpSingleTask[_] => effectSyms(s.block)
     case e: DeliteOpExternal[_] => effectSyms(e.allocVal) /*++ super.effectSyms(e) */
     case op: DeliteCollectElem[_,_] => effectSyms(op.func) ++ syms(op.aV) ++ effectSyms(op.alloc)
-//    case op: DeliteForeachElem[_] => effectSyms(op.func) ++ effectSyms(op.sync)
+    case op: DeliteForeachGenElem[_] => effectSyms(op.func)
     case op: DeliteForeachElem[_] => effectSyms(op.func) ++ effectSyms(op.sync)
     case op: DeliteReduceElem[_] => List(op.rV._1, op.rV._2) ++ effectSyms(op.func) ++ effectSyms(op.zero) ++ effectSyms(op.rFunc)
     case op: DeliteReduceTupleElem[_,_] => syms(op.rVPar) ++ syms(op.rVSeq) ++ effectSyms(op.func._1) ++ effectSyms(op.cond) ++ effectSyms(op.zero) ++ effectSyms(op.rFuncPar) ++ effectSyms(op.rFuncSeq)
@@ -869,7 +924,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     case s: DeliteOpSingleTask[_] => freqNormal(s.block)
     case e: DeliteOpExternal[_] => freqNormal(e.allocVal) ++ super.symsFreq(e)
     case op: DeliteCollectElem[_,_] => freqNormal(op.alloc) ++ freqHot(op.func)
-//    case op: DeliteForeachElem[_] => freqNormal(op.sync) ++ freqHot(op.func)
+    case op: DeliteForeachGenElem[_] => freqNormal(op.func)
     case op: DeliteForeachElem[_] => freqNormal(op.sync) ++ freqHot(op.func)
     case op: DeliteReduceElem[_] => freqHot(op.func) ++ freqNormal(op.zero) ++ freqHot(op.rFunc)
     case op: DeliteReduceTupleElem[_,_] => freqHot(op.cond) ++ freqHot(op.func) ++ freqNormal(op.zero) ++ freqHot(op.rFuncSeq) ++ freqHot(op.rFuncPar)
@@ -886,6 +941,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     case e: DeliteOpExternal[_] => Nil
     case op: DeliteCollectElem[_,_] => Nil // in particular not op.alloc !
     case op: DeliteForeachElem[_] => Nil
+    case op: DeliteForeachGenElem[_] => Nil
     case op: DeliteReduceElem[_] => Nil
     case op: DeliteReduceTupleElem[_,_] => Nil
     case foreach: DeliteOpForeach2[_,_] => Nil
@@ -898,6 +954,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     case e: DeliteOpExternal[_] => Nil
     case op: DeliteCollectElem[_,_] => syms(op.func)
     case op: DeliteForeachElem[_] => Nil
+    case op: DeliteForeachGenElem[_] => Nil
     case op: DeliteReduceElem[_] => Nil
     case op: DeliteReduceTupleElem[_,_] => Nil
     case foreach: DeliteOpForeach2[_,_] => Nil
@@ -910,6 +967,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     case e: DeliteOpExternal[_] => Nil
     case op: DeliteCollectElem[_,_] => Nil
     case op: DeliteForeachElem[_] => Nil
+    case op: DeliteForeachGenElem[_] => Nil
     case op: DeliteReduceElem[_] => Nil
     case op: DeliteReduceTupleElem[_,_] => Nil
     case foreach: DeliteOpForeach2[_,_] => Nil
@@ -922,6 +980,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     case e: DeliteOpExternal[_] => syms(e.allocVal)
     case op: DeliteCollectElem[_,_] => syms(op.alloc)
     case op: DeliteForeachElem[_] => Nil
+    case op: DeliteForeachGenElem[_] => Nil
     case op: DeliteReduceElem[_] => Nil
     case op: DeliteReduceTupleElem[_,_] => Nil
     case foreach: DeliteOpForeach2[_,_] => Nil
@@ -1477,7 +1536,6 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
             if (elem.stripFirst) {
               stream.println("__act2." + quote(sym) + "_zero = " + "__act." + quote(sym) + "_zero") // do we need zero here? yes, for comparing against...
               stream.println("__act2." + quote(sym) + " = __act2." + quote(sym) + "_zero")
-
             } else {
               stream.println("__act2." + quote(sym) + "_zero = " + "__act." + quote(sym) + "_zero")
               if (isPrimitiveType(sym.Type)) {

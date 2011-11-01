@@ -683,13 +683,13 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
     def func = (a,b) => a ++ b    
   } 
 
-  // TODO (VJ) replace with DeliteOpFlatMap
   case class VectorFlatMap[A:Manifest,B:Manifest](in: Exp[Vector[A]], map: Exp[A] => Exp[Vector[B]])
-    extends DeliteOpMapReduce[A,Vector[B]] {
+    extends DeliteOpFlatMap[A, B, Vector[B]] {
 
+    def alloc = Vector[B](0, in.isRow)
     val size = in.length
-    val zero = EmptyVector[B]
-    def reduce = (a,b) => a ++ b
+    def func = map
+
   }
   
   case class VectorFilter[A:Manifest](in: Exp[Vector[A]], cond: Exp[A] => Exp[Boolean]) 
@@ -1018,7 +1018,8 @@ trait VectorOpsExpOpt extends VectorOpsExp with DeliteCollectionOpsExp {
 
   override def vector_isRow[A:Manifest](x: Exp[Vector[A]]) = x match {
     case Def(e: VectorArithmeticMap[A]) => e.in.asInstanceOf[Exp[Vector[A]]].isRow 
-    case Def(e: VectorArithmeticZipWith[A]) => e.inA.asInstanceOf[Exp[Vector[A]]].isRow 
+    case Def(e: VectorMap[A, _]) => e.in.asInstanceOf[Exp[Vector[A]]].isRow
+    case Def(e: VectorArithmeticZipWith[A]) => e.inA.asInstanceOf[Exp[Vector[A]]].isRow
     //case Def(e: DeliteOpVectorLoop[A]) => e.isRow
     //case Def(e: VectorDeliteOp[A] => e.isRow)
     //case Def(Reflect(VectorObjectZeros(l,r), _)) => r
