@@ -1,12 +1,12 @@
 package ppl.delite.framework.ops
 
 import scala.Predef._
-import java.io.{FileWriter, File, PrintWriter}
 import scala.virtualization.lms.common._
 import ppl.delite.framework.datastruct.scala.DeliteCollection
 import ppl.delite.framework.Config
 import ppl.delite.framework.extern.lib._
 import scala.virtualization.lms.internal.{Effects, GenericCodegen, GenericFatCodegen, GenerationFailedException}
+import java.io.{StringWriter, FileWriter, File, PrintWriter}
 
 //trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with LoopsFatExp {
 trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with LoopsFatExp with IfThenElseFatExp
@@ -375,7 +375,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     // loop    
     lazy val body: Def[A] = copyBodyOrElse({
       var g: Exp[Gen[A]] = null
-      val y: Block[Gen[A]] = reifyEffects {g = Yield(List(v), dc_apply(in,v)); g}
+      val y: Block[Gen[A]] = reifyEffects {g = toAtom(Yield(List(v), dc_apply(in,v))); g}
 
       DeliteReduceElem[A](
       func = y,
@@ -1109,10 +1109,9 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
   // -- begin emit reduce
   
   def emitFirstReduceElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "")(implicit stream: PrintWriter) {
-    // TODO (VJ) should be that simple
-//    if (elem.cond.nonEmpty) {
-//      // if we have conditionals, we have to delay the the initialization of the accumulator to the
-//      // first element where the condition is true
+//    if (elem.condNonEmpty) {
+//      if we have conditionals, we have to delay the the initialization of the accumulator to the
+//      first element where the condition is true
 //      stream.println("if (" + elem.cond.map(c=>quote(getBlockResult(c))).mkString(" && ") + ") {")
 //      stream.println(quote(getBlockResult(elem.func)))
 //      stream.println("} else {")
@@ -1120,19 +1119,63 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
 //      stream.println("}")
 //    }
 //    else {
-      stream.println(quote(getBlockResult(elem.func)))        
+      stream.println(quote(getBlockResult(elem.func)))
 //    }
   }
 
+  // TODO (VJ) temporary code duplication in order to make changes easier. Later all methods will be implemented through these new methods.
+  def emitReduceElemYield(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "", emitted: String, redFunc: String)(implicit stream: PrintWriter) {
+    if (elem.condNonEmpty && elem.stripFirst)
+      emitInitializeOrReductionYield(op, sym, elem, prefixSym, emitted, redFunc)
+    else
+      emitReductionYield(op, sym, elem, prefixSym, emitted, redFunc)
+  }
+
+  def emitReductionYield(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "", emitted: String, redFunc: String)(implicit stream: PrintWriter) {
+    stream.println("val " + quote(elem.rV._1) + " = " + prefixSym + quote(sym))
+    stream.println("val " + quote(elem.rV._2) + " = " + emitted)
+    stream.println(redFunc)
+    stream.println(prefixSym + quote(sym) + " = " + quote(getBlockResult(elem.rFunc)))
+  }
+
+  def emitInitializeOrReductionYield(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "", emitted: String, redFunc: String)(implicit stream: PrintWriter) {
+    stream.println("// TODO: we could optimize this check away with more convoluted runtime support if necessary")
+    stream.println("if (" + prefixSym + quote(sym) + " == " + prefixSym + quote(sym) + "_zero" + ") " + prefixSym + quote(sym) + " = {")
+
+    // initialize
+    stream.println(redFunc)
+    stream.println("}")
+    // or reduce
+    stream.println("else {")
+    emitReductionYield(op, sym, elem, prefixSym, emitted, redFunc)
+    stream.println("}")
+  }
+
   def emitReduceElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "")(implicit stream: PrintWriter) {
-    if (elem.condNonEmpty) {
-      if (elem.stripFirst)
-        emitInitializeOrReduction(op, sym, elem, prefixSym)
-      else
-        emitReduction(op, sym, elem, prefixSym)
-    }
+    if (elem.condNonEmpty && elem.stripFirst)
+      emitInitializeOrReduction(op, sym, elem, prefixSym)
     else
       emitReduction(op, sym, elem, prefixSym)
+  }
+
+  def emitReduction(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "")(implicit stream: PrintWriter) {
+    stream.println("val " + quote(elem.rV._1) + " = " + prefixSym + quote(sym))
+    stream.println("val " + quote(elem.rV._2) + " = " + quote(getBlockResult(elem.func)))
+    emitBlock(elem.rFunc)
+    stream.println(prefixSym + quote(sym) + " = " + quote(getBlockResult(elem.rFunc)))
+  }
+
+  def emitInitializeOrReduction(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "")(implicit stream: PrintWriter) {
+    stream.println("// TODO: we could optimize this check away with more convoluted runtime support if necessary")
+    stream.println("if (" + prefixSym + quote(sym) + " == " + prefixSym + quote(sym) + "_zero" + ") " + prefixSym + quote(sym) + " = {")
+
+    // initialize
+    stream.println(quote(getBlockResult(elem.func)))
+    stream.println("}")
+    // or reduce
+    stream.println("else {")
+    emitReduction(op, sym, elem, prefixSym)
+    stream.println("}")
   }
 
   def emitReduceTupleElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceTupleElem[_,_], prefixSym: String = "")(implicit stream: PrintWriter) {
@@ -1142,26 +1185,6 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     else {
       emitReductionTuple(op, sym, elem, prefixSym)
     }
-  }
-
-  def emitInitializeOrReduction(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "")(implicit stream: PrintWriter) {
-    stream.println("// TODO: we could optimize this check away with more convoluted runtime support if necessary")          
-    stream.println("if (" + prefixSym + quote(sym) + " == " + prefixSym + quote(sym) + "_zero" + ") " + prefixSym + quote(sym) + " = {")
-    
-    // initialize
-    stream.println(quote(getBlockResult(elem.func)))
-    stream.println("}")
-    // or reduce
-    stream.println("else {")
-    emitReduction(op, sym, elem, prefixSym)
-    stream.println("}")
-  } 
-        
-  def emitReduction(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "")(implicit stream: PrintWriter) {
-    stream.println("val " + quote(elem.rV._1) + " = " + prefixSym + quote(sym))
-    stream.println("val " + quote(elem.rV._2) + " = " + quote(getBlockResult(elem.func)))
-    emitBlock(elem.rFunc)
-    stream.println(prefixSym + quote(sym) + " = " + quote(getBlockResult(elem.rFunc)))    
   }
 
   def emitReductionTuple(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceTupleElem[_,_], prefixSym: String)(implicit stream: PrintWriter) {
@@ -1189,19 +1212,6 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
       case elem: DeliteReduceTupleElem[_,_] => elem.func._1 :: elem.func._2 :: elem.cond
     }
     emitFatBlock(elemFuncs)
-  }
-
-  // TODO (VJ) sort out these two methods names
-  def emitMultiLoopFuncsYield(op: AbstractFatLoop, symList: List[Sym[Any]])(implicit stream: PrintWriter) {
-    val elemFuncs = op.body flatMap {
-      // don't emit dependencies twice!
-      //      case elem: DeliteForeachElem[_] => elem.cond // only emit func inside condition! TODO: how to avoid emitting deps twice? // elem.func :: elem.cond
-      case elem: DeliteForeachElem[_] => List(elem.func)
-      case elem: DeliteReduceTupleElem[_, _] => elem.func._1 :: elem.func._2 :: elem.cond
-      case _ => Nil
-    }
-    if (elemFuncs != Nil)
-      emitFatBlock(elemFuncs)
   }
 
   def emitInlineAbstractFatLoop(op: AbstractFatLoop, symList: List[Sym[Any]])(implicit stream: PrintWriter) {
@@ -1275,9 +1285,15 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     def createGens(op: AbstractFatLoop, symList: List[Sym[Any]]) =
       for ((sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]]) yield elem match {
       case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
-        (g, (s: String) => stream.println(quote(sym) + "_buf_append(" + s + ")\n" + emitValDef(sym, "()")))
+        (g, (s: String) => {
+          stream.println(quote(sym) + "_buf_append(" + s + ")")
+          emitValDef(sym, "()")
+        })
       case elem@DeliteCollectElem(_, _, g, Block(y)) =>
-        (g, (s: String) => stream.println(quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s + "\n" + emitValDef(sym, "()")))
+        (g, (s: String) => {
+          stream.println(quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s)
+          emitValDef(sym, "()")
+        })
       case DeliteReduceElem(g, y, _, _, _, _) =>
         // TODO (VJ) apply the function that you defined previously
         (g, (s: String) => stream.println(quote(sym) + " += " + s + "\n" + emitValDef(sym, "()")))
@@ -1436,57 +1452,54 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
 */
     //out.append("val acc = head.closure.processRange(out,idx,end)\n")
 
-    stream.println("def init(__act: " + actType + ", " + quotearg(op.v) + "): " + actType + " = {"/*}*/)
+    stream.println("def init(__act: " + actType + ", " + quotearg(op.v) + "): " + actType + " = {" /*}*/)
     if (op.body exists (loopBodyNeedsCombine _)) {
       val gens = for ((sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]]) yield elem match {
         case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
-          stream.println("__act." + quote(sym) + "_buf_init")
-          (g, (s: String) =>
-            stream.println("__act." + quote(sym) + "_buf_append(" + s + ")\n" + emitValDef(elem.resultSym(sym), "()"))
-          )
+          (g, (s: String) => {
+            stream.println("__act." + quote(sym) + "_buf_init")
+            stream.println("__act." + quote(sym) + "_buf_append(" + s + ")")
+            emitValDef(elem.resultSym(sym), "()")
+          })
         case elem@DeliteCollectElem(_, _, g, Block(y)) =>
-          stream.println("__act2." + quote(sym) + "_data = " + "__act." + quote(sym) + "_data")
-          (g, (s: String) =>
-            stream.println("__act." + quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s + "\n" + emitValDef(elem.resultSym(sym), "()"))
-          )
-        case DeliteReduceElem(g, y, _, _, _, _) =>
-          // TODO (VJ) apply the function that you defined previously
-          (g, (s: String) => stream.println(quote(sym) + " += " + s + "\n" + emitValDef(sym, "()")))
-      }
-
-    withGens(gens) {
-      emitMultiLoopFuncs(op, symList)
-    }
-      stream.println("val __act2 = new " + actType)
-      (symList zip op.body) foreach {
-        case (sym, elem: DeliteCollectElem[_,_]) =>
-          if (elem.condNonEmpty) {
-            stream.println("__act2." + quote(sym) + "_buf_init")
-          } else {
+          (g, (s: String) => {
             stream.println("__act2." + quote(sym) + "_data = " + "__act." + quote(sym) + "_data")
-          }
+            stream.println("__act." + quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s)
+            emitValDef(elem.resultSym(sym), "()")
+          })
+        case elem@DeliteReduceElem(g, y, _, _, _, _) =>
+          val result = new StringWriter()
+          val writer = new PrintWriter(result)
+          emitBlock(elem.rFunc)(writer)
+          (g, (s: String) => {
+            if (elem.stripFirst) {
+              stream.println("__act2." + quote(sym) + "_zero = " + "__act." + quote(sym) + "_zero") // do we need zero here? yes, for comparing against...
+              stream.println("__act2." + quote(sym) + " = __act2." + quote(sym) + "_zero")
 
-          quote(getBlockResult(elem.func))
-        case (sym, elem: DeliteForeachElem[_]) => 
-          stream.println("__act2." + quote(sym) + " = {"/*}*/)
-          emitForeachElem(op, sym, elem)
-          stream.println(/*{*/"}")               
-        case (sym, elem: DeliteReduceElem[_]) =>
-          if (elem.stripFirst) {
-            stream.println("__act2." + quote(sym) + "_zero = " + "__act." + quote(sym) + "_zero") // do we need zero here? yes, for comparing against...
-            stream.println("__act2." + quote(sym) + " = {"/*}*/)
-            emitFirstReduceElem(op, sym, elem, "__act2.")
-            stream.println(/*{*/"}")
-          } else { 
-            stream.println("__act2." + quote(sym) + "_zero = " + "__act." + quote(sym) + "_zero")
-            if (isPrimitiveType(sym.Type)) {
-              stream.println("__act2." + quote(sym) + " = " + "__act2." + quote(sym) + "_zero")
             } else {
-              stream.println("__act2." + quote(sym) + " = " + "__act2." + quote(sym) + "_zero.cloneL") // separate zero buffer
+              stream.println("__act2." + quote(sym) + "_zero = " + "__act." + quote(sym) + "_zero")
+              if (isPrimitiveType(sym.Type)) {
+                stream.println("__act2." + quote(sym) + " = " + "__act2." + quote(sym) + "_zero")
+              } else {
+                stream.println("__act2." + quote(sym) + " = " + "__act2." + quote(sym) + "_zero.cloneL") // separate zero buffer
+              }
             }
-            emitReduceElem(op, sym, elem, "__act2.")
-          }
-        case (sym, elem: DeliteReduceTupleElem[_,_]) =>
+            emitReduceElemYield(op, sym, elem, "__act2.", s, result.toString)
+          })
+      }
+      stream.println("val __act2 = new " + actType)
+
+      withGens(gens) {
+        emitMultiLoopFuncs(op, symList)
+      }
+      (symList zip op.body) foreach {
+        case (sym, elem: DeliteCollectElem[_, _]) =>
+        case (sym, elem: DeliteForeachElem[_]) =>
+          stream.println("__act2." + quote(sym) + " = {" /*}*/)
+          emitForeachElem(op, sym, elem)
+          stream.println(/*{*/ "}")
+        case (sym, elem: DeliteReduceElem[_]) =>
+        case (sym, elem: DeliteReduceTupleElem[_, _]) =>
           // no strip first here ... stream.println("assert(false, \"TODO: tuple reduce\")")
           stream.println("__act2." + quote(sym) + "_zero   = " + "__act." + quote(sym) + "_zero  ")
           stream.println("__act2." + quote(sym) + "_zero_2 = " + "__act." + quote(sym) + "_zero_2")
@@ -1505,16 +1518,23 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
 
     val gens = for ((sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]]) yield elem match {
       case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
-        (g, (s: String) =>
-          stream.println("__act." + quote(sym) + "_buf_append(" + s + ")\n" + emitValDef(elem.resultSym(sym), "()"))
-        )
+        (g, (s: String) => {
+          stream.println("__act." + quote(sym) + "_buf_append(" + s + ")")
+          emitValDef(elem.resultSym(sym), "()")
+        })
       case elem@DeliteCollectElem(_, _, g, Block(y)) =>
-        (g, (s: String) =>
-          stream.println("__act." + quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s + "\n" + emitValDef(elem.resultSym(sym), "()"))
-        )
-      case DeliteReduceElem(g, y, _, _, _, _) =>
-        // TODO (VJ) apply the function that you defined previously
-        (g, (s: String) => stream.println(quote(sym) + " += " + s + "\n" + emitValDef(sym, "()")))
+        (g, (s: String) =>{
+          stream.println("__act." + quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s)
+          emitValDef(elem.resultSym(sym), "()")
+        })
+      case elem@DeliteReduceElem(g, y, _, _, _, _) =>
+        // TODO (VJ) hack discuss with Tiark when we put this inside the loop the result is not dislayed as it renders it in the inner scope
+        val result = new StringWriter()
+        val writer = new PrintWriter(result)
+        emitBlock(elem.rFunc)(writer)
+        (g, (s: String) => {
+          emitReduceElemYield(op, sym, elem, "__act.", s, result.toString)
+        })
     }
 
     withGens(gens) {
@@ -1804,19 +1824,19 @@ trait CudaGenDeliteOps extends CudaGenLoopsFat with BaseGenDeliteOps {
   def emitForeachElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteForeachElem[_])(implicit stream: PrintWriter) {
     stream.println(quote(getBlockResult(elem.func)))
   }
-  
+
   def emitFirstReduceElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "")(implicit stream: PrintWriter) {
-    // TODO (VJ) check if this is ok
-//      if (elem.condNonEmpty) {
-//        stream.println("if (" + elem.cond.map(c=>quote(getBlockResult(c))).mkString(" && ") + ") {")
-//        stream.println(quote(getBlockResult(elem.func)))
-//        stream.println("} else {")
-//        stream.println(prefixSym + quote(sym) + "_zero")
-//        stream.println("}")
-//      }
-//      else {
-        stream.println(quote(getBlockResult(elem.func)))        
-//      }
+    // TODO (VJ) fix when implementing CUDA codegens
+    //      if (elem.condNonEmpty) {
+    //        stream.println("if (" + elem.cond.map(c=>quote(getBlockResult(c))).mkString(" && ") + ") {")
+    //        stream.println(quote(getBlockResult(elem.func)))
+    //        stream.println("} else {")
+    //        stream.println(prefixSym + quote(sym) + "_zero")
+    //        stream.println("}")
+    //      }
+    //      else {
+    stream.println(quote(getBlockResult(elem.func)))
+    //      }
   }
 
   def emitReduceElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "")(implicit stream: PrintWriter) {
@@ -2170,17 +2190,17 @@ trait OpenCLGenDeliteOps extends OpenCLGenEffect with BaseGenDeliteOps {
   }
 
   def emitFirstReduceElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "")(implicit stream: PrintWriter) {
-    // TODO (VJ) check if this works
-//      if (elem.cond.nonEmpty) {
+      if (elem.condNonEmpty) {
+        // TODO (VJ) fix after the deadline
 //        stream.println("if (" + elem.cond.map(c=>quote(getBlockResult(c))).mkString(" && ") + ") {")
 //        stream.println(quote(getBlockResult(elem.func)))
 //        stream.println("} else {")
 //        stream.println(prefixSym + quote(sym) + "_zero")
 //        stream.println("}")
-//      }
-//      else {
+      }
+      else {
         stream.println(quote(getBlockResult(elem.func)))
-//      }
+      }
   }
 
  def emitReduceTupleElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceTupleElem[_,_], prefixSym: String = "")(implicit stream: PrintWriter) {
@@ -2193,17 +2213,17 @@ trait OpenCLGenDeliteOps extends OpenCLGenEffect with BaseGenDeliteOps {
   }
 
   def emitReduceElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "")(implicit stream: PrintWriter) {
-    // TODO (VJ) should also work
-//    if (elem.cond.nonEmpty){
+    if (elem.condNonEmpty){
+      // TODO (VJ) fix after the deadline
 //      stream.println("if (" + elem.cond.map(c=>quote(getBlockResult(c))).mkString(" && ") + ") {")
 //      emitReduction(op, sym, elem, prefixSym)
 //      stream.println("}")
-//    }
-//    else {
+    }
+    else {
       //println("before")
       emitReduction(op, sym, elem, prefixSym)
       //println("after red")
-//    }
+    }
   }
 
 /*
