@@ -49,7 +49,7 @@ trait ScalaEmitter {
   def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter)
   def emitPostCombine2(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter)
   def emitPostProcInit2(basename: String, activname: String)(implicit stream: PrintWriter)
-  def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter)
+  def emitPostProcess2(basename: String, activname: String, convertKeyBucketToCollection: (String, String) => String)(implicit stream: PrintWriter)
   def emitDataDeclaration(basename: String, activname: String, dataname: String)(implicit stream: PrintWriter)
   def emitInitializeDataStructure(basename: String, activname: String, collectionname: String, dataname: String)(implicit stream: PrintWriter)
 }

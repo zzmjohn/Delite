@@ -15,14 +15,23 @@ trait HelloCollections extends CollectionsApplication {
     // println(ys)
     // val ms = HashMap.range(6).map(x => x)
     // println(ms)
-    // val mg = ArraySeq.range(6).groupBy(x => x % 2)
-    // println(mg)
     
-    val xs = HashMap.range(25000)
+    val mg = ArraySeq.range(6).groupBy(x => x % 2)
+    println(mg)
     
-    tic(xs)
-    val ys = xs.map(x => x)
-    toc(ys)
+    // val xs = ArraySeq.range(250000)
+    
+    // tic(xs)
+    // val ys = xs.map(x => x)
+    // toc(ys)
+    
+    // tic(ys)
+    // val ys1 = xs.map(x => x)
+    // toc(ys1)
+    
+    // tic(ys1)
+    // val ys2 = xs.map(x => x)
+    // toc(ys2)
   }
 }
 

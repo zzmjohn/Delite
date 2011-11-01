@@ -87,7 +87,7 @@ trait ArraySeqEmitting {
       }
       def emitPostProcInit2(basename: String, activname: String)(implicit stream: PrintWriter) {
       }
-      def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter) {
+      def emitPostProcess2(basename: String, activname: String, convertKeyBucketToCollection: (String, String) => String)(implicit stream: PrintWriter) {
       }
       def emitDataDeclaration(basename: String, prefix: String, dataname: String)(implicit stream: PrintWriter) {
         stream.println("val " + dataname + " = " + prefix + basename + "_data")

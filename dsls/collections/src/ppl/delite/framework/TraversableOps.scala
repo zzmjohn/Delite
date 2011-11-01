@@ -85,7 +85,7 @@ self: HashMapOpsExp with HashMultiMapEmitting =>
     val size = in.size
     def func: Exp[T] => Exp[(K, T)] = x => make_tuple2(f(x), x)
     def alloc: Exp[HashMap[K, Bucket[T]]] = HashMapNew[K, Bucket[T]]()(manifest[HashMapImpl[K, Bucket[T]]])
-    def convertToCV: Exp[Bucket[T]] => Exp[Bucket[T]] = x => x
+    def convertToCV: (Exp[K], Exp[Bucket[T]]) => Exp[Bucket[T]] = (k, x) => x
     def emitterFactory: Option[EmitterFactory] = Some(hashMultiMapEmitterFactory)
   }
   

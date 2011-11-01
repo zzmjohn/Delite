@@ -349,7 +349,7 @@ trait HashMapEmittingBase {
         //stream.println("println(\"-------------------------------------------\")")
         //stream.println("println(%s.%s)".format(activname, basename))
       }
-      def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter) {
+      def emitPostProcess2(basename: String, activname: String, convertKeyBucketToCollection: (String, String) => String)(implicit stream: PrintWriter) {
         stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
         stream.println("%s.%s_keys = %s.%s_activations(%s.%s_numChunks - 1).%s_keys".format(activname, basename, activname, basename, activname, basename, basename))
         stream.println("%s.%s_values = %s.%s_activations(%s.%s_numChunks - 1).%s_values".format(activname, basename, activname, basename, activname, basename, basename))
@@ -382,6 +382,10 @@ trait HashMapEmittingBase {
         stream.println("tindices(pos) = datapos")
         stream.println("tkeys(datapos) = k")
         stream.println("tvals(datapos) = v")
+        
+        // convert the bucket
+        if (convertKeyBucketToCollection != null) stream.println("tvals(datapos) = " + convertKeyBucketToCollection("k", "v"))
+        
         stream.println("datapos += 1")
         stream.println("}")
         stream.println("pos += 2")

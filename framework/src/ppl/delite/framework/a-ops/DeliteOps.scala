@@ -131,7 +131,9 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     alloc: Exp[CR],
     func: Exp[(K, V1)],
     //inner: Def[V2], TODO
-    convertToV2: Exp[V2], // TODO
+    k: Sym[K],
+    vC: Sym[Bucket[V1]],
+    convertToV2: Exp[V2],
     cond: List[Exp[Boolean]] = Nil,
     emitterFactory: Option[EmitterFactory] = None
     // TODO: note that the alloc block right now directly references the size
@@ -263,15 +265,18 @@ with OrderingOpsExp with CastingOpsExp with ImplicitOpsExp with WhileExp with St
     def alloc: Exp[CR]
     def emitterFactory: Option[EmitterFactory]
     
-    def convertToCV: Exp[Bucket[V]] => Exp[CV]
+    def convertToCV: (Exp[K], Exp[Bucket[V]]) => Exp[CV]
     
+    final lazy val k: Sym[K] = copyTransformedOrElse(_.k)(fresh[K]).asInstanceOf[Sym[K]]
     final lazy val vC: Sym[Bucket[V]] = copyTransformedOrElse(_.vC)(fresh[Bucket[V]]).asInstanceOf[Sym[Bucket[V]]]
     
     // loop
     lazy val body: Def[CR] = copyBodyOrElse(DeliteHashElem[K,V,CV,CR](
       alloc = reifyEffects(this.alloc),
+      k = this.k,
+      vC = this.vC,
       func = reifyEffects(this.func(dc_apply(in, v))),
-      convertToV2 = reifyEffects(this.convertToCV(vC)),
+      convertToV2 = reifyEffects(this.convertToCV(k, vC)),
       emitterFactory = emitterFactory
     ))
   }
@@ -1348,7 +1353,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     }
     def emitPostProcInit2(basename: String, activname: String)(implicit stream: PrintWriter) {
     }
-    def emitPostProcess2(basename: String, activname: String)(implicit stream: PrintWriter) {
+    def emitPostProcess2(basename: String, activname: String, convertKeyBucketToCollection: (String, String) => String)(implicit stream: PrintWriter) {
     }
     def emitDataDeclaration(basename: String, prefix: String, dataname: String)(implicit stream: PrintWriter) {
       stream.println("val " + dataname + " = " + prefix + basename + "_data")
@@ -1692,13 +1697,18 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         val emitter = elem.emitterScala.get
         if (elem.needsPostProcess2) {
           //calculate start offset from rhs.offset + rhs.size
-          emitter.emitPostProcess2(quote(sym), "__act")
+          emitter.emitPostProcess2(quote(sym), "__act", (keyname: String, bucketname: String) => {
+            emitValDef(elem.k, keyname)
+            emitValDef(elem.vC, bucketname)
+            emitBlock(elem.convertToV2)
+            quote(getBlockResult(elem.convertToV2))
+          })
         }
       case (sym, elem: DeliteCollectElem[_,_]) =>
         val emitter = elem.emitterScala.getOrElse(standardScalaEmitter)
         if (elem.needsPostProcess2) {
           //calculate start offset from rhs.offset + rhs.size
-          emitter.emitPostProcess2(quote(sym), "__act")
+          emitter.emitPostProcess2(quote(sym), "__act", null)
         }
       case (sym, elem: DeliteForeachElem[_]) =>
       case (sym, elem: DeliteReduceElem[_]) =>
