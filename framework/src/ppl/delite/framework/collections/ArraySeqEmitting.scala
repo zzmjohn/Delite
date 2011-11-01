@@ -18,7 +18,7 @@ trait ArraySeqEmitting {
     def needsPostProcess2 = false
     
     def scala = new ScalaEmitter {
-      def emitBufferDefs(kernelname: String, basename: String, elemtype: String)(implicit stream: PrintWriter) {
+      def emitBufferDefs(kernelname: String, basename: String, elemtype: String, valtype: String)(implicit stream: PrintWriter) {
         stream.println("var " + basename + "_buf: Array[" + elemtype + "] = _")
         stream.println("var " + basename + "_size = 0")
         stream.println("var " + basename + "_offset = 0")

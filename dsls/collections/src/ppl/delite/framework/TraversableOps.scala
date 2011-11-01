@@ -83,7 +83,8 @@ self: HashMapOpsExp with HashMultiMapEmitting =>
   (in: Exp[Coll], f: Exp[T] => Exp[K])
   extends DeliteOpGroupBy[T, K, T, Coll, Bucket[T], HashMap[K, Bucket[T]]] {
     val size = in.size
-    def func: Exp[T] => Exp[(K, T)] = x => make_tuple2(f(x), x)
+    def funcKey: Exp[T] => Exp[K] = x => f(x)
+    def funcVal: Exp[T] => Exp[T] = x => x
     def alloc: Exp[HashMap[K, Bucket[T]]] = HashMapNew[K, Bucket[T]]()(manifest[HashMapImpl[K, Bucket[T]]])
     def convertToCV: (Exp[K], Exp[Bucket[T]]) => Exp[Bucket[T]] = (k, x) => x
     def emitterFactory: Option[EmitterFactory] = Some(hashMultiMapEmitterFactory)

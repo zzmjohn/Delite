@@ -27,11 +27,11 @@ trait HashMapEmittingBase {
       def emitCollisionResolutionOnCopyIndex(indexArrayName: String, indexArrayPos: String, olddatapos: String, newdatapos: String, newChunkIndex: String, basename: String, existingKeyActivationRead: String, collidingValue: String)(implicit stream: PrintWriter)
       def valueStoreType(valtype: String): String
       
-      def emitBufferDefs(kernelname: String, basename: String, elemtype: String)(implicit stream: PrintWriter) {
+      def emitBufferDefs(kernelname: String, basename: String, kt: String, vt: String)(implicit stream: PrintWriter) {
         // a temporary hack
-        val innertypes = elemtype.substring(elemtype.indexOf("Tuple2") + 7, elemtype.length - 1).split(", ")
-        val keytype = innertypes(0)
-        val valtype = innertypes(1)
+        def innertypes = kt.substring(kt.indexOf("Tuple2") + 7, kt.length - 1).split(", ")
+        val keytype = if (vt == null) innertypes(0) else kt
+        val valtype = if (vt == null) innertypes(1) else vt
         
         stream.println("// emitting hash map")
         stream.println("var " + basename + "_buf_ind: Array[Int] = _")
@@ -116,16 +116,16 @@ trait HashMapEmittingBase {
         emitValBufsInit(basename, valtype, "(elemest * 1.2f).toInt")
         stream.println("}")
         
-        stream.println("def " + basename + "_buf_append(x: " + elemtype + ") {")
+        stream.println("def " + basename + "_buf_append(k: " + keytype + ", v: " + valtype + ") {")
         // find relevant hashcode part
-        stream.println("val hc = x._1.## * 0x9e3775cd")
+        stream.println("val hc = k.## * 0x9e3775cd")
         // find starting position
         stream.println("val relbits = Integer.numberOfTrailingZeros(%s_buf_ind.length / 2)".format(basename))
         stream.println("var pos = (hc >>> (32 - relbits)) * 2")
         // find empty slot
         stream.println("var currelem = %s_buf_ind(pos)".format(basename))
         stream.println("var currhash = %s_buf_ind(pos + 1)".format(basename))
-        stream.println("while (currelem != -1 && (currhash != hc || %s_buf_keys(currelem) != x._1)) {".format(basename))
+        stream.println("while (currelem != -1 && (currhash != hc || %s_buf_keys(currelem) != k)) {".format(basename))
         stream.println("pos = (pos + 2) % " + basename + "_buf_ind.length")
         stream.println("currelem = %s_buf_ind(pos)".format(basename))
         stream.println("currhash = %s_buf_ind(pos + 1)".format(basename))
@@ -135,9 +135,9 @@ trait HashMapEmittingBase {
         stream.println("val datapos = %s_bufsz".format(basename))
         stream.println("%s_buf_ind(pos) = datapos".format(basename))
         stream.println("%s_buf_ind(pos + 1) = hc".format(basename))
-        stream.println("%s_buf_keys(datapos) = x._1".format(basename))
+        stream.println("%s_buf_keys(datapos) = k".format(basename))
         /*stream.println("%s_buf_vals(datapos) = x._2".format(basename)) // !! different ways to initialize the value container*/
-        emitValBufsAddNoCollision(basename, "x._2")
+        emitValBufsAddNoCollision(basename, "v")
         stream.println("%s_bufsz += 1".format(basename))
         stream.println("%s_grow()".format(basename))
         stream.println("} else {")
@@ -146,7 +146,7 @@ trait HashMapEmittingBase {
         stream.println("%s_buf_keys(datapos) = x._1".format(basename)) // !! different ways to resolve collisions
         stream.println("%s_buf_vals(datapos) = x._2".format(basename)) // !! different ways to resolve collisions
         */
-        emitValBufsAddCollision(basename, "x._1", "x._2")
+        emitValBufsAddCollision(basename, "k", "v")
         stream.println("}")
         stream.println("}")
       }
@@ -154,10 +154,16 @@ trait HashMapEmittingBase {
         stream.println(activname + "." + basename + "_buf_init(" + chunkIdxVar + ", " + numChunksVar + ", size)")
       }
       def emitAddToBuffer(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
-        stream.println(prefixSym + basename + "_buf_append(" + elemname + ")")
+        stream.println(prefixSym + basename + "_buf_append(" + elemname + "._1, " + elemname + "._2)")
       }
       def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
         stream.println(prefixSym + basename + ".put(" + elemname + "._1, " + elemname + "._2)")
+      }
+      override def emitAddToBufferKeyVal(prefixSym: String, basename: String, keyname: String, valname: String)(implicit stream: PrintWriter) {
+        stream.println(prefixSym + basename + "_buf_append(" + keyname + ", " + valname + ")")
+      }
+      override def emitAddToDataStructureKeyVal(prefixSym: String, basename: String, keyname: String, valname: String)(implicit stream: PrintWriter) {
+        stream.println(prefixSym + basename + ".put(" + keyname + ", " + valname + ")")
       }
       def emitPostCombine(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {
         stream.println(activname + "." + basename + "_offset = " + lhsname + "." + basename + "_offset + " + lhsname + "." + basename + "_bufsz")
