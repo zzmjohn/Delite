@@ -11,14 +11,29 @@ import ppl.tests.scalatest._
 
 trait BasicExamples extends CollectionsApplication with DeliteTestModule {
   def main() {
+    implicit val collector = ArrayBuffer[Boolean]()
+    
     val xs = ArraySeq.range(6).map(x => x)
     println(xs)
+    collect(xs.size == 6)
+    
     val ys = ArraySeq.range(6).filter(x => x % 2 == 0)
     println(ys)
+    collect(ys.size == 3)
+    
     val ms = HashMap.range(6).map(x => x)
     println(ms)
+    collect(ms.size == 6)
+    
     val mg = ArraySeq.range(6).groupBy(x => x % 2)
     println(mg)
+    collect(mg.size == 2)
+    
+    val zs = ArraySeq.range(6).flatMap(x => ArraySeq.range(x))
+    println(zs)
+    collect(zs.size == 15)
+    
+    mkReport
   }
 }
 
@@ -131,6 +146,7 @@ object ArraySeqGroupByRunner extends CollectionsApplicationRunner with ArraySeqG
 
 
 class HelloCollectionsOpsSuite extends DeliteSuite {
+  def testBasicExamples() { compileAndTest(BasicExamplesRunner) }
   def testHashMapMap() { compileAndTest(HashMapMapRunner) }
   def testArraySeqGroupBy() { compileAndTest(ArraySeqGroupByRunner) }
 }

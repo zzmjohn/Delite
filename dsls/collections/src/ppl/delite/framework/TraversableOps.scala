@@ -29,6 +29,7 @@ trait TraversableOps extends GenericCollectionOps with DeliteCollectionOps {
     def map[S, Target <: DeliteCollection[S]](f: Rep[T] => Rep[S])(implicit cbf: CanBuild[Coll, S, Target], ms: Manifest[S], mt: Manifest[Target]) = traversable_map[T, S, Coll, Target](t, f, cbf)
     def filter[Target <: DeliteCollection[T]](p: Rep[T] => Rep[Boolean])(implicit cbf: CanBuild[Coll, T, Target], ms: Manifest[Target]) = traversable_filter[T, Coll, Target](t, p, cbf)
     def groupBy[K: Manifest](f: Rep[T] => Rep[K]) = traversable_groupby[T, Coll, K](t, f)
+    def flatMap[S, Target <: DeliteCollection[S]](f: Rep[T] => Rep[DeliteCollection[S]])(implicit cbf: CanBuild[Coll, S, Target], ms: Manifest[S], mt: Manifest[Target]) = traversable_flatmap[T, S, Coll, Target](t, f, cbf)
   }
   
   /* class interface defs */
@@ -37,6 +38,7 @@ trait TraversableOps extends GenericCollectionOps with DeliteCollectionOps {
   def traversable_map[T: Manifest, S: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Rep[Coll], f: Rep[T] => Rep[S], cbf: CanBuild[Coll, S, Target]): Rep[Target]
   def traversable_filter[T: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Rep[Coll], p: Rep[T] => Rep[Boolean], cbf: CanBuild[Coll, T, Target]): Rep[Target]
   def traversable_groupby[T: Manifest, Coll <: DeliteCollection[T]: Manifest, K: Manifest](in: Rep[Coll], f: Rep[T] => Rep[K]): Rep[HashMap[K, Bucket[T]]]
+  def traversable_flatmap[T: Manifest, S: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Rep[Coll], f: Rep[T] => Rep[DeliteCollection[S]], cbf: CanBuild[Coll, S, Target]): Rep[Target]
   
   /* implicit rules */
   implicit def traversableCanBuild[T: Manifest, S: Manifest]: CanBuild[Traversable[T], S, Traversable[S]]
@@ -89,6 +91,13 @@ self: HashMapOpsExp with HashMultiMapEmitting =>
     def convertToCV: (Exp[K], Exp[Bucket[T]]) => Exp[Bucket[T]] = (k, x) => x
     def emitterFactory: Option[EmitterFactory] = Some(hashMultiMapEmitterFactory)
   }
+  case class TraversableFlatMap[T: Manifest, S: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[S]: Manifest]
+  (in: Exp[Coll], func: Exp[T] => Exp[DeliteCollection[S]], cbf: CanBuild[Coll, S, Target])
+  extends DeliteOpFlatMap[T, S, Target] {
+    val size = in.size
+    def alloc = cbf.alloc(in)
+    override def emitterFactory = Some(cbf.emitterFactory(in))
+  }
   
   /* class interface */
   def traversable_size[T: Manifest, Coll <: DeliteCollection[T]: Manifest](t: Exp[Coll]) = reflectPure(TraversableSize[T, Coll](t))
@@ -96,6 +105,7 @@ self: HashMapOpsExp with HashMultiMapEmitting =>
   def traversable_map[T: Manifest, S: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Exp[Coll], f: Exp[T] => Exp[S], cbf: CanBuild[Coll, S, Target]): Exp[Target] = reflectEffect(TraversableMap[T, S, Coll, Target](t, f, cbf))
   def traversable_filter[T: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[T]: Manifest](t: Exp[Coll], p: Exp[T] => Exp[Boolean], cbf: CanBuild[Coll, T, Target]): Exp[Target] = reflectEffect(TraversableFilter[T, Coll, Target](t, p, cbf))
   def traversable_groupby[T: Manifest, Coll <: DeliteCollection[T]: Manifest, K: Manifest](in: Exp[Coll], f: Exp[T] => Exp[K]): Exp[HashMap[K, Bucket[T]]] = reflectEffect(TraversableGroupBy[T, K, Coll](in, f))
+  def traversable_flatmap[T: Manifest, S: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Exp[Coll], f: Exp[T] => Exp[DeliteCollection[S]], cbf: CanBuild[Coll, S, Target]): Exp[Target] = reflectEffect(TraversableFlatMap[T, S, Coll, Target](t, f, cbf))
   
   /* implicit rules */
   implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
