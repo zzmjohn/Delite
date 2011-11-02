@@ -32,11 +32,12 @@ def main():
     emitHeader(fileOut)
 
     #get the list of files
-    files = os.listdir(impls_dir)
-    for fname in files:
-        if fname.endswith(".scala") and os.path.isdir(impls_dir + "/" + fname) == False:
-            print "processing file:[" + fname + "]"
-            liftClass(impls_dir, fname, fileOut)
+    for impls_dir in args:
+        files = os.listdir(impls_dir)
+        for fname in files:
+            if fname.endswith(".scala") and os.path.isdir(impls_dir + "/" + fname) == False:
+                print "processing file:[" + fname + "]"
+                liftClass(impls_dir, fname, fileOut)
     #now emit the application ops directory
     emitApplicationOps(fileOut)
     fileOut.close()
@@ -70,8 +71,8 @@ def emitHeader(fileOut):
     #take care of package and imports
     l = l + "import ppl.dsl." + options['dsl'] + ".datastruct.scala.liftables._\n\
 import java.io.PrintWriter\n\
-import ppl.delite.framework.{DSLType}\n\
 import ppl.delite.framework.datastructures._\n\
+import scala.reflect.SourceContext\n\
 import scala.virtualization.lms.common.ScalaGenFat\n\
 import scala.virtualization.lms.util.OverloadHack\n\
 import scala.virtualization.lms.common.{EffectExp, BaseFatExp, Variables}\n\n"
@@ -143,9 +144,9 @@ def liftClass(impls_dir, fname, fileOut):
     
     
     #First handle the Ops part
-    l =     "trait " + clazz + "Ops extends DSLType with Variables with OverloadHack {\n\n"
+    l =     "trait " + clazz + "Ops extends Variables with OverloadHack {\n\n"
     l = l + "  object " + clazz + " {\n"
-    l = l + "    def apply(" + repify(fields, types) + ") = " + lclazz + "_obj_new(" + listify(fields) + ")\n"
+    l = l + "    def apply(" + repify(fields, types) + ")(implicit ctx: SourceContext) = " + lclazz + "_obj_new(" + listify(fields) + ")\n"
     l = l + "  }\n\n"
 
     l = l + "  implicit def rep" + clazz + "To" + clazz + "Ops(x: Rep[" + clazz +"]) = new " + lclazz + "OpsCls(x)\n"
@@ -153,15 +154,15 @@ def liftClass(impls_dir, fname, fileOut):
 
     l = l + "  class " + lclazz + "OpsCls(__x: Rep[" + clazz + "]) {\n"
     for f in fields:
-        l = l + "    def " + f + " = " + lclazz + "_" + f + "(__x)\n"
+        l = l + "    def " + f + "(implicit ctx: SourceContext) = " + lclazz + "_" + f + "(__x)\n"
     l = l + "  }\n\n"
     
     l = l + "  //object defs\n"
-    l = l + "  def " + lclazz + "_obj_new(" + repify(fields, types) + "): Rep[" + clazz + "]\n\n"
+    l = l + "  def " + lclazz + "_obj_new(" + repify(fields, types) + ")(implicit ctx: SourceContext): Rep[" + clazz + "]\n\n"
     
     l = l + "  //class defs\n"
     for f in fields:
-        l = l + "  def " + lclazz + "_" + f + "(__x: Rep[" + clazz + "]): Rep[" + types[f] + "]\n"
+        l = l + "  def " + lclazz + "_" + f + "(__x: Rep[" + clazz + "])(implicit ctx: SourceContext): Rep[" + types[f] + "]\n"
     l = l + "}\n\n"
 
     #OpsExp
@@ -171,12 +172,12 @@ def liftClass(impls_dir, fname, fileOut):
     #for f in fields:
     #    l = l + "  case class " + clazz + f.capitalize() + "(__x: Exp[" + clazz + "]) extends Def[" + types[f] + "]\n"
     #l = l + "\n"
-    l = l + "  def " + lclazz + "_obj_new(" + expify(fields, types) + ") = reflectEffect(" + clazz + "ObjectNew(" + listify(fields) + "))\n"
+    l = l + "  def " + lclazz + "_obj_new(" + expify(fields, types) + ")(implicit ctx: SourceContext) = reflectEffect(" + clazz + "ObjectNew(" + listify(fields) + "))\n"
     for f in fields:
-        l = l + "  def " + lclazz + "_" + f + "(__x: Rep[" + clazz + "]) = FieldRead["+ types[f] +"](__x, \"" + f + "\", \"" + types[f] + "\")\n"
+        l = l + "  def " + lclazz + "_" + f + "(__x: Rep[" + clazz + "])(implicit ctx: SourceContext) = FieldRead["+ types[f] +"](__x, \"" + f + "\", \"" + types[f] + "\")\n"
     l = l + "\n"
     #emit Mirror
-    l = l + "  override def mirror[A:Manifest](e: Def[A], f: Transformer): Exp[A] = e match {\n"
+    l = l + "  override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit ctx: SourceContext): Exp[A] = e match {\n"
     l = l + "    case _ => super.mirror(e,f)\n"
     l = l + "  }\n"
     l = l + "}\n\n"
@@ -246,6 +247,6 @@ def listify(fields):
 def loadOptions(opts):
     options['verbose'] = opts.verbose
     options['dsl'] = opts.dsl_name
-S
+
 if __name__ == "__main__":
     main()

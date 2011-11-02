@@ -18,26 +18,26 @@ trait QueryableOps extends Base {
   //override def __forward[A,B,C](self: TransparentProxy[A], method: String, x: TransparentProxy[B]*): TransparentProxy[C] = throw new RuntimeException("forwarding to " + method)
 
   class QOpsCls[TSource:Manifest](s: Rep[DataTable[TSource]]) {
-    def Where(predicate: Rep[TSource] => Rep[Boolean]) = queryable_where(s, predicate)
-	def GroupBy[TKey:Manifest](keySelector: Rep[TSource] => Rep[TKey]) = queryable_groupby(s,keySelector)
-	def Select[TResult:Manifest](resultSelector: Rep[TSource] => Rep[TResult]) = queryable_select(s, resultSelector)
-	def Sum(sumSelector: Rep[TSource] => Rep[Double]) = queryable_sum(s, sumSelector)
-	def Average(avgSelector: Rep[TSource] => Rep[Double]) = queryable_average(s, avgSelector)
-	def Count() = queryable_count(s)
+    def Where(predicate: Rep[TSource] => Rep[Boolean])(implicit ctx: SourceContext) = queryable_where(s, predicate)
+	def GroupBy[TKey:Manifest](keySelector: Rep[TSource] => Rep[TKey])(implicit ctx: SourceContext) = queryable_groupby(s,keySelector)
+	def Select[TResult:Manifest](resultSelector: Rep[TSource] => Rep[TResult])(implicit ctx: SourceContext) = queryable_select(s, resultSelector)
+	def Sum(sumSelector: Rep[TSource] => Rep[Double])(implicit ctx: SourceContext) = queryable_sum(s, sumSelector)
+	def Average(avgSelector: Rep[TSource] => Rep[Double])(implicit ctx: SourceContext) = queryable_average(s, avgSelector)
+	def Count()(implicit ctx: SourceContext) = queryable_count(s)
   }
   
   //Grouping stuff
-  def infix_key[TKey:Manifest, TSource:Manifest](g: Rep[Grouping[TKey, TSource]]) = queryable_grouping_key(g) 
+  def infix_key[TKey:Manifest, TSource:Manifest](g: Rep[Grouping[TKey, TSource]])(implicit ctx: SourceContext) = queryable_grouping_key(g) 
 
-  def queryable_where[TSource:Manifest](s: Rep[DataTable[TSource]], predicate: Rep[TSource] => Rep[Boolean]): Rep[DataTable[TSource]]
-  def queryable_groupby[TSource:Manifest, TKey:Manifest](s: Rep[DataTable[TSource]], keySelector: Rep[TSource] => Rep[TKey]): Rep[DataTable[Grouping[TKey, TSource]]]
-  def queryable_select[TSource:Manifest, TResult:Manifest](s: Rep[DataTable[TSource]], resultSelector: Rep[TSource] => Rep[TResult]): Rep[DataTable[TResult]]
-  def queryable_sum[TSource:Manifest](s: Rep[DataTable[TSource]], sumSelector: Rep[TSource] => Rep[Double]): Rep[Double]
-  def queryable_average[TSource:Manifest](s: Rep[DataTable[TSource]], avgSelector: Rep[TSource] => Rep[Double]): Rep[Double]
-  def queryable_count[TSource:Manifest](s: Rep[DataTable[TSource]]): Rep[Int]  
+  def queryable_where[TSource:Manifest](s: Rep[DataTable[TSource]], predicate: Rep[TSource] => Rep[Boolean])(implicit ctx: SourceContext): Rep[DataTable[TSource]]
+  def queryable_groupby[TSource:Manifest, TKey:Manifest](s: Rep[DataTable[TSource]], keySelector: Rep[TSource] => Rep[TKey])(implicit ctx: SourceContext): Rep[DataTable[Grouping[TKey, TSource]]]
+  def queryable_select[TSource:Manifest, TResult:Manifest](s: Rep[DataTable[TSource]], resultSelector: Rep[TSource] => Rep[TResult])(implicit ctx: SourceContext): Rep[DataTable[TResult]]
+  def queryable_sum[TSource:Manifest](s: Rep[DataTable[TSource]], sumSelector: Rep[TSource] => Rep[Double])(implicit ctx: SourceContext): Rep[Double]
+  def queryable_average[TSource:Manifest](s: Rep[DataTable[TSource]], avgSelector: Rep[TSource] => Rep[Double])(implicit ctx: SourceContext): Rep[Double]
+  def queryable_count[TSource:Manifest](s: Rep[DataTable[TSource]])(implicit ctx: SourceContext): Rep[Int]  
   
-  def queryable_grouping_toDatatable[TKey:Manifest, TSource:Manifest](g: Rep[Grouping[TKey, TSource]]): Rep[DataTable[TSource]]
-  def queryable_grouping_key[TKey:Manifest, TSource:Manifest](g: Rep[Grouping[TKey, TSource]]): Rep[TKey]
+  def queryable_grouping_toDatatable[TKey:Manifest, TSource:Manifest](g: Rep[Grouping[TKey, TSource]])(implicit ctx: SourceContext): Rep[DataTable[TSource]]
+  def queryable_grouping_key[TKey:Manifest, TSource:Manifest](g: Rep[Grouping[TKey, TSource]])(implicit ctx: SourceContext): Rep[TKey]
   
   
 }
@@ -83,28 +83,28 @@ trait QueryableOpsExp extends QueryableOps with BaseFatExp {
   case class QueryableGroupingToDataTable[TSource:Manifest, TKey:Manifest](g: Rep[Grouping[TKey, TSource]]) extends Def[DataTable[TSource]]
   case class QueryableGroupingKey[TSource:Manifest, TKey:Manifest](g: Rep[Grouping[TKey, TSource]]) extends Def[TKey]
 
-  def queryable_select[TSource:Manifest, TResult:Manifest](s: Rep[DataTable[TSource]], resultSelector: Rep[TSource] => Rep[TResult]) = {
+  def queryable_select[TSource:Manifest, TResult:Manifest](s: Rep[DataTable[TSource]], resultSelector: Rep[TSource] => Rep[TResult])(implicit ctx: SourceContext) = {
 //	val v = fresh[TSource]
 //	val func = reifyEffects(resultSelector(v))
 	QueryableSelect(s, resultSelector)
   }
   
-  def queryable_where[TSource:Manifest](s: Exp[DataTable[TSource]], predicate: Exp[TSource] => Exp[Boolean]) = QueryableWhere(s,predicate)
-  def queryable_groupby[TSource:Manifest, TKey:Manifest](s: Exp[DataTable[TSource]], keySelector: Exp[TSource] => Exp[TKey]) = {
+  def queryable_where[TSource:Manifest](s: Exp[DataTable[TSource]], predicate: Exp[TSource] => Exp[Boolean])(implicit ctx: SourceContext) = QueryableWhere(s,predicate)
+  def queryable_groupby[TSource:Manifest, TKey:Manifest](s: Exp[DataTable[TSource]], keySelector: Exp[TSource] => Exp[TKey])(implicit ctx: SourceContext) = {
     val v = fresh[TSource]
     val key = keySelector(v)
     HackQueryableGroupBy(s, v, key)
   }
-  def queryable_sum[TSource:Manifest](s: Rep[DataTable[TSource]], sumSelector: Rep[TSource] => Rep[Double]) = {
+  def queryable_sum[TSource:Manifest](s: Rep[DataTable[TSource]], sumSelector: Rep[TSource] => Rep[Double])(implicit ctx: SourceContext) = {
     val sym = fresh[TSource]
     val value = sumSelector(sym)
     HackQueryableSum(s,sym,value)
   }
-  def queryable_average[TSource:Manifest](s: Rep[DataTable[TSource]], avgSelector: Rep[TSource] => Rep[Double]) = s.Sum(avgSelector)/s.size()
-  def queryable_count[TSource:Manifest](s: Rep[DataTable[TSource]]) = s.size()
+  def queryable_average[TSource:Manifest](s: Rep[DataTable[TSource]], avgSelector: Rep[TSource] => Rep[Double])(implicit ctx: SourceContext) = s.Sum(avgSelector)/s.size()
+  def queryable_count[TSource:Manifest](s: Rep[DataTable[TSource]])(implicit ctx: SourceContext) = s.size()
   
-  def queryable_grouping_toDatatable[TKey:Manifest, TSource:Manifest](g: Rep[Grouping[TKey, TSource]]) = QueryableGroupingToDataTable(g)
-  def queryable_grouping_key[TKey:Manifest, TSource:Manifest](g: Rep[Grouping[TKey, TSource]]): Rep[TKey] = QueryableGroupingKey(g)
+  def queryable_grouping_toDatatable[TKey:Manifest, TSource:Manifest](g: Rep[Grouping[TKey, TSource]])(implicit ctx: SourceContext) = QueryableGroupingToDataTable(g)
+  def queryable_grouping_key[TKey:Manifest, TSource:Manifest](g: Rep[Grouping[TKey, TSource]])(implicit ctx: SourceContext): Rep[TKey] = QueryableGroupingKey(g)
   
   override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit ctx: SourceContext): Exp[A] = (e match {    
     case QueryableWhere(s,p) => queryable_where(f(s), p)

@@ -11,15 +11,15 @@ trait DateOps extends Base {
   implicit def dateRepToDateRepOps(d: Rep[Date]) = new DateRepOps(d)
 
   object Date {
-    def apply(str: Rep[String]): Rep[Date] = dateObjectApply(str)
+    def apply(str: Rep[String])(implicit ctx: SourceContext): Rep[Date] = dateObjectApply(str)
   }
 
   class DateRepOps(d: Rep[Date]) {
-    def <=(rd: Rep[Date]): Rep[Boolean] = dateLessThan(d,rd)
+    def <=(rd: Rep[Date])(implicit ctx: SourceContext): Rep[Boolean] = dateLessThan(d,rd)
   }
 
-  def dateObjectApply(str: Rep[String]): Rep[Date]
-  def dateLessThan(ld: Rep[Date], rd: Rep[Date]): Rep[Boolean]
+  def dateObjectApply(str: Rep[String])(implicit ctx: SourceContext): Rep[Date]
+  def dateLessThan(ld: Rep[Date], rd: Rep[Date])(implicit ctx: SourceContext): Rep[Boolean]
 
 }
 
@@ -30,8 +30,8 @@ trait DateOpsExp extends DateOps with BaseExp {
   case class DateLessThan[T:Manifest](ld: Rep[Date], rd: Rep[Date]) extends Def[Boolean]
 
   //Interface implementation
-  def dateObjectApply(str: Rep[String]) = DateObjectApply(str)
-  def dateLessThan(ld: Rep[Date], rd: Rep[Date]) = DateLessThan(ld, rd)
+  def dateObjectApply(str: Rep[String])(implicit ctx: SourceContext) = DateObjectApply(str)
+  def dateLessThan(ld: Rep[Date], rd: Rep[Date])(implicit ctx: SourceContext) = DateLessThan(ld, rd)
 
   override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit ctx: SourceContext): Exp[A] = (e match {
     case DateLessThan(l,r) => dateLessThan(f(l), f(r));
