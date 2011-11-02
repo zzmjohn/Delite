@@ -16,11 +16,11 @@ trait HelloCollections extends CollectionsApplication {
     // val ms = HashMap.range(6).map(x => x)
     // println(ms)
     
-    // val mg = ArraySeq.range(6).groupBy(x => x % 2)
-    // println(mg)
+    val mg = ArraySeq.range(6).groupBy(x => x % 2)
+    println(mg)
     
-    val ys = ArraySeq.range(6).flatMap(x => ArraySeq.range(x + 1))
-    println(ys)
+    // val ys = ArraySeq.range(6).flatMap(x => ArraySeq.range(x + 1))
+    // println(ys)
     
     // val xs = ArraySeq.range(250000)
     

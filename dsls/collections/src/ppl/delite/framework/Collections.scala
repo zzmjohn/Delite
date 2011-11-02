@@ -76,6 +76,7 @@ trait CollScalaOpsPkg extends Base
     with Equal with IfThenElse with Variables with While with TupleOps with ListOps
     with MathOps with CastingOps with ObjectOps
     with SynchronizedArrayBufferOps
+    with LongOps
 
 
 trait CollScalaOpsPkgExp extends CollScalaOpsPkg
@@ -84,6 +85,7 @@ trait CollScalaOpsPkgExp extends CollScalaOpsPkg
     with FunctionsExp with EqualExp with IfThenElseExp with VariablesExp with WhileExp with TupleOpsExp with ListOpsExp
     with DSLOpsExp with MathOpsExp with CastingOpsExp with ObjectOpsExp
     with SynchronizedArrayBufferOpsExp
+    with LongOpsExp
 
 
 trait CollScalaCodeGenPkg extends ScalaGenImplicitOps with ScalaGenNumericOps with ScalaGenFractionalOps with ScalaGenOrderingOps
@@ -93,6 +95,7 @@ trait CollScalaCodeGenPkg extends ScalaGenImplicitOps with ScalaGenNumericOps wi
     with ScalaGenDSLOps with ScalaGenMathOps with ScalaGenCastingOps
     with ScalaGenObjectOps
     with ScalaGenSynchronizedArrayBufferOps
+    with ScalaGenLongOps
 { val IR: CollScalaOpsPkgExp  }
 
 

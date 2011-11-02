@@ -53,6 +53,17 @@ object ArraySeqImpl {
     
     as
   }
+  def fromArray[T: Manifest](arr: Array[T]) = {
+    val as = new ArraySeqImpl(0)
+    as.unsafeSetData(arr, arr.length)
+    as
+  }
+  def fromArrayBuffer[T: Manifest](ab: collection.mutable.ArrayBuffer[T]) = {
+    val as = new ArraySeqImpl(0)
+    val arr = ab.toArray
+    as.unsafeSetData(arr, arr.length)
+    as
+  }
   def fillArray(sz: Int)(value: Int) = {
     val arr = new Array[Int](sz)
     var i = 0

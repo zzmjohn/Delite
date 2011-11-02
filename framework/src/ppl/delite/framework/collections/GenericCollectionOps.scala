@@ -43,7 +43,7 @@ trait ScalaEmitter {
   def emitBufferDefs(kernelname: String, basename: String, keytype: String, valtype: String)(implicit stream: PrintWriter)
   def emitInitSubActivation(basename: String, activname: String, chunkIdxVar: String, numChunksVar: String)(implicit stream: PrintWriter)
   def emitAddToBuffer(basename: String, activname: String, elemname: String)(implicit stream: PrintWriter)
-  def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter)
+  def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String, idxname: String)(implicit stream: PrintWriter)
   def emitAddToBufferKeyVal(basename: String, activname: String, keyname: String, valname: String)(implicit stream: PrintWriter) {}
   def emitAddToDataStructureKeyVal(prefixSym: String, basename: String, keyname: String, valname: String)(implicit stream: PrintWriter) {}
   def emitPostCombine(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter)

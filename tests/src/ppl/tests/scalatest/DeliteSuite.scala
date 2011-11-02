@@ -151,7 +151,7 @@ trait DeliteSuite extends Suite with DeliteTestConfig {
 // the workaround for now is that the dsl under test must include ArrayBuffer in its code gen
 trait DeliteTestRunner extends DeliteTestModule with DeliteApplication
   with MiscOpsExp with SynchronizedArrayBufferOpsExp with StringOpsExp {
- 
+  
   var resultBuffer: ArrayBuffer[Boolean] = _
   
   def collector: Rep[ArrayBuffer[Boolean]] = staticData(resultBuffer)

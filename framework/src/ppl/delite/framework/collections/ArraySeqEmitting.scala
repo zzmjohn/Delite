@@ -47,8 +47,9 @@ trait ArraySeqEmitting {
       def emitAddToBuffer(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
         stream.println(prefixSym + basename + "_buf_append(" + elemname + ")")
       }
-      def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
-        stream.println(prefixSym + basename + ".+=(" + elemname + ")")
+      def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String, idxname: String)(implicit stream: PrintWriter) {
+        //stream.println(prefixSym + basename + ".+=(" + elemname + ")")
+        stream.println(prefixSym + basename + "_data(" + idxname + ") = " + elemname)
       }
       def emitPostCombine(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {
         stream.println(activname + "." + basename + "_offset = " + lhsname + "." + basename + "_offset + " + lhsname + "." + basename + "_size")

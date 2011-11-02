@@ -156,7 +156,7 @@ trait HashMapEmittingBase {
       def emitAddToBuffer(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
         stream.println(prefixSym + basename + "_buf_append(" + elemname + "._1, " + elemname + "._2)")
       }
-      def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
+      def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String, idxname: String)(implicit stream: PrintWriter) {
         stream.println(prefixSym + basename + ".put(" + elemname + "._1, " + elemname + "._2)")
       }
       override def emitAddToBufferKeyVal(prefixSym: String, basename: String, keyname: String, valname: String)(implicit stream: PrintWriter) {

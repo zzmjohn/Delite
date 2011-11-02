@@ -1104,15 +1104,14 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
   /**
    * MultiLoop components
    */
-  def emitCollectElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteCollectElem[_,_], prefixSym: String = "")(implicit stream: PrintWriter) {
+  def emitCollectElem(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteCollectElem[_,_], prefixSym: String = "", idxsym: String = "")(implicit stream: PrintWriter) {
     val emitter = elem.emitterScala.getOrElse(standardScalaEmitter)
     if (elem.needsSpecialCollect) {
       if (elem.cond.nonEmpty) stream.print("if (" + elem.cond.map(c=>quote(getBlockResult(c))).mkString(" && ") + ") ")
       if (deliteKernel)
         emitter.emitAddToBuffer(prefixSym, quote(sym), quote(getBlockResult(elem.func)))
       else
-        stream.println("throw new RuntimeException(\"FIXME: buffer growing\")")
-        //stream.println(prefixSym + quote(sym) + ".insert(" + prefixSym + quote(sym) + ".length, " + quote(getBlockResult(elem.func)) + ") // FIXME: buffer growing")
+        emitter.emitAddToDataStructure(prefixSym, quote(sym), quote(getBlockResult(elem.func)), idxsym)
     } else {
       stream.println(prefixSym + quote(sym) + "_data(" + quote(op.v) + ") = " + quote(getBlockResult(elem.func)))
     }
@@ -1331,7 +1330,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
       case (sym, elem: DeliteHashElem[_, _, _, _]) =>
         emitHashElem(op, sym, elem)
       case (sym, elem: DeliteCollectElem[_,_]) =>
-        emitCollectElem(op, sym, elem)
+        emitCollectElem(op, sym, elem, "", quote(op.v))
       case (sym, elem: DeliteFlattenElem[_,_]) =>
         emitFlattenElem(op, sym, elem)
       case (sym, elem: DeliteForeachElem[_]) => 
@@ -1354,10 +1353,11 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         elem.emitterFactory.get.scala.emitInitializeDataStructure(quote(sym), "", quote(getBlockResult(elem.alloc)), quote(sym) + "_data")
         stream.println("}")
       case (sym, elem: DeliteCollectElemLike[_,_]) =>
+        stream.println("val %s_size = %s".format(quote(sym), quote(op.v)))
         if (elem.emitterFactory.isEmpty) {
           emitValDef(elem.aV, quote(sym) + "_data")
         } else {
-          elem.emitterFactory.map(_.scala).getOrElse(standardScalaEmitter).emitDataDeclaration(quote(sym), "", quote(sym) + "_data")
+          elem.emitterFactory.map(_.scala).getOrElse(standardScalaEmitter).emitDataDeclaration(quote(sym), "", quote(sym) + "_dtarray")
         }
         stream.println("val " + quote(sym) + " = {"/*}*/)
         if (elem.emitterFactory.isEmpty) {
@@ -1365,7 +1365,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
           stream.println(quote(getBlockResult(elem.alloc)))
         } else {
           emitBlock(elem.allocDataStructure)
-          elem.emitterFactory.get.scala.emitInitializeDataStructure(quote(sym), "", quote(getBlockResult(elem.allocDataStructure)), quote(sym) + "_data")
+          elem.emitterFactory.get.scala.emitInitializeDataStructure(quote(sym), "", quote(getBlockResult(elem.allocDataStructure)), quote(sym) + "_dtarray")
         }
         stream.println(/*{*/"}")
       case (sym, elem: DeliteForeachElem[_]) => 
@@ -1413,8 +1413,10 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     def emitAddToBuffer(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
       stream.println(prefixSym + basename + "_buf_append(" + elemname + ")")
     }
-    def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String)(implicit stream: PrintWriter) {
-      stream.println(prefixSym + basename + ".insert(" + prefixSym + basename + ".length, " + elemname + ")")
+    def emitAddToDataStructure(prefixSym: String, basename: String, elemname: String, idxname: String)(implicit stream: PrintWriter) {
+      //stream.println(prefixSym + basename + ".insert(" + prefixSym + basename + ".length, " + elemname + ")")
+      stream.println(prefixSym + basename + "_data(" + idxname + ") = " + elemname)
+      stream.println("if (%s > %s%s_data.length) sys.error(\"FIXME - resize array\")".format(idxname, prefixSym, basename))
     }
     def emitPostCombine(basename: String, activname: String, lhsname: String)(implicit stream: PrintWriter) {
       stream.println(activname + "." + basename + "_offset = " + lhsname + "." + basename + "_offset + " + lhsname + "." + basename + "_size")
