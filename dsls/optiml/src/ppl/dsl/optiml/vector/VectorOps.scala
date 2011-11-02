@@ -690,6 +690,8 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
     val size = in.length
     def func = map
 
+    val mA = manifest[A]
+    val mB = manifest[B]
   }
   
   case class VectorFilter[A:Manifest](in: Exp[Vector[A]], cond: Exp[A] => Exp[Boolean]) 
@@ -831,6 +833,7 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
     case VectorApply(x, n) => vector_apply(f(x), f(n))
     case VectorLength(x) => vector_length(f(x))
     case VectorIsRow(x) => vector_isRow(f(x))
+    case e@VectorObjectRange(x,y,z,w) => reflectPure(VectorObjectRange(f(x),f(y),f(z),f(w)))(mtype(manifest[A]))
     // implemented as DeliteOpSingleTask and DeliteOpLoop
     case e@VectorObjectOnes(x) => reflectPure(new { override val original = Some(f,e) } with VectorObjectOnes(f(x)))(mtype(manifest[A]))
     case e@VectorObjectOnesF(x) => reflectPure(new { override val original = Some(f,e) } with VectorObjectOnesF(f(x)))(mtype(manifest[A]))
@@ -850,6 +853,7 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
     case e@VectorCount(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorCount(f(x),f(p))(e.m))(mtype(manifest[A]))
     case e@VectorMinIndex(x) => reflectPure(new { override val original = Some(f,e) } with VectorMinIndex(f(x))(e.m,e.o,e.p))(mtype(manifest[A]))
     case e@VectorMap(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorMap(f(x),f(p))(e.mA,e.mB))(mtype(manifest[A]))
+    case e@VectorFlatMap(x,p) => reflectPure(new { override val original = Some(f,e) } with VectorFlatMap(f(x),f(p))(e.mA,e.mB))(mtype(manifest[A]))
     // read/write effects
     case Reflect(VectorApply(l,r), u, es) => reflectMirrored(Reflect(VectorApply(f(l),f(r)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case Reflect(VectorLength(x), u, es) => reflectMirrored(Reflect(VectorLength(f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))
@@ -1019,6 +1023,7 @@ trait VectorOpsExpOpt extends VectorOpsExp with DeliteCollectionOpsExp {
   override def vector_isRow[A:Manifest](x: Exp[Vector[A]]) = x match {
     case Def(e: VectorArithmeticMap[A]) => e.in.asInstanceOf[Exp[Vector[A]]].isRow 
     case Def(e: VectorMap[A, _]) => e.in.asInstanceOf[Exp[Vector[A]]].isRow
+    case Def(e: VectorFlatMap[A, _]) => e.in.asInstanceOf[Exp[Vector[A]]].isRow
     case Def(e: VectorArithmeticZipWith[A]) => e.inA.asInstanceOf[Exp[Vector[A]]].isRow
     //case Def(e: DeliteOpVectorLoop[A]) => e.isRow
     //case Def(e: VectorDeliteOp[A] => e.isRow)

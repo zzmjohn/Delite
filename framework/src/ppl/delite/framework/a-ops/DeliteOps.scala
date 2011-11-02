@@ -149,7 +149,6 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
   ) extends Def[A]
 
 
-
   def loopBodyNeedsStripFirst[A](e: Def[A]) = e match {
     case e:DeliteReduceElem[_] => e.stripFirst
     case e:DeliteReduceTupleElem[_,_] => e.stripFirst
@@ -307,13 +306,10 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
         val innShape = dc_size(array)
         val outVar = v
 
-        new DeliteOpForeachGen[B, B] {
+        FlatMapForeachGen[B, B](array, innShape, (x => {
           g = toAtom(Yield(List(v, outVar), dc_apply(array, v)))
-
-          val in = array
-          val size = innShape
-          def innerLoop = reifyEffects(g)
-        }
+          g
+        }))
       }
 
       DeliteCollectElem[B, CB](
@@ -324,6 +320,13 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
       )
     })
   }
+
+  override def mirror[A: Manifest](e: Def[A], f: Transformer): Exp[A] = (e match {
+    case op@FlatMapForeachGen(array, size, _) =>
+      reflectPure(FlatMapForeachGen(f(array), f(size), x => f(getBlockResult(op.innerLoop)))(op.mA, op.mB))(mtype(manifest[A]))
+    case _ => super.mirror(e, f)
+  }).asInstanceOf[Exp[A]]
+
 
   /**
    *  Currently conditionally appends values to buffers, which are concatenated in the combine stage.
@@ -684,6 +687,18 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     lazy val body: Def[Gen[B]] = copyBodyOrElse(DeliteForeachGenElem(innerLoop))
   }
 
+  case class FlatMapForeachGen[A: Manifest, B: Manifest](in: Exp[DeliteCollection[A]],
+                                                         size: Exp[Int],
+                                                         innL: Unit => Exp[Gen[B]])
+    extends DeliteOpForeachGen[A, B] {
+    private val innLoopResult =  reifyEffects(innL(()))
+
+    def innerLoop = innLoopResult
+
+    val mA = manifest[A]
+    val mB = manifest[B]
+  }
+
   abstract class DeliteOpIndexedLoop extends DeliteOpLoop[Unit] {
     type OpType <: DeliteOpIndexedLoop
     val size: Exp[Int]
@@ -854,7 +869,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
           sync = f(e.sync)
         ).asInstanceOf[Def[A]] // reasonable?
       case e: DeliteForeachGenElem[a] =>
-        DeliteForeachGenElem[a](func = f(e.func)).asInstanceOf[Def[A]] // reasonable?
+        DeliteForeachGenElem[a](func = f(e.func)).asInstanceOf[Def[A]]
       case e: DeliteReduceElem[a] => 
         DeliteReduceElem[a](
           func = f(e.func),
@@ -1080,28 +1095,27 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
 
   def plugInHelper[A, T: Manifest, U: Manifest](oldGen: Exp[Gen[A]], context: Block[Gen[T]], plug: Block[Gen[U]]): Block[Gen[U]] = context match {
     case Block(`oldGen`) => plug
-    case Block(Def(IfThenElse(c, a, b@Block(Def(Skip(x)))))) => Block(toAtom2(IfThenElse(c, plugInHelper(oldGen, a, plug), Block(toAtom2(Skip(x))))))
-    // TODO (VJ) fix this SimpleLoop node
-    case Block(Def(SimpleLoop(sh, x, DeliteForeachGenElem(y)))) => Block(toAtom2(SimpleLoop(sh, x, DeliteForeachGenElem(plugInHelper(oldGen, y, plug)))))
-    case Block(Def(x)) => error("Missed me => " + x + " should find " + oldGen); throw new RuntimeException("Missed me => " + x + " should find " + oldGen)
+
+    case Block(Def(IfThenElse(c, a, b@Block(Def(Skip(x)))))) =>
+      Block(toAtom2(IfThenElse(c, plugInHelper(oldGen, a, plug), Block(toAtom2(Skip(x))))))
+
+    case Block(Def(SimpleLoop(sh, x, DeliteForeachGenElem(y)))) =>
+      Block(toAtom2(SimpleLoop(sh, x, DeliteForeachGenElem(plugInHelper(oldGen, y, plug)))))
+
+    case Block(Def(x)) =>
+      throw new RuntimeException("Missed me => " + x + " should find " + oldGen)
   }
 
   override def applyPlugIntoContext(d: Def[Any], r: Def[Any], newGen: Exp[Any]) = (d, r) match {
-    // case (ArrayElem(g, a), ArrayElem(g2, b)) => ArrayElem(newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
     case (DeliteCollectElem(av, alloc, g, a), DeliteCollectElem(av2, alloc2, g2, b)) =>
       DeliteCollectElem(av, alloc, newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
 
-    // case (ReduceElem(g, a), ArrayElem(g2, b)) => ArrayElem(newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
     case (DeliteReduceElem(g, a, _, _, _, _), DeliteCollectElem(av, alloc, g2, b)) =>
       DeliteCollectElem(av, alloc, newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
 
-    // TODO(VJ) rFunc can not stay the same. See the tests and fix the code generation and plugging!!!
-    // case (ArrayElem(g, a), ReduceElem(g2, b)) => ReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b))
     case (DeliteCollectElem(_, _, g, a), DeliteReduceElem(g2, b, zero, rV, rFunc, stripFirst)) =>
       DeliteReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b), zero, rV, rFunc, stripFirst)
 
-    // TODO(VJ) rFunc can not stay the same. See the tests and fix the code generation and plugging!!!
-    // case (ReduceElem(g, a), ReduceElem(g2, b)) => ReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b))
     case (DeliteReduceElem(g, a, _, _, _, _), DeliteReduceElem(g2, b, zero, rV, rFunc, stripFirst)) =>
       DeliteReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b), zero, rV, rFunc, stripFirst)
 
