@@ -131,13 +131,10 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     rFunc: Block[A],
     stripFirst: Boolean
   ) extends Def[A] {
-    // TODO (VJ) taken from lms check if it will work. If not keep all assignments of cond
     def condNonEmpty() = getBlockResult(func) != gen
   }
 
-  case class DeliteForeachGenElem[A](
-    func: Block[Gen[A]]
-  ) extends Def[Gen[A]]
+  case class DeliteForeachGenElem[A](func: Block[Gen[A]]) extends Def[Gen[A]]
 
 
   case class DeliteReduceTupleElem[A,B](
@@ -308,13 +305,15 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
       val y: Block[Gen[B]] = reifyEffects {
         val array = func(dc_apply(in, v))
         val innShape = dc_size(array)
-        val innVar = fresh[Int]
-        g = toAtom(Yield(List(innVar, v), dc_apply(array, innVar)))
-        val y2 = reifyEffects {
-          g
+        val outVar = v
+
+        new DeliteOpForeachGen[B, B] {
+          g = toAtom(Yield(List(v, outVar), dc_apply(array, v)))
+
+          val in = array
+          val size = innShape
+          def innerLoop = reifyEffects(g)
         }
-        SimpleLoop(innShape, innVar, DeliteForeachGenElem(y2).asInstanceOf[Def[Gen[B]]])
-        g
       }
 
       DeliteCollectElem[B, CB](
@@ -675,7 +674,16 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
       sync = reifyEffects(this.sync(i))
     ))
   }
-  
+
+  abstract class DeliteOpForeachGen[A:Manifest, B: Manifest] extends DeliteOpLoop[Gen[B]] { //DeliteOp[Unit] {
+    type OpType <: DeliteOpForeachGen[A, B]
+    val in: Exp[DeliteCollection[A]]
+    val size: Exp[Int]
+    def innerLoop: Block[Gen[B]]
+
+    lazy val body: Def[Gen[B]] = copyBodyOrElse(DeliteForeachGenElem(innerLoop))
+  }
+
   abstract class DeliteOpIndexedLoop extends DeliteOpLoop[Unit] {
     type OpType <: DeliteOpIndexedLoop
     val size: Exp[Int]
@@ -1070,10 +1078,11 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
     tp.sym
   }
 
-  def plugInHelper[A,T:Manifest,U:Manifest](oldGen: Exp[Gen[A]], context: Block[Gen[T]], plug: Block[Gen[U]]): Block[Gen[U]] = context match {
+  def plugInHelper[A, T: Manifest, U: Manifest](oldGen: Exp[Gen[A]], context: Block[Gen[T]], plug: Block[Gen[U]]): Block[Gen[U]] = context match {
     case Block(`oldGen`) => plug
-    case Block(Def(IfThenElse(c,a,b@Block(Def(Skip(x)))))) => Block(toAtom2(IfThenElse(c,plugInHelper(oldGen,a,plug),Block(toAtom2(Skip(x))))))
-    case Block(Def(SimpleLoop(sh,x,DeliteForeachGenElem(y)))) => Block(toAtom2(SimpleLoop(sh,x,DeliteForeachGenElem(plugInHelper(oldGen,y,plug)))))
+    case Block(Def(IfThenElse(c, a, b@Block(Def(Skip(x)))))) => Block(toAtom2(IfThenElse(c, plugInHelper(oldGen, a, plug), Block(toAtom2(Skip(x))))))
+    // TODO (VJ) fix this SimpleLoop node
+    case Block(Def(SimpleLoop(sh, x, DeliteForeachGenElem(y)))) => Block(toAtom2(SimpleLoop(sh, x, DeliteForeachGenElem(plugInHelper(oldGen, y, plug)))))
     case Block(Def(x)) => error("Missed me => " + x + " should find " + oldGen); throw new RuntimeException("Missed me => " + x + " should find " + oldGen)
   }
 
@@ -1265,7 +1274,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
   def emitMultiLoopFuncs(op: AbstractFatLoop, symList: List[Sym[Any]])(implicit stream: PrintWriter) {
     val elemFuncs = op.body flatMap { // don't emit dependencies twice!
       case elem: DeliteCollectElem[_,_] => List(elem.func)
-//      case elem: DeliteForeachElem[_] => elem.cond // only emit func inside condition! TODO: how to avoid emitting deps twice? // elem.func :: elem.cond
+      case elem: DeliteForeachGenElem[_] => List(elem.func)
       case elem: DeliteForeachElem[_] => List(elem.func) 
       case elem: DeliteReduceElem[_] => List(elem.func)
       case elem: DeliteReduceTupleElem[_,_] => elem.func._1 :: elem.func._2 :: elem.cond
@@ -1292,6 +1301,8 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
 */
       case (sym, elem: DeliteForeachElem[_]) => 
         stream.println("var " + quotearg(sym) + " = ()") // must be type Unit
+      case (sym, elem: DeliteForeachGenElem[_]) =>
+        stream.println("var " + quote(sym) + ": " + stripGenToUnit(sym.Type) + " = ()") // must be type Unit
       case (sym, elem: DeliteReduceElem[_]) =>
         stream.println("val " + quote(sym) + "_zero = {"/*}*/)
         emitBlock(elem.zero)
@@ -1341,8 +1352,8 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     }
     stream.println("while (" + quote(op.v) + " < " + quote(op.size) + ") {  // begin fat loop " + symList.map(quote).mkString(",")/*}*/)
 
-    def createGens(op: AbstractFatLoop, symList: List[Sym[Any]]) =
-      for ((sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]]) yield elem match {
+    // body
+    val gens = for ((sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]]) yield elem match {
       case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
         (g, (s: String) => {
           stream.println(quote(sym) + "_buf_append(" + s + ")")
@@ -1357,9 +1368,6 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         // TODO (VJ) apply the function that you defined previously
         (g, (s: String) => stream.println(quote(sym) + " += " + s + "\n" + emitValDef(sym, "()")))
     }
-
-    // body
-    val gens = createGens(op, symList)
 
     withGens(gens) {
       emitMultiLoopFuncs(op, symList)
@@ -1384,7 +1392,8 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         emitBlock(elem.alloc)
         stream.println(quote(getBlockResult(elem.alloc)))
         stream.println(/*{*/"}")
-      case (sym, elem: DeliteForeachElem[_]) => 
+      case (sym, elem: DeliteForeachElem[_]) =>
+      case (sym, elem: DeliteForeachGenElem[_]) =>
       case (sym, elem: DeliteReduceElem[_]) =>
       case (sym, elem: DeliteReduceTupleElem[_,_]) =>
     }
