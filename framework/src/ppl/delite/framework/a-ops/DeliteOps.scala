@@ -306,7 +306,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
         val innShape = dc_size(array)
         val outVar = v
 
-        FlatMapForeachGen[B, B](array, innShape, (x => {
+        FlatMapForeachGen[B, B](array, innShape, (v => {
           g = toAtom(Yield(List(v, outVar), dc_apply(array, v)))
           g
         }))
@@ -689,9 +689,9 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
 
   case class FlatMapForeachGen[A: Manifest, B: Manifest](in: Exp[DeliteCollection[A]],
                                                          size: Exp[Int],
-                                                         innL: Unit => Exp[Gen[B]])
-    extends DeliteOpForeachGen[A, B] {
-    private val innLoopResult =  reifyEffects(innL(()))
+                                                         innL: Sym[Int] => Exp[Gen[B]])
+  extends DeliteOpForeachGen[A, B] {
+    private val innLoopResult = reifyEffects(innL(v))
 
     def innerLoop = innLoopResult
 
@@ -1097,10 +1097,15 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
     case Block(`oldGen`) => plug
 
     case Block(Def(IfThenElse(c, a, b@Block(Def(Skip(x)))))) =>
+      error("IfThenElse")
       Block(toAtom2(IfThenElse(c, plugInHelper(oldGen, a, plug), Block(toAtom2(Skip(x))))))
 
-    case Block(Def(SimpleLoop(sh, x, DeliteForeachGenElem(y)))) =>
-      Block(toAtom2(SimpleLoop(sh, x, DeliteForeachGenElem(plugInHelper(oldGen, y, plug)))))
+    case Block(Def(in@FlatMapForeachGen(sh, x, _))) =>
+      in.innerLoop match {
+        case Block(Def(DeliteForeachGenElem(inBlock))) =>
+          Block(toAtom2(FlatMapForeachGen(sh, x, v => toAtom2(DeliteForeachGenElem(plugInHelper(oldGen, inBlock, plug))))))
+        case _ => throw new RuntimeException("Wrong type of inner loop: " + in.innerLoop)
+      }
 
     case Block(Def(x)) =>
       throw new RuntimeException("Missed me => " + x + " should find " + oldGen)
@@ -1364,7 +1369,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
       stream.println(/*{*/"}")
       stream.println(quote(op.v) + " = 1")
     }
-    stream.println("while (" + quote(op.v) + " < " + quote(op.size) + ") {  // begin fat loop " + symList.map(quote).mkString(",")/*}*/)
+    stream.println("while (" + quote(op.v) + " < " + quote(op.size) + ") {  // begin inline fat loop " + symList.map(quote).mkString(",")/*}*/)
 
     // body
     val gens = for ((sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]]) yield elem match {
@@ -1397,7 +1402,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
       case _ => // others are handled by the yield statement
     }
     stream.println(quote(op.v) + " += 1")
-    stream.println(/*{*/"} // end fat loop " + symList.map(quote).mkString(","))
+    stream.println(/*{*/"} // end of inline fat loop " + symList.map(quote).mkString(","))
     // finalize
     (symList zip op.body) foreach {
       case (sym, elem@DeliteCollectElem(_, _, _, _)) =>
