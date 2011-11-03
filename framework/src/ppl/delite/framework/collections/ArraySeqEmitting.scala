@@ -98,7 +98,7 @@ trait ArraySeqEmitting {
           stream.println("%s.unsafeSetData(%s%s_data, %s%s_size)".format(collectionname, prefix, basename, prefix, basename))
           stream.println("%s".format(collectionname))
         } else {
-          stream.println("val %s_totalsize = %s%s_activations(%s%s_numChunks - 1).%s_offset + %s%s_activations(%s%s_numChunks - 1).%s_size".format(basename, prefix, basename, prefix, basename, basename, prefix, basename, prefix, basename, basename))
+          stream.println("val %s_totalsize = if (%s%s_numChunks > 1) %s%s_activations(%s%s_numChunks - 1).%s_offset + %s%s_activations(%s%s_numChunks - 1).%s_size else %s%s_size".format(basename, prefix, basename, prefix, basename, prefix, basename, basename, prefix, basename, prefix, basename, basename, prefix, basename))
           stream.println("%s.unsafeSetData(%s%s_data, %s_totalsize)".format(collectionname, prefix, basename, basename))
           stream.println("%s".format(collectionname))
         }

@@ -74,7 +74,6 @@ trait ReverseWebLink extends CollectionsApplication with DeliteTestModule {
     val inverted = invertedAndShifted map {
       x => (x._1 >>> 32, x._2 map { src => long_and(src, 0xffffffffL) })
     }
-    println(inverted)
     toc(inverted)
     
     // println(inverted)
