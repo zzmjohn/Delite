@@ -42,6 +42,17 @@ trait ReverseWebLink extends CollectionsApplication with DeliteTestModule {
     }
     val pagelinks = ArraySeq.fromArrayBuffer(linesbuffer)
     
+    // test flatMap to tuples
+    val sdtuples = pagelinks flatMap {
+      l =>
+      val sourcedests = l.split(":")
+      val source = Long.parseLong(sourcedests(0))
+      val dests = sourcedests(1).trim.split(" ")
+      ArraySeq.fromArray(dests).map(d => (source, Long.parseLong(d)))
+    }
+    // println(sdtuples)
+    
+    tic(pagelinks)
     // flatMap it
     val sourcedests = pagelinks flatMap {
       l =>
@@ -50,6 +61,9 @@ trait ReverseWebLink extends CollectionsApplication with DeliteTestModule {
       val dests = sourcedests(1).trim.split(" ")
       ArraySeq.fromArray(dests).map(d => long_plus(source, Long.parseLong(d) << 32))
     }
+    //println(sourcedests.size)
+    //val sdtuples2 = sourcedests map {x => (x >>> 32, long_and(x, 0xffffffffL)) }
+    //println(sdtuples2)
     
     // groupBy it
     val invertedAndShifted = sourcedests groupBy {
@@ -60,8 +74,10 @@ trait ReverseWebLink extends CollectionsApplication with DeliteTestModule {
     val inverted = invertedAndShifted map {
       x => (x._1 >>> 32, x._2 map { src => long_and(src, 0xffffffffL) })
     }
+    println(inverted)
+    toc(inverted)
     
-    //println(inverted)
+    // println(inverted)
     collect(1 == 1)
     
     mkReport

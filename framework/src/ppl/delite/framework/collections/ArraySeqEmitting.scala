@@ -94,8 +94,14 @@ trait ArraySeqEmitting {
         stream.println("val " + dataname + " = " + prefix + basename + "_data")
       }
       def emitInitializeDataStructure(basename: String, prefix: String, collectionname: String, dataname: String)(implicit stream: PrintWriter) {
-        stream.println("%s.unsafeSetData(%s%s_data, %s%s_size)".format(collectionname, prefix, basename, prefix, basename))
-        stream.println("%s".format(collectionname))
+        if (prefix == "") {
+          stream.println("%s.unsafeSetData(%s%s_data, %s%s_size)".format(collectionname, prefix, basename, prefix, basename))
+          stream.println("%s".format(collectionname))
+        } else {
+          stream.println("val %s_totalsize = %s%s_activations(%s%s_numChunks - 1).%s_offset + %s%s_activations(%s%s_numChunks - 1).%s_size".format(basename, prefix, basename, prefix, basename, basename, prefix, basename, prefix, basename, basename))
+          stream.println("%s.unsafeSetData(%s%s_data, %s_totalsize)".format(collectionname, prefix, basename, basename))
+          stream.println("%s".format(collectionname))
+        }
       }
     }
   }
