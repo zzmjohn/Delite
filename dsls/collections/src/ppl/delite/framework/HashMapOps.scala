@@ -35,7 +35,7 @@ self: ArraySeqOps with ArraySeqEmitting =>
 
 
 trait HashMapOpsExp extends MapOpsExp with HashMapOps {
-self: HashMapOpsExp with HashMapEmitting with ArraySeqOps with ArraySeqEmitting with HashMultiMapEmitting =>
+self: HashMapOpsExp with HashMapEmitting with ArraySeqOpsExp with ArraySeqEmitting with HashMultiMapEmitting =>
   
   /* nodes */
   case class HashMapNew[K, V]()(val mV: Manifest[HashMapImpl[K, V]]) extends Def[HashMap[K, V]]

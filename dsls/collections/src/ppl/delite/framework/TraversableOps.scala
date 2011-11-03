@@ -12,7 +12,15 @@ import ppl.delite.framework.ops.DeliteCollectionOps
 
 
 
-trait TraversableOps extends GenericCollectionOps with DeliteCollectionOps {
+trait LowPriorityCollectionImplicits extends GenericCollectionOps {
+  
+  // TODO see what to can be done about this
+  //implicit def deliteCollectionCanBuild[T: Manifest, S: Manifest]: CanBuild[DeliteCollection[T], S, DeliteCollection[S]] = sys.error("unimplemented")
+  
+}
+
+
+trait TraversableOps extends GenericCollectionOps with DeliteCollectionOps with LowPriorityCollectionImplicits {
   
   /* ctors */
   object Traversable {
@@ -47,8 +55,7 @@ trait TraversableOps extends GenericCollectionOps with DeliteCollectionOps {
 
 
 trait TraversableOpsExp extends TraversableOps with VariablesExp with TupleOpsExp with BaseFatExp with DeliteOpsExp {
-self: HashMapOpsExp with HashMultiMapEmitting =>
-//self: ArraySeqOpsExp with ArraySeqEmitting =>
+self: HashMapOpsExp with HashMultiMapEmitting with ArraySeqOpsExp with ArraySeqEmitting =>
   
   /* lifting */
   implicit def liftUnit(u: Unit): Exp[Unit] = Const(())
@@ -109,10 +116,9 @@ self: HashMapOpsExp with HashMultiMapEmitting =>
   
   /* implicit rules */
   implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
-    // TODO
-    def alloc(source: Exp[Traversable[T]]) = null //ArraySeq.apply[S](travrep2traversableops(source).size)
-    def emptyAlloc(source: Exp[Traversable[T]]) = null //ArraySeq[S](Const(0))
-    def emitterFactory(source: Exp[Traversable[T]]) = null //scalaArraySeqEmitter[T]
+    def alloc(source: Exp[Traversable[T]]) = ArraySeq.apply[S](travrep2traversableops(source).size)
+    def emptyAlloc(source: Exp[Traversable[T]]) = ArraySeq[S](Const(0))
+    def emitterFactory(source: Exp[Traversable[T]]) = arraySeqEmitterFactory[T]
     def noPrealloc = false
   }
   

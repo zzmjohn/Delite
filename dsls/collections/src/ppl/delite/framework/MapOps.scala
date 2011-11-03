@@ -35,7 +35,7 @@ self: ArraySeqOps with ArraySeqEmitting =>
 
 
 trait MapOpsExp extends TraversableOpsExp {
-self: HashMapOpsExp with HashMapEmitting with HashMultiMapEmitting =>
+self: HashMapOpsExp with HashMapEmitting with HashMultiMapEmitting with ArraySeqOpsExp with ArraySeqEmitting =>
   
   /* nodes */
   case class MapGet[K: Manifest, V: Manifest, Coll <: Map[K, V]: Manifest](m: Exp[Coll], key: Exp[K]) extends Def[V]

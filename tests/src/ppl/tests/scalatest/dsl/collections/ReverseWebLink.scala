@@ -5,6 +5,7 @@ package ppl.tests.scalatest.dsl.collections
 import scala.virtualization.lms.common._
 import java.io._
 import ppl.delite.framework.collections._
+import ppl.delite.framework.datastruct.scala._
 import ppl.delite.framework.DeliteApplication
 import ppl.tests.scalatest._
 import ppl.delite.framework.datastruct.scala.{ArraySeqImpl, ArraySeq}
@@ -42,19 +43,25 @@ trait ReverseWebLink extends CollectionsApplication with DeliteTestModule {
     val pagelinks = ArraySeq.fromArrayBuffer(linesbuffer)
     
     // flatMap it
-    val sourcedests = pagelinks.flatMap {
+    val sourcedests = pagelinks flatMap {
       l =>
       val sourcedests = l.split(":")
       val source = Long.parseLong(sourcedests(0))
       val dests = sourcedests(1).trim.split(" ")
-      ArraySeq.fromArray(dests).map(d => longPlus(source << 32, Long.parseLong(d)))
+      ArraySeq.fromArray(dests).map(d => long_plus(source, Long.parseLong(d) << 32))
     }
     
     // groupBy it
-    val inverted = sourcedests.groupBy {
-      x => 
+    val invertedAndShifted = sourcedests groupBy {
+      x => long_and(x, 0xffffffff00000000L)
     }
     
+    // map it properly
+    val inverted = invertedAndShifted map {
+      x => (x._1 >>> 32, x._2 map { src => long_and(src, 0xffffffffL) })
+    }
+    
+    //println(inverted)
     collect(1 == 1)
     
     mkReport
