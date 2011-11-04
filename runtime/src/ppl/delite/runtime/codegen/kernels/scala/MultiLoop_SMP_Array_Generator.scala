@@ -125,7 +125,7 @@ object MultiLoop_SMP_Array_Generator {
       
       if (chunkIdx != 0) {
         val neighbor = chunkIdx - 1
-        out.append("head.closure.postCombine2(acc, head.getC"+neighbor+")\n")
+        out.append("head.closure.postCombine2(acc, head.getD"+neighbor+")\n")
       }
       if (chunkIdx == numChunks - 1) {
         out.append("head.closure.postProcInit2(acc)\n")

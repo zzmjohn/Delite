@@ -175,7 +175,7 @@ def launchApps(options):
         os.putenv('LMS_HOME', props['libs.lms.home'])
         os.putenv('SCALA_VIRT_HOME', props['scala.virtualized.home'])
         print "==  Generating DEG file with options: " + opts
-        print "executing command: " + props['delite.home'] + "/bin/gen " + classes[app] 
+        print "executing command: " + props['delite.home'] + "/bin/gen " + classes[app]
         ecode = os.system(props['delite.home'] + "/bin/gen " + classes[app])
         if ecode != 0 and options['keep-going'] == None:
             print "Detected abnormal exit code, exiting"
@@ -185,7 +185,7 @@ def launchApps(options):
         ld_library_path = filter(len, os.getenv("LD_LIBRARY_PATH", "").split(":"))
         ld_library_path.append(build_dir+"/libraries")
         os.putenv("LD_LIBRARY_PATH", ":".join(ld_library_path))
-        if options['run']['smp']: 
+        if options['run']['smp']:
             for numThreads in options['delite.threads']:
                 os.putenv("MKL_NUM_THREADS", str(numThreads))
                 os.putenv("SCALA_HOME", props['scala.vanilla.home'])
@@ -252,7 +252,7 @@ def loadParams(options):
         hostname = 'tflop'
     else:
         hostname = 'default'
-		
+
     if not 'datasets' in options:
       f = open(props['delite.home'] + '/benchmark/config/datasets.' + hostname + "." + options['input-size'], 'r')
     else:

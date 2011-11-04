@@ -25,3 +25,6 @@ test-out/*/*-skel
 test-out/*/*-src
 *~
 scripts/setupenv
+dsls/collections/links-sorted-big.txt
+benchmark/CollectionsExperiments/target
+benchmark/CollectionsExperiments/project/boot

@@ -198,13 +198,14 @@ trait HashMapEmittingBase {
         stream.println("%s.%s_blocksizes = new Array[Int](%s.%s_blocks * 32)".format(activname, basename, activname, basename))
         stream.println("}")
         
+        //stream.println("println(\"done \" + %s, %s.%s_blocksizes)".format(activname, activname, basename))
         // stream.println("Console.err.println('atProcInit, %s.%s)".format(activname, basename))
         //stream.println("for (act <- %s.%s_activations) println(act.%s_chunkIdx + \"::\", act.%s_buf_ind.mkString(\", \"))".format(activname, basename, basename, basename))
         //stream.println("println(\"----------------------------------------------\")")
       }
       def emitPostProcess(basename: String, activname: String)(implicit stream: PrintWriter) {
         // read in indices and blocksizes from the last chunk
-        stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
+        stream.println("if (%s.%s_numChunks > 1 && %s.%s_chunkIdx != (%s.%s_numChunks - 1)) {".format(activname, basename, activname, basename, activname, basename))
         stream.println("%s.%s_indices = %s.%s_activations(%s.%s_numChunks - 1).%s_indices".format(activname, basename, activname, basename, activname, basename, basename))
         stream.println("%s.%s_blocksizes = %s.%s_activations(%s.%s_numChunks - 1).%s_blocksizes".format(activname, basename, activname, basename, activname, basename, basename))
         stream.println("}")
