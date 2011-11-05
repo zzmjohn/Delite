@@ -7,10 +7,12 @@ import scala.virtualization.lms.common._
 import ppl.delite.framework.datastruct.scala._
 import ppl.delite.framework.datastruct.scala.DeliteCollection
 import java.io.PrintWriter
+import ppl.dsl.optila.{OptiLA, OptiLAExp}
 
 
 
 trait SeqOps extends TraversableOps {
+self: OptiLA =>
   
   /* ctors */
   // TODO: rename to Seq
@@ -29,7 +31,7 @@ trait SeqOps extends TraversableOps {
 
 
 trait SeqOpsExp extends TraversableOpsExp {
-self: HashMapOpsExp with ArraySeqOpsExp with ArraySeqEmitting with HashMultiMapEmitting =>
+self: OptiLAExp with HashMap1OpsExp with ArraySeqOpsExp with ArraySeqEmitting with HashMultiMapEmitting =>
   
   /* nodes */
   

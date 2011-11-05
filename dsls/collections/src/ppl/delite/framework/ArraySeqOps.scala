@@ -7,10 +7,12 @@ import scala.virtualization.lms.common._
 import ppl.delite.framework.datastruct.scala.DeliteCollection
 import java.io.PrintWriter
 import ppl.delite.framework.datastruct.scala._
+import ppl.dsl.optila.{OptiLA, OptiLAExp}
 
 
 
 trait ArraySeqOps extends SeqOps {
+self: OptiLA =>
   
   /* ctors */
   // TODO - array buffer
@@ -43,7 +45,7 @@ trait ArraySeqOps extends SeqOps {
 
 
 trait ArraySeqOpsExp extends SeqOpsExp with ArraySeqOps {
-self: HashMapOpsExp with ArraySeqEmitting with HashMultiMapEmitting =>
+self: OptiLAExp with HashMap1OpsExp with ArraySeqEmitting with HashMultiMapEmitting =>
   
   // TODO: remove later, but - the implicit conversion below _is_ resolved, unlike the one in the supertrait - why?
   //implicit def arrayseqrep2traversableops2[T: Manifest](t: Rep[ArraySeq[T]]): TraversableClsOps[T, ArraySeq[T]] = new TraversableClsOps[T, ArraySeq[T]](t)

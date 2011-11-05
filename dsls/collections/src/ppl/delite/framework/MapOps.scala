@@ -7,11 +7,12 @@ import scala.virtualization.lms.common._
 import ppl.delite.framework.datastruct.scala._
 import ppl.delite.framework.datastruct.scala.DeliteCollection
 import java.io.PrintWriter
+import ppl.dsl.optila.{OptiLA, OptiLAExp}
 
 
 
 trait MapOps extends TraversableOps {
-self: ArraySeqOps with ArraySeqEmitting =>
+self: OptiLA with ArraySeqOps with ArraySeqEmitting =>
   
   /* ctors */
   object Map {
@@ -35,7 +36,7 @@ self: ArraySeqOps with ArraySeqEmitting =>
 
 
 trait MapOpsExp extends TraversableOpsExp {
-self: HashMapOpsExp with HashMapEmitting with HashMultiMapEmitting with ArraySeqOpsExp with ArraySeqEmitting =>
+self: OptiLAExp with HashMap1OpsExp with HashMapEmitting with HashMultiMapEmitting with ArraySeqOpsExp with ArraySeqEmitting =>
   
   /* nodes */
   case class MapGet[K: Manifest, V: Manifest, Coll <: Map[K, V]: Manifest](m: Exp[Coll], key: Exp[K]) extends Def[V]
@@ -45,8 +46,8 @@ self: HashMapOpsExp with HashMapEmitting with HashMultiMapEmitting with ArraySeq
   
   /* implicit rules */
   implicit def mapCanBuild[K: Manifest, V: Manifest, P: Manifest, Q: Manifest]: CanBuild[Map[K, V], (P, Q), Map[P, Q]] = new CanBuild[Map[K, V], (P, Q), Map[P, Q]] {
-    def alloc(source: Exp[Map[K, V]]) = reflectEffect(HashMap.apply[P, Q]().asInstanceOf[Def[Map[P, Q]]])
-    def emptyAlloc(source: Exp[Map[K, V]]) = reflectEffect(HashMap[P, Q]().asInstanceOf[Def[Map[P, Q]]])
+    def alloc(source: Exp[Map[K, V]]) = reflectEffect(HashMap1.apply[P, Q]().asInstanceOf[Def[Map[P, Q]]])
+    def emptyAlloc(source: Exp[Map[K, V]]) = reflectEffect(HashMap1[P, Q]().asInstanceOf[Def[Map[P, Q]]])
     def emitterFactory(source: Exp[Map[K, V]]) = hashMapEmitterFactory[K, V]
     def noPrealloc = true
   }
@@ -55,7 +56,7 @@ self: HashMapOpsExp with HashMapEmitting with HashMultiMapEmitting with ArraySeq
 
 
 trait ScalaGenMapOps extends ScalaGenTraversableOps {
-self: ScalaGenHashMapOps =>
+self: ScalaGenHashMap1Ops =>
   
   val IR: MapOpsExp
   import IR._

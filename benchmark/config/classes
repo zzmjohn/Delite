@@ -20,4 +20,4 @@ tpchsf3|ppl.apps.dataquery.tpch.TPCHRunner
 tpchsf5|ppl.apps.dataquery.tpch.TPCHRunner
 cf|ppl.apps.ml.cf.TopNRunner
 reverseweb|ppl.apps.collections.reverseweb.ReverseWebLinkRunner
-linefit|ppl.apps.collections.linefit
+linefit|ppl.apps.collections.linefit.LineFitRunner

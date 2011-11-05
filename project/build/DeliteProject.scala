@@ -90,7 +90,7 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
     }, framework)
     lazy val optiql = project("optiql", "OptiQL", new OptiQLProject(_), framework)
     lazy val profiling = project("profiling", "Profiling", new FlatProject(_), framework)
-    lazy val collections = project("collections", "Collections", new FlatProject(_), framework)
+    lazy val collections = project("collections", "Collections", new FlatProject(_), framework, optila)
   }
   
   lazy val dsls = project("dsls", "DSLs", new DSLs(_), framework)

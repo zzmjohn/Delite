@@ -9,6 +9,8 @@ import scala.virtualization.lms.common._
 import ppl.delite.framework.datastruct.scala._
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.delite.framework.ops.DeliteCollectionOps
+import ppl.dsl.optila.capabilities._
+import ppl.dsl.optila.{OptiLA, OptiLAExp}
 
 
 
@@ -20,7 +22,8 @@ trait LowPriorityCollectionImplicits extends GenericCollectionOps {
 }
 
 
-trait TraversableOps extends GenericCollectionOps with DeliteCollectionOps with LowPriorityCollectionImplicits {
+trait TraversableOps extends GenericCollectionOps with DeliteCollectionOps with LowPriorityCollectionImplicits with ArithOps {
+self: OptiLA =>
   
   /* ctors */
   object Traversable {
@@ -39,7 +42,7 @@ trait TraversableOps extends GenericCollectionOps with DeliteCollectionOps with 
     def flatMap[S, Target <: DeliteCollection[S]](f: Rep[T] => Rep[DeliteCollection[S]])(implicit cbf: CanBuild[Coll, S, Target], ms: Manifest[S], mt: Manifest[Target]) = traversable_flatmap[T, S, Coll, Target](t, f, cbf)
     
     def foreach(block: Rep[T] => Rep[Unit]) = traversable_foreach(t, block)
-    def sumBy[S: Manifest: Numeric](func: Rep[T] => Rep[S]) = traversable_sumby(t, func)
+    def sumBy[S: Manifest: Arith](func: Rep[T] => Rep[S]) = traversable_sumby(t, func)
   }
   
   /* class interface defs */
@@ -49,7 +52,7 @@ trait TraversableOps extends GenericCollectionOps with DeliteCollectionOps with 
   def traversable_groupby[T: Manifest, Coll <: DeliteCollection[T]: Manifest, K: Manifest](in: Rep[Coll], f: Rep[T] => Rep[K]): Rep[HashMap[K, Bucket[T]]]
   def traversable_flatmap[T: Manifest, S: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Rep[Coll], f: Rep[T] => Rep[DeliteCollection[S]], cbf: CanBuild[Coll, S, Target]): Rep[Target]
   def traversable_foreach[T: Manifest, Coll <: DeliteCollection[T]: Manifest](t: Rep[Coll], block: Rep[T] => Rep[Unit]): Rep[Unit]
-  def traversable_sumby[T: Manifest, Coll <: DeliteCollection[T]: Manifest, S: Manifest: Numeric](t: Rep[Coll], func: Rep[T] => Rep[S]): Rep[S]
+  def traversable_sumby[T: Manifest, Coll <: DeliteCollection[T]: Manifest, S: Manifest: Arith](t: Rep[Coll], func: Rep[T] => Rep[S]): Rep[S]
   
   /* implicit rules */
   implicit def traversableCanBuild[T: Manifest, S: Manifest]: CanBuild[Traversable[T], S, Traversable[S]]
@@ -57,8 +60,8 @@ trait TraversableOps extends GenericCollectionOps with DeliteCollectionOps with 
 }
 
 
-trait TraversableOpsExp extends TraversableOps with VariablesExp with TupleOpsExp with BaseFatExp with DeliteOpsExp {
-self: HashMapOpsExp with HashMultiMapEmitting with ArraySeqOpsExp with ArraySeqEmitting =>
+trait TraversableOpsExp extends TraversableOps with VariablesExp with TupleOpsExp with BaseFatExp with DeliteOpsExp with ArithOpsExp {
+self: OptiLAExp with HashMap1OpsExp with HashMultiMapEmitting with ArraySeqOpsExp with ArraySeqEmitting =>
   
   /* lifting */
   implicit def liftUnit(u: Unit): Exp[Unit] = Const(())
@@ -67,7 +70,7 @@ self: HashMapOpsExp with HashMultiMapEmitting with ArraySeqOpsExp with ArraySeqE
   case class TraversableSize[T: Manifest, Coll <: DeliteCollection[T]: Manifest](t: Exp[Coll]) extends Def[Int]
   case class TraversableForeach[T: Manifest, Coll <: DeliteCollection[T]: Manifest](in: Exp[Coll], func: Exp[T] => Exp[Unit])
   extends DeliteOpForeach[T] {
-    def sync = n => Const(List()) // ? why not: n => List() - where's the implicit to do this??
+    def sync = n => Const(collection.immutable.List()) // ? why not: n => List() - where's the implicit to do this??
     val size = copyTransformedOrElse(_.size)(in.size)
   }
   case class TraversableMap[T: Manifest, S: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[S]: Manifest]
@@ -97,7 +100,7 @@ self: HashMapOpsExp with HashMultiMapEmitting with ArraySeqOpsExp with ArraySeqE
     val size = in.size
     def funcKey: Exp[T] => Exp[K] = x => f(x)
     def funcVal: Exp[T] => Exp[T] = x => x
-    def alloc: Exp[HashMap[K, Bucket[T]]] = HashMapNew[K, Bucket[T]]()(manifest[HashMapImpl[K, Bucket[T]]])
+    def alloc: Exp[HashMap[K, Bucket[T]]] = HashMap1New[K, Bucket[T]]()(manifest[HashMapImpl[K, Bucket[T]]])
     def convertToCV: (Exp[K], Exp[Bucket[T]]) => Exp[Bucket[T]] = (k, x) => x
     def emitterFactory: Option[EmitterFactory] = Some(hashMultiMapEmitterFactory)
   }
@@ -108,12 +111,12 @@ self: HashMapOpsExp with HashMultiMapEmitting with ArraySeqOpsExp with ArraySeqE
     def alloc = cbf.alloc(in)
     override def emitterFactory = Some(cbf.emitterFactory(in))
   }
-  case class TraversableSumBy[T: Manifest, S: Manifest: Numeric, Coll <: DeliteCollection[T]: Manifest]
+  case class TraversableSumBy[T: Manifest, S: Manifest: Arith, Coll <: DeliteCollection[T]: Manifest]
   (in: Exp[Coll], map: Exp[T] => Exp[S])
   extends DeliteOpMapReduce[T, S] {
     val size = in.size
-    val reduce = (a: Exp[S], b: Exp[S]) => ???
-    val zero = ???
+    val reduce = (a: Exp[S], b: Exp[S]) => implicitly[Arith[S]].+(a, b)
+    val zero = implicitly[Arith[S]].zero(implicitly[Arith[S]].empty)
   }
   
   /* class interface */
@@ -123,7 +126,7 @@ self: HashMapOpsExp with HashMultiMapEmitting with ArraySeqOpsExp with ArraySeqE
   def traversable_groupby[T: Manifest, Coll <: DeliteCollection[T]: Manifest, K: Manifest](in: Exp[Coll], f: Exp[T] => Exp[K]): Exp[HashMap[K, Bucket[T]]] = reflectEffect(TraversableGroupBy[T, K, Coll](in, f))
   def traversable_flatmap[T: Manifest, S: Manifest, Coll <: DeliteCollection[T]: Manifest, Target <: DeliteCollection[S]: Manifest](t: Exp[Coll], f: Exp[T] => Exp[DeliteCollection[S]], cbf: CanBuild[Coll, S, Target]): Exp[Target] = reflectEffect(TraversableFlatMap[T, S, Coll, Target](t, f, cbf))
   def traversable_foreach[T: Manifest, Coll <: DeliteCollection[T]: Manifest](t: Exp[Coll], block: Exp[T] => Rep[Unit]) = reflectEffect(TraversableForeach[T, Coll](t, block))
-  def traversable_sumby[T: Manifest, Coll <: DeliteCollection[T]: Manifest, S: Manifest: Numeric](t: Exp[Coll], func: Exp[T] => Exp[S]): Exp[S] = reflectEffect(TraversableSumBy[T, S, Coll](t, func))
+  def traversable_sumby[T: Manifest, Coll <: DeliteCollection[T]: Manifest, S: Manifest: Arith](t: Exp[Coll], func: Exp[T] => Exp[S]): Exp[S] = reflectEffect(TraversableSumBy[T, S, Coll](t, func))
   
   /* implicit rules */
   implicit def traversableCanBuild[T: Manifest, S: Manifest] = new CanBuild[Traversable[T], S, Traversable[S]] {
@@ -136,7 +139,7 @@ self: HashMapOpsExp with HashMultiMapEmitting with ArraySeqOpsExp with ArraySeqE
 }
 
 
-trait ScalaGenTraversableOps extends ScalaGenFat with ScalaGenTupleOps with GenericCollectionGen {
+trait ScalaGenTraversableOps extends ScalaGenFat with ScalaGenTupleOps with GenericCollectionGen with ScalaGenArithOps {
 //self: ScalaGenArraySeqOps =>
   
   val IR: TraversableOpsExp
