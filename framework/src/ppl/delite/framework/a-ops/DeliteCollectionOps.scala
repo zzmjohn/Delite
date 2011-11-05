@@ -88,6 +88,11 @@ trait BaseGenDeliteCollectionOps extends GenericFatCodegen {
     case DeliteCollectionApply(a, i) => Some((a,i))
     case _ => super.unapplySimpleIndex(e)
   }
+
+  override def unapplySimpleDomain(e: Def[Int]): Option[Exp[Any]] = e match {
+    case DeliteCollectionSize(a) => Some(a)
+    case _ => super.unapplySimpleDomain(e)
+  }
 }
 trait ScalaGenDeliteCollectionOps extends BaseGenDeliteCollectionOps with ScalaGenFat {
   val IR: DeliteCollectionOpsExp

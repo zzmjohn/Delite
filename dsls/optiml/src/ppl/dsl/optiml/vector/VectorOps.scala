@@ -1067,6 +1067,11 @@ trait BaseGenVectorOps extends GenericFatCodegen {
     case _ => super.unapplySimpleIndex(e)
   }
 
+  override def unapplySimpleDomain(e: Def[Int]): Option[Exp[Any]] = e match {
+    case VectorLength(a) => Some(a)
+    case _ => super.unapplySimpleDomain(e)
+  }
+
 }
 
 trait ScalaGenVectorOps extends BaseGenVectorOps with ScalaGenFat {

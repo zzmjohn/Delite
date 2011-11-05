@@ -306,7 +306,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
         val innShape = dc_size(array)
         val outVar = v
 
-        FlatMapForeachGen[B, B](array, innShape, (v => {
+        FlatMapForeachGen[B, B](array, innShape, (v => reifyEffects{
           g = toAtom(Yield(List(v, outVar), dc_apply(array, v)))
           g
         }))
@@ -323,7 +323,8 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
 
   override def mirror[A: Manifest](e: Def[A], f: Transformer): Exp[A] = (e match {
     case op@FlatMapForeachGen(array, size, _) =>
-      reflectPure(FlatMapForeachGen(f(array), f(size), x => f(getBlockResult(op.innerLoop)))(op.mA, op.mB))(mtype(manifest[A]))
+      reflectPure(FlatMapForeachGen(f(array), f(size), x => reifyEffects(f(getBlockResult(op.innerLoop))))(op.mA, op.mB))(mtype(manifest[A]))
+    case DeliteForeachGenElem(b) => reflectPure(DeliteForeachGenElem(f(b)))
     case _ => super.mirror(e, f)
   }).asInstanceOf[Exp[A]]
 
@@ -689,9 +690,9 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
 
   case class FlatMapForeachGen[A: Manifest, B: Manifest](in: Exp[DeliteCollection[A]],
                                                          size: Exp[Int],
-                                                         innL: Sym[Int] => Exp[Gen[B]])
+                                                         innL: Sym[Int] => Block[Gen[B]])
   extends DeliteOpForeachGen[A, B] {
-    private val innLoopResult = reifyEffects(innL(v))
+    private val innLoopResult = innL(v)
 
     def innerLoop = innLoopResult
 
@@ -1046,18 +1047,20 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
 */
 
 
-  // TODO (VJ) override for collections operations and whatewer else uses it
+
   override def unapplySimpleDomain(e: Def[Int]): Option[Exp[Any]] = e match {
     case ArrayLength(a) => Some(a)
     case _ => super.unapplySimpleDomain(e)
   }
 
   override def unapplySimpleCollect(e: Def[Any]) = e match {
-    case e@DeliteCollectElem(_, _, Def(Yield(_, a)), _) if !e.condNonEmpty => Some(a)
+    case e@DeliteCollectElem(_, _, Def(Yield(_, a)), _) => Some(a)
     case _ => super.unapplySimpleCollect(e)
   }
 
   override def unapplySimpleCollectIf(e: Def[Any]) = e match {
+      // TODO (VJ) fix this issue
+    //    case DeliteCollectElem(_, _, g, Block(Def(IfThenElse(c, Block(Def(SimpleCollectIf(a, cs))), Block(Def(Skip(_))))))) =>
     case DeliteCollectElem(_, _, g, Block(Def(IfThenElse(c, Def(SimpleCollectIf(a, cs)), Def(Skip(_)))))) =>
       Some((a, c :: cs))
     case _ => super.unapplySimpleCollectIf(e)
@@ -1097,14 +1100,16 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
     case Block(`oldGen`) => plug
 
     case Block(Def(IfThenElse(c, a, b@Block(Def(Skip(x)))))) =>
-      error("IfThenElse")
       Block(toAtom2(IfThenElse(c, plugInHelper(oldGen, a, plug), Block(toAtom2(Skip(x))))))
 
     case Block(Def(in@FlatMapForeachGen(sh, x, _))) =>
-      in.innerLoop match {
-        case Block(Def(DeliteForeachGenElem(inBlock))) =>
-          Block(toAtom2(FlatMapForeachGen(sh, x, v => toAtom2(DeliteForeachGenElem(plugInHelper(oldGen, inBlock, plug))))))
-        case _ => throw new RuntimeException("Wrong type of inner loop: " + in.innerLoop)
+      in.body match {
+        case DeliteForeachGenElem(inBlock) =>
+          Block(toAtom2(FlatMapForeachGen[Any, U](sh, x, v => plugInHelper(oldGen, inBlock, plug))))
+        case _ =>
+//          printerr("oldGen = " + oldGen + "")
+//          printerr("in = " + in)
+          throw new RuntimeException("Wrong type of inner loop: " + in.innerLoop)
       }
 
     case Block(Def(x)) =>
@@ -1750,6 +1755,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
   }
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = rhs match {
+    case DeliteForeachGenElem(b) => emitBlock(b)
     case s:DeliteOpSingleTask[_] => {
       //printlog("EMIT single "+s)
       //val save = deliteKernel
