@@ -90,7 +90,9 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
   abstract class DeliteOpLoop[A] extends AbstractLoop[A] with DeliteOp[A] {
     type OpType <: DeliteOpLoop[A]
     def copyBodyOrElse(e: => Def[A]): Def[A] = original.map(p=>mirrorLoopBody(p._2.asInstanceOf[OpType].body,p._1)).getOrElse(e)
-    final lazy val v: Sym[Int] = copyTransformedOrElse(_.v)(fresh[Int]).asInstanceOf[Sym[Int]]
+//    final lazy val v: Sym[Int] = copyTransformedOrElse(_.v)(fresh[Int]).asInstanceOf[Sym[Int]]
+    // TODO (VJ) need it. sorry :)
+    lazy val v: Sym[Int] = copyTransformedOrElse(_.v)(fresh[Int]).asInstanceOf[Sym[Int]]
   }
 
   //case class DeliteOpFatLoop(val size: Exp[Int], val v: Sym[Int], val body: List[Def[Any]]) extends AbstractFatLoop with DeliteFatOp
@@ -305,11 +307,13 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
         val array = func(dc_apply(in, v))
         val innShape = dc_size(array)
         val outVar = v
-
+//        val loopVar = fresh[Int]
+//        g = toAtom(Yield(List(loopVar, outVar), dc_apply(array, v)))
+//        SimpleLoop(innShape, loopVar, DeliteForeachGenElem(reifyEffects{g}))
         FlatMapForeachGen[B, B](array, innShape, (v => reifyEffects{
           g = toAtom(Yield(List(v, outVar), dc_apply(array, v)))
           g
-        }))
+        }))(manifest[B], manifest[B], fresh[Int])
       }
 
       DeliteCollectElem[B, CB](
@@ -344,7 +348,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
         }))
 
     case op@FlatMapForeachGen(array, size, _) =>
-      reflectPure(FlatMapForeachGen(f(array), f(size), x => reifyEffects(f(getBlockResult(op.innerLoop))))(op.mA, op.mB))(mtype(manifest[A]))
+      reflectPure(FlatMapForeachGen(f(array), f(size), x => reifyEffects(f(getBlockResult(op.innerLoop))))(op.mA, op.mB, op.v))(mtype(manifest[A]))
     case DeliteForeachGenElem(b) => reflectPure(DeliteForeachGenElem(f(b)))
     case _ => super.mirror(e, f)
   }).asInstanceOf[Exp[A]]
@@ -712,10 +716,10 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
 
   case class FlatMapForeachGen[A: Manifest, B: Manifest](in: Exp[DeliteCollection[A]],
                                                          size: Exp[Int],
-                                                         innL: Sym[Int] => Block[Gen[B]])
+                                                         innL: Sym[Int] => Block[Gen[B]])(implicit loopVar: Sym[Int])
   extends DeliteOpForeachGen[A, B] {
+    override lazy val v = copyTransformedOrElse(_.v)(loopVar).asInstanceOf[Sym[Int]]
     private val innLoopResult = innL(v)
-
     def innerLoop = innLoopResult
 
     val mA = manifest[A]
@@ -1129,10 +1133,15 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
     case Block(Def(in@FlatMapForeachGen(sh, x, _))) =>
       in.body match {
         case DeliteForeachGenElem(inBlock) =>
-          Block(toAtom2(FlatMapForeachGen[Any, U](sh, x, v => plugInHelper(oldGen, inBlock, plug))))
+//      Block(toAtom2(SimpleLoop(x, in.v, DeliteForeachGenElem(plugInHelper(oldGen, inBlock, plug)))))
+
+          Block(toAtom2(FlatMapForeachGen[Any, U](sh, x, v => plugInHelper(oldGen, inBlock, plug))(in.mA, manifest[U], in.v)))
         case _ =>
           throw new RuntimeException("Wrong type of inner loop: " + in.innerLoop)
       }
+
+    case Block(Def(SimpleLoop(sh, x, DeliteForeachGenElem(inBlock)))) =>
+          Block(toAtom2(SimpleLoop(sh, x, DeliteForeachGenElem(plugInHelper(oldGen, inBlock, plug)))))
 
     case _ => super.plugInHelper(oldGen, context, plug)
   }
