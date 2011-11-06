@@ -1,10 +1,11 @@
+
 package ppl.dsl.optiql.ops
 
 import scala.virtualization.lms.common._
 import java.io.PrintWriter
 import scala.virtualization.lms.common.{ScalaGenBase, ScalaGenEffect, BaseExp, Base}
 
-
+class Row[T[_]]
 trait ResultOps extends Base {
   
   class Result extends Row[Rep]

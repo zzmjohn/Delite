@@ -35,22 +35,19 @@ trait DeliteMap extends DeliteTestModule with OptiMLApplication {
 
 object DeliteFlatMapRunner extends DeliteTestRunner with OptiMLApplicationRunner with DeliteFlatMap
 trait DeliteFlatMap extends DeliteTestModule with OptiMLApplication {
+
   def main() = {
+
     val v = Vector.range(0, 10)
+    val v3 = v.filter(_ < 5)
+      .flatMap {
+      e => Vector.range(0, e)
+    }.filter(_ > 3)
 
-//        val v1 = v.map(_ + 5)
-//        val v2 = v1.filter(_ > 10)
-//        val v3 = v2 flatMap { e =>  Vector.range(0, e)}
-
-    val v2 = v.filter(_ < 5)
-//      .flatMap {
-//      e => Vector.range(0, e)
-//    }
-
-    val v3 = v2.sum
+//    val v3 = v2.sum
     println(v3)
 
-//    collect(v3.length == 45)
+    collect(v3 == 10)
 //    collect(v3(0) == 5)
 //    var i = 0
 //    var sum = 0
