@@ -1072,6 +1072,11 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
   }
 */
 
+  override def unapplySimpleForeach(e: Def[Any]) = e match {
+    case DeliteCollectElem(_, _, _, Block(Def(SimpleLoop(s, x, DeliteForeachGenElem(Block(Def(b))))))) => Some((x, b))
+    case SimpleLoop(s, x, DeliteForeachGenElem(Block(Def(b)))) => Some((x, b))
+    case _ => printerr("Missed the match of " + e); super.unapplySimpleForeach(e)
+  }
 
 
   override def unapplySimpleDomain(e: Def[Int]): Option[Exp[Any]] = {
