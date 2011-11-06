@@ -58,8 +58,16 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
   // fusion stuff...
   override def unapplySimpleIndex(e: Def[Any]) = ifGenAgree(_.unapplySimpleIndex(e))
   override def unapplySimpleCollect(e: Def[Any]) = ifGenAgree(_.unapplySimpleCollect(e))
+  override def unapplySimpleDomain(e: Def[Int]) = ifGenAgree(_.unapplySimpleDomain(e))
+  override def unapplySimpleCollectIf(e: Def[Any]): Option[(Exp[Any],List[Exp[Boolean]])] = ifGenAgree(_.unapplySimpleCollectIf(e))
 
   override def shouldApplyFusion(currentScope: List[TTP])(result: List[Exp[Any]]) = ifGenAgree(_.shouldApplyFusion(currentScope)(result))
+  override def plugInHelper[A, T: Manifest, U: Manifest](oldGen: Exp[Gen[A]], context: Block[Gen[T]], plug: Block[Gen[U]]): Block[Gen[U]] =
+    ifGenAgree(_.plugInHelper(oldGen, context, plug))
+  override def applyPlugIntoContext(d: Def[Any], r: Def[Any], newGen: Exp[Any]): Def[Any] =
+    ifGenAgree(_.applyPlugIntoContext(d, r, newGen))
+  override def applyExtendGenerator[A](d: Def[Any], body: Def[Any]): (Exp[A], Exp[A]) =
+    ifGenAgree(_.applyExtendGenerator(d, body))
 
   def emitSource[A,B](f: Exp[A] => Exp[B], className: String, stream: PrintWriter)(implicit mA: Manifest[A], mB: Manifest[B]): List[(Sym[Any],Any)] = {
 

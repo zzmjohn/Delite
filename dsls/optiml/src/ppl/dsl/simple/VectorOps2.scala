@@ -3,7 +3,6 @@ package ppl.dsl.simple
 import ppl.delite.framework.{DSLType, DeliteApplication}
 import java.io.PrintWriter
 import scala.virtualization.lms.common.{Base, BaseExp, BaseFatExp, EffectExp, CGenBase, CGenFat, ScalaGenBase, ScalaGenFat}
-import scala.virtualization.lms.internal.Effects
 import ppl.delite.framework.codegen.delite.DeliteCodegen
 import ppl.delite.framework.ops.DeliteOpsExp
 
@@ -66,6 +65,12 @@ trait VectorOpsExp2 extends VectorOps2 with DeliteOpsExp {
 trait ScalaGenVectorOps2 extends ScalaGenFat {
   val IR: VectorOpsExp2
   import IR._
+
+
+  override def unapplySimpleDomain(e: Def[Int]): Option[Exp[Any]] = e match {
+    case VectorLength(a) => Some(a)
+    case _ => super.unapplySimpleDomain(e)
+  }
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = rhs match {
     case VectorObjectDoubleZeros(s) => emitValDef(sym, "Vector.doubleZeros(" + quote(s) + ")")

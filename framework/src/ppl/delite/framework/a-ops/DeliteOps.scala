@@ -1070,11 +1070,6 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
 
 
 
-  override def unapplySimpleDomain(e: Def[Int]): Option[Exp[Any]] = e match {
-    case ArrayLength(a) => Some(a)
-    case _ => super.unapplySimpleDomain(e)
-  }
-
   override def unapplySimpleCollect(e: Def[Any]) = e match {
     case e@DeliteCollectElem(_, _, Def(Yield(_, a)), _) => Some(a)
     case _ => super.unapplySimpleCollect(e)
