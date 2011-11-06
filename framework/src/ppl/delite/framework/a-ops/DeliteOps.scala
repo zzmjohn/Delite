@@ -1070,6 +1070,13 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
 
 
 
+  override def unapplySimpleDomain(e: Def[Int]): Option[Exp[Any]] = {
+    e match {
+      case ArrayLength(a) => Some(a)
+      case _ => super.unapplySimpleDomain(e)
+    }
+  }
+
   override def unapplySimpleCollect(e: Def[Any]) = e match {
     case e@DeliteCollectElem(_, _, Def(Yield(_, a)), _) => Some(a)
     case _ => super.unapplySimpleCollect(e)
@@ -1402,11 +1409,16 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
           stream.println(quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s)
           emitValDef(sym, "()")
         })
-      case DeliteReduceElem(g, y, _, _, _, _) =>
-        // TODO (VJ) apply the function that you defined previously
-        (g, (s: String) => stream.println(quote(sym) + " += " + s + "\n" + emitValDef(sym, "()")))
+      case elem@DeliteReduceElem(g, y, _, _, _, _) =>
+        val result = new StringWriter()
+        val writer = new PrintWriter(result)
+        emitBlock(elem.rFunc)(writer)
+        (g, (s: String) => {
+          emitReduceElemYield(op, sym, elem, "__act.", s, result.toString)
+        })
     }
 
+    stream.println("// emit loop funcs")
     withGens(gens) {
       emitMultiLoopFuncs(op, symList)
     }
