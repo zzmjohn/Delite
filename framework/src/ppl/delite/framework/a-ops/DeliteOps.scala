@@ -322,6 +322,27 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
   }
 
   override def mirror[A: Manifest](e: Def[A], f: Transformer): Exp[A] = (e match {
+
+    case SimpleLoop(s,i, body) =>
+      toAtom(SimpleLoop(f(s), f(i).asInstanceOf[Sym[Int]],
+        body match {
+          case e: DeliteForeachGenElem[a] => DeliteForeachGenElem[a](func = f(e.func))
+          case e: DeliteCollectElem[a, ca] => DeliteCollectElem[a, ca](
+            aV = f(e.aV).asInstanceOf[Sym[Array[a]]],
+            alloc = f(e.alloc),
+            gen = f(e.gen),
+            func = f(e.func)
+          )
+          case e: DeliteReduceElem[a] => DeliteReduceElem[a](
+            func = f(e.func),
+            gen = f(e.gen),
+            zero = f(e.zero),
+            rV = (f(e.rV._1).asInstanceOf[Sym[a]], f(e.rV._2).asInstanceOf[Sym[a]]), // need to transform bound vars ??
+            rFunc = f(e.rFunc),
+            stripFirst = e.stripFirst
+          )
+        }))
+
     case op@FlatMapForeachGen(array, size, _) =>
       reflectPure(FlatMapForeachGen(f(array), f(size), x => reifyEffects(f(getBlockResult(op.innerLoop))))(op.mA, op.mB))(mtype(manifest[A]))
     case DeliteForeachGenElem(b) => reflectPure(DeliteForeachGenElem(f(b)))
@@ -351,7 +372,8 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
       val y: Block[Gen[B]] = reifyEffects {
         val x = dc_apply(in, v)
         g = toAtom(Yield(List(v), this.func(x)))
-        if (cond(x)) g else Skip(List(v))
+        // TODO (VJ) this if here is temporary (deadline)
+        IfThenElse(cond(x), reifyEffects(g), reifyEffects(toAtom(Skip(List(v)))))
       }
 
       DeliteCollectElem[B, CB](
@@ -1096,7 +1118,7 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
     tp.sym
   }
 
-  def plugInHelper[A, T: Manifest, U: Manifest](oldGen: Exp[Gen[A]], context: Block[Gen[T]], plug: Block[Gen[U]]): Block[Gen[U]] = context match {
+  override def plugInHelper[A, T: Manifest, U: Manifest](oldGen: Exp[Gen[A]], context: Block[Gen[T]], plug: Block[Gen[U]]): Block[Gen[U]] = context match {
     case Block(`oldGen`) => plug
 
     case Block(Def(IfThenElse(c, a, b@Block(Def(Skip(x)))))) =>
@@ -1107,13 +1129,10 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
         case DeliteForeachGenElem(inBlock) =>
           Block(toAtom2(FlatMapForeachGen[Any, U](sh, x, v => plugInHelper(oldGen, inBlock, plug))))
         case _ =>
-//          printerr("oldGen = " + oldGen + "")
-//          printerr("in = " + in)
           throw new RuntimeException("Wrong type of inner loop: " + in.innerLoop)
       }
 
-    case Block(Def(x)) =>
-      throw new RuntimeException("Missed me => " + x + " should find " + oldGen)
+    case _ => super.plugInHelper(oldGen, context, plug)
   }
 
   override def applyPlugIntoContext(d: Def[Any], r: Def[Any], newGen: Exp[Any]) = (d, r) match {
