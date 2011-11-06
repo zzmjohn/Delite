@@ -33,12 +33,12 @@ object ReverseWeb extends Benchmark {
       val sourcedests = l.split(":")
       val source = sourcedests(0).toLong
       val dests = sourcedests(1).trim.split(" ")
-      dests.map(d => source + (d.toLong << 32))
+      dests.map(d => (d, source.toInt))
     }
     
     // groupBy it
-    val invertedAndShifted = sourcedests groupBy {
-      x => x & 0xffffffff00000000L
+    val inverted = sourcedests groupBy {
+      x => x._1
     }
   }
   

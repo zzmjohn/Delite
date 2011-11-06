@@ -44,16 +44,16 @@ trait ReverseWebLink extends CollectionsApplication {
     val sourcedests = pagelinks flatMap {
       l =>
       val sourcedests = l.split(":")
-      val source = Long.parseLong(sourcedests(0))
+      val source = Integer.parseInt(sourcedests(0))
       val dests = sourcedests(1).trim.split(" ")
-      ArraySeq.fromArray(dests).map(d => long_plus(source, Long.parseLong(d) << 32))
+      ArraySeq.fromArray(dests).map(d => (Integer.parseInt(d), source))
     }
     
     // groupBy it
-    val invertedAndShifted = sourcedests groupBy {
-      x => long_and(x, 0xffffffff00000000L)
+    val inverted = sourcedests groupBy {
+      x => x._1
     }
-    toc(invertedAndShifted)
+    toc(inverted)
     
     // map it properly
     // val inverted = invertedAndShifted map {

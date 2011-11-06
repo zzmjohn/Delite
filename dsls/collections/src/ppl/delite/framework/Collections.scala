@@ -96,7 +96,7 @@ trait CollScalaOpsPkgExp extends OptiLAScalaOpsPkgExp
     //with NumericOpsExp
     with FractionalOpsExp with OrderingOpsExp with StringOpsExp
     with RangeOpsExp with IOOpsExp with ArrayOpsExp with BooleanOpsExp with PrimitiveOpsExp with MiscOpsExp
-    with FunctionsExp with EqualExp with IfThenElseExp with VariablesExp with WhileExp with TupleOpsExp with ListOpsExp
+    with FunctionsExp with EqualExp with IfThenElseExp with VariablesExp with WhileExp with TupleOpsExp with TupleOpsExpOpt with ListOpsExp
     with DSLOpsExp with MathOpsExp with CastingOpsExp with ObjectOpsExp
     with SynchronizedArrayBufferOpsExp
     with LongOpsExp
@@ -113,8 +113,8 @@ trait CollScalaCodeGenPkg extends OptiLAScalaCodeGenPkg
     with ScalaGenObjectOps
     with ScalaGenSynchronizedArrayBufferOps
     with ScalaGenLongOps
-{ val IR: CollScalaOpsPkgExp  }
-
+    with ScalaGenTupleOpsOpt
+{ val IR: CollScalaOpsPkgExp }
 
 
 trait Collections extends OptiLA with CollScalaOpsPkg with CollectionsOps with TupleOps {
@@ -151,6 +151,11 @@ trait CollectionsCodeGenBase extends OptiLACodeGenBase with GenericFatCodegen wi
   override def initialDefs = IR.deliteGenerator.availableDefs
   
   //def dsmap(s: String) = s.replaceAll("ppl.delite.framework.datastruct.scala", "generated.scala")
+  override def dsmap(line: String) : String = {
+    val res = line.replaceAll("scala.Tuple2\\[Int, Int\\]", "Long")
+    //Console.err.println("rewriting! " + line + " -> " + res)
+    super.dsmap(res)
+  }
   
   override def remap[A](m: Manifest[A]) = dsmap(super.remap(m))
   
