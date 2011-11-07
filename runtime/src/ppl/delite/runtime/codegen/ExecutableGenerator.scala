@@ -123,6 +123,7 @@ abstract class ExecutableGenerator {
       if (!first) out.append(',') //no comma before first argument
       first = false
       out.append(getSym(input, name))
+      if (resultName == "xx122") out.append(".asInstanceOf[VectorImpl[String]]")
     }
     out.append(")\n")
 

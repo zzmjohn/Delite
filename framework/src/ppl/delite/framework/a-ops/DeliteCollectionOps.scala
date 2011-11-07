@@ -103,7 +103,11 @@ trait ScalaGenDeliteCollectionOps extends BaseGenDeliteCollectionOps with ScalaG
       case DeliteCollectionSize(x) => emitValDef(sym, quote(x) + ".dcSize")
       case DeliteCollectionApply(x,n) => emitValDef(sym, quote(x) + ".dcApply(" + quote(n) + ")")
       case DeliteCollectionUpdate(x,n,y) => emitValDef(sym, quote(x) + ".dcUpdate(" + quote(n) + "," + quote(y) + ")")
-      case DeliteCollectionUnsafeSetData(x,d,l) => emitValDef(sym, quote(x) + ".unsafeSetData(" + quote(d) + "," + quote(l) + ")")
+      case DeliteCollectionUnsafeSetData(x,d,l) =>
+        if (d.asInstanceOf[Sym[Any]].id == 62)
+          emitValDef(sym, quote(x) + ".unsafeSetData(" + quote(d) + "," + quote(l) + ")")
+        else
+          emitValDef(sym, quote(x) + ".unsafeSetData(" + quote(d) + ".asInstanceOf[Array[String]]," + quote(l) + ")")
       case _ => super.emitNode(sym, rhs)
     }
 
