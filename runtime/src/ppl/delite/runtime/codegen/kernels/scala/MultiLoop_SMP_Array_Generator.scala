@@ -66,6 +66,8 @@ object MultiLoop_SMP_Array_Generator {
 
     //tree reduction
     //first every chunk performs its primary (map-)reduction
+    out.append("val chunkIdx = %d\n".format(chunkIdx))
+    out.append("val numChunks = %d\n".format(numChunks))
     out.append("val size = head.closure.size\n")
     out.append("val out = head.out\n")
     out.append("var idx = size*")
@@ -87,7 +89,7 @@ object MultiLoop_SMP_Array_Generator {
     out.append("idx += 1\n")
     out.append("}\n")
 */
-    out.append("val acc = head.closure.processRange(out,idx,end)\n")
+    out.append("val acc = head.closure.processRange(out,idx,end,chunkIdx,numChunks)\n")
 
     if (op.needsCombine) {
       var half = chunkIdx

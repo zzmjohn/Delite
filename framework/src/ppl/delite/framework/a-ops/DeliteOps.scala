@@ -1478,7 +1478,12 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
           stream.println("var " + quotedSym + "_buf: Array[" + stripGen(getBlockResult(elem.func).Type) + "] = _")
           stream.println("var " + quotedSym + "_size = 0")
           stream.println("var " + quotedSym + "_offset = 0")
-          stream.println("def " + quotedSym + "_buf_init: Unit = {"/*}*/)
+          stream.println("var " + quotedSym + "_chunkIdx: Int = _")
+          stream.println("var " + quotedSym + "_numChunks: Int = _")
+          stream.println("var " + quotedSym + "_activations: Array[activation_" + kernelName + "] = _")
+          stream.println("def " + quotedSym + "_buf_init(chunkIdx: Int, numChunks:Int): Unit = {"/*}*/)
+          stream.println(quotedSym + "_chunkIdx = chunkIdx")
+          stream.println(quotedSym + "_numChunks = numChunks")
           stream.println(quotedSym + "_buf = new Array(128)")
           stream.println(/*{*/"}")
           stream.println("def " + quotedSym + "_buf_append(x: " + stripGen(getBlockResult(elem.func).Type) + "): Unit = {"/*}*/)
@@ -1565,9 +1570,9 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     stream.println("__act")
     stream.println(/*{*/"}")
     // processRange
-    stream.println("def processRange(__act: " + actType + ", start: Int, end: Int): " + actType + " = {"/*}*/)
+    stream.println("def processRange(__act: " + actType + ", start: Int, end: Int, chunkIdx: Int, numChunks: Int): " + actType + " = {"/*}*/)
     stream.println("var idx = start")
-    stream.println("val __act2 = init(__act,idx)")
+    stream.println("val __act2 = init(__act,idx, chunkIdx, numChunks)")
     stream.println("idx += 1")
     stream.println("while (idx < end) {"/*}*/)
     stream.println("process(__act2, idx)")
@@ -1587,13 +1592,13 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
 */
     //out.append("val acc = head.closure.processRange(out,idx,end)\n")
 
-    stream.println("def init(__act: " + actType + ", " + quotearg(op.v) + "): " + actType + " = {" /*}*/)
+    stream.println("def init(__act: " + actType + ", " + quotearg(op.v) + ",chunkIdx: Int, numChunks: Int): " + actType + " = {" /*}*/)
     stream.println("val __act2 = new " + actType)
 
     if (op.body exists (loopBodyNeedsCombine _)) {
       val gens = for ((sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]]) yield elem match {
         case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
-          stream.println("__act2." + quote(sym) + "_buf_init")
+          stream.println("__act2." + quote(sym) + "_buf_init(chunkIdx, numChunks)") //__act2." + quote(sym) + "_chunkIdx, __act2."+ quote(sym) + "_numChunks
           (g, (s: String) => {
             stream.println("__act2." + quote(sym) + "_buf_append(" + s + ")")
             emitValDef(elem.resultSym(sym), "()")
@@ -1719,6 +1724,19 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         if (elem.condNonEmpty) {
           //calculate start offset from rhs.offset + rhs.size. if last chunk
           stream.println("__act." + quote(sym) + "_offset = rhs." + quote(sym) + "_offset + rhs." + quote(sym) + "_size")
+
+          // init first block
+          val lhsname = "rhs"
+          val basename = quote(sym)
+          val activname = "__act"
+          stream.println("if (%s.%s_chunkIdx == 0) {".format(lhsname, basename))
+          stream.println("%s.%s_activations = new Array(%s.%s_numChunks)".format(lhsname, basename, lhsname, basename))
+          stream.println("%s.%s_activations(0) = %s".format(lhsname, basename, lhsname))
+          stream.println("}")
+
+          // copy and update the array
+          stream.println("%s.%s_activations = %s.%s_activations".format(activname, basename, lhsname, basename))
+          stream.println("%s.%s_activations(%s.%s_chunkIdx) = %s".format(activname, basename, activname, basename, activname))
         }
       case (sym, elem: DeliteForeachElem[_]) =>
       case (sym, elem: DeliteReduceElem[_]) =>
@@ -1747,6 +1765,11 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     (symList zip op.body) foreach {
       case (sym, elem: DeliteCollectElem[_,_]) => //FIXME: get rid of .data and adapt to new alloc style
         if (elem.condNonEmpty) {
+          val activname = "__act"
+          val basename = quote(sym)
+          stream.println("if (%s.%s_numChunks > 1) {".format(activname, basename))
+          stream.println("%s.%s_data = %s.%s_activations(%s.%s_numChunks - 1).%s_data".format(activname, basename, activname, basename, activname, basename, basename))
+          stream.println("}")
           //calculate start offset from rhs.offset + rhs.size
           stream.println("if (__act." + quote(sym) + "_data ne __act." + quote(sym) + "_buf)")
 //          stream.println("__act." + quote(resultSym) + "_buf.foreach(x => print(x + \", \"))")
