@@ -15,7 +15,7 @@ trait YieldLoopFusionBenchmark extends OptiMLApplication {
   def main() {
     // load data from the file
     val userName = "John"
-    val file = "/home/vjovanov/work/research/benchmarking-data/twitter-tweets-processed/dataset-20000"
+    val file = "/home/vojin/benchmarking-data/twitter-tweets-processed/dataset-60000"
     val reader = BufferedReader(FileReader(file))
     var line = reader.readLine.trim
     var users = line.toInt
@@ -46,7 +46,7 @@ trait YieldLoopFusionBenchmark extends OptiMLApplication {
 
     // measure execution time 
     tic(friends)
-    val res = friends.filter(x => x._2 == "online").flatMap(x => x._2).filter(v => v != userName)
+    val res = friends.filter(x => x._3 == "online").flatMap(x => x._2).filter(v => v != userName)
 
     toc(res)
   }
