@@ -29,7 +29,7 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
   override def mainScalaSourcePath = "src"
   override def mainResourcesPath = "resources"
   
-  override def testScalaSourcePath = "tests" / "src" / "ppl" / "tests" / "scalatest" 
+  override def testScalaSourcePath = "tests" / "src" / "ppl" / "tests" / "scalatest"
   override def testResourcesPath = "tests" / "resources"
 
   val virtualization_lms_core = "scala" % "virtualization-lms-core_2.10.0-virtualized-SNAPSHOT" % "0.1"
@@ -94,7 +94,7 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
   lazy val apps = project("apps", "Applications", new APPs(_), framework, dsls)
   class APPs(info: ProjectInfo) extends DefaultProject(info) {
 	  lazy val scala = project("scala", "Scala Apps", new FlatProject(_), framework, dsls)
-    override def compileOptions = CompileOption("-Xprint:typer -Ydebug -Ylog:typer") :: super.compileOptions.toList    
+    override def compileOptions = CompileOption("-Xprint:typer -Ydebug -Ylog:typer") :: super.compileOptions.toList
   }
   
   //TR is anybody using this? conflict with defining 'tests' as test source path above...

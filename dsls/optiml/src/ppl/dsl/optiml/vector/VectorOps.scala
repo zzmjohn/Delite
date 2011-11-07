@@ -696,9 +696,9 @@ trait VectorOpsExp extends VectorOps with VariablesExp with BaseFatExp {
   
   case class VectorFilter[A:Manifest](in: Exp[Vector[A]], cond: Exp[A] => Exp[Boolean]) 
     extends DeliteOpFilter[A,A,Vector[A]] {
-      
+
     def alloc = Vector[A](0, in.isRow)
-    def func = e => e 
+    def func = e => e
     val size = in.length
     
     def m = manifest[A]  
@@ -1024,6 +1024,7 @@ trait VectorOpsExpOpt extends VectorOpsExp with DeliteCollectionOpsExp {
     case Def(e: VectorArithmeticMap[A]) => e.in.asInstanceOf[Exp[Vector[A]]].isRow 
     case Def(e: VectorMap[A, _]) => e.in.asInstanceOf[Exp[Vector[A]]].isRow
     case Def(e: VectorFlatMap[A, _]) => e.in.asInstanceOf[Exp[Vector[A]]].isRow
+    case Def(e: VectorFilter[A]) => e.in.asInstanceOf[Exp[Vector[A]]].isRow
     case Def(e: VectorArithmeticZipWith[A]) => e.inA.asInstanceOf[Exp[Vector[A]]].isRow
     //case Def(e: DeliteOpVectorLoop[A]) => e.isRow
     //case Def(e: VectorDeliteOp[A] => e.isRow)
