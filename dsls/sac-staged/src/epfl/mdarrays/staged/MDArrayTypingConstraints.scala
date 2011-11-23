@@ -23,6 +23,7 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with DeliteScalaGenIfThenE
   protected def createSubScope(ifSym: Sym[_], sym: Sym[_])(action: => Unit): Unit
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter): Unit = {
+    //System.out.println("emitNode: " + sym + " <= " + rhs)
     val nodeConstraints =
       // generic reconstruct value from shape
       ReconstructValueFromShape(ValueVar(sym), ShapeVar(sym), postReq, rhs)::
@@ -30,8 +31,8 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with DeliteScalaGenIfThenE
       (rhs match {
         // We only analyze the "special" cases here
         case DeliteWhile(cond, body) =>
-          createSubScope(sym, cond.asInstanceOf[Sym[_]]) { emitBlock(cond) }
-          createSubScope(sym, body.asInstanceOf[Sym[_]]) { emitBlock(body) }
+          emitBlock(cond)
+          emitBlock(body)
           getConstraints(sym, rhs)
         case DeliteIfThenElse(cond, thenp, elsep, _) =>
           createSubScope(sym, thenp.asInstanceOf[Sym[_]]) { emitBlock(thenp) }
@@ -66,6 +67,9 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with DeliteScalaGenIfThenE
           addSymbol(foldTerm1)
           addSymbol(foldTerm2)
           emitBlock(foldExpression)
+          getConstraints(sym, rhs)
+        case Timed(oper) =>
+          emitBlock(oper)
           getConstraints(sym, rhs)
         case _ =>
           getConstraints(sym, rhs)
@@ -189,9 +193,13 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with DeliteScalaGenIfThenE
       Equality(ShapeVar(cond), Lst(Nil), preReq, rhs)::Nil
     case DeliteIfThenElse(cond, thenp, elsep, _) =>
       Equality(ShapeVar(cond), Lst(Nil), preReq, rhs)::
+//      Equality(ShapeVar(thenp), ShapeVar(elsep), preReq, rhs)::
+//      Equality(ShapeVar(sym), ShapeVar(thenp), postReq, rhs)::Nil
       CommonDenominator(ShapeVar(sym), ShapeVar(thenp), ShapeVar(elsep), postReq, rhs)::Nil
     case IfThenElse(cond, thenp, elsep) =>
       Equality(ShapeVar(cond), Lst(Nil), preReq, rhs)::
+//      Equality(ShapeVar(thenp), ShapeVar(elsep), preReq, rhs)::
+//      Equality(ShapeVar(sym), ShapeVar(thenp), postReq, rhs)::Nil
       CommonDenominator(ShapeVar(sym), ShapeVar(thenp), ShapeVar(elsep), postReq, rhs)::Nil
     case ScalarOperatorApplication(/*function, */operator, operand1, operand2) =>
       Equality(ShapeVar(operand1), Lst(Nil), preReq, rhs)::
@@ -215,7 +223,30 @@ trait MDArrayTypingConstraints extends BaseGenMDArray with DeliteScalaGenIfThenE
       Nil
     case StopTimer(afterComputing) =>
       Nil
+    case IntegerEqeqeq(o1, o2) =>
+      Equality(ShapeVar(o1), Lst(Nil), preReq, rhs)::
+      Equality(ShapeVar(o2), Lst(Nil), preReq, rhs)::
+      Equality(ShapeVar(sym), Lst(Nil), postReq, rhs)::
+      Nil
+    case IntegerLt(o1, o2) =>
+      Equality(ShapeVar(o1), Lst(Nil), preReq, rhs)::
+      Equality(ShapeVar(o2), Lst(Nil), preReq, rhs)::
+      Equality(ShapeVar(sym), Lst(Nil), postReq, rhs)::
+      Nil
+    case IntegerMinus(o1, o2) =>
+      Equality(ShapeVar(o1), Lst(Nil), preReq, rhs)::
+      Equality(ShapeVar(o2), Lst(Nil), preReq, rhs)::
+      Equality(ShapeVar(sym), Lst(Nil), postReq, rhs)::
+      Nil
+    case IntConst(o) =>
+      Equality(ShapeVar(sym), Lst(Nil), postReq, rhs)::
+      Nil
+    case Timed(op) =>
+      Equality(ShapeVar(sym), ShapeVar(op), postReq, rhs)::
+      Equality(ValueVar(sym), ValueVar(op), postReq, rhs)::
+      Nil
     case _ =>
+//      System.err.println("other nodes: " + sym + " <= " + rhs)
       super.emitNode(sym, rhs)(null) // for Reify() - careful, if it outputs anything it will crash&burn!
       Nil
   }

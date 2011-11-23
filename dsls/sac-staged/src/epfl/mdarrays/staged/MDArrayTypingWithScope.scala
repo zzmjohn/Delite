@@ -115,7 +115,7 @@ trait MDArrayTypingWithScope extends MDArrayTypingConstraints {
       solveScope(child, current.constraints, debug)
 
     if (debug) {
-      println("Solving FULL scope for " + current.sym.toString)
+      System.err.println("Solving FULL scope for " + current.sym.toString)
       //println("Incoming constraints:\n" + parentConstraints.mkString("\t", "\n\t", ""))
       //println("Scope additional constraints:\n" + currentConstraints.mkString("\t", "\n\t", ""))
     }
@@ -152,7 +152,7 @@ trait MDArrayTypingWithScope extends MDArrayTypingConstraints {
 
   protected def reconcileSymbol(v: TypingVariable, values: List[TypingVariable], name: String = "Reconciliation"): List[TypingConstraint] = {
 
-    assert(values != 0) // should be already satisfied
+    assert(values.length != 0) // should be already satisfied
 
     // Reconciliation strategy:
     //  - first:  check if everyone agrees on the length

@@ -21,14 +21,14 @@ trait StagedSACApplication extends StagedSAC {
   def main(): Unit
 }
 
-trait StagedSAC extends MDArrayBase with MiscOps with StagedSACLift with Variables with Equal with While {
+trait StagedSAC extends MDArrayBase with MiscOps with StagedSACLift with Variables with Equal with While with IntegerSupport with TimedSupport {
 	this: StagedSACApplication =>
 }
 
 trait StagedSACLift extends LiftVariables with LiftEquals /*with LiftString with LiftBoolean with LiftNumeric*/ { this: StagedSAC =>
 }
 
-trait StagedSACExp extends StagedSAC with MDArrayBaseExp with MiscOpsExp
+trait StagedSACExp extends StagedSAC with IntegerSupportExp with MDArrayBaseExp with MiscOpsExp with TimedSupportExp
  	with DeliteOpsExp with DeliteAllOverridesExp {
 	
 	this: DeliteApplication with StagedSACApplication with StagedSACExp =>
@@ -43,7 +43,7 @@ trait StagedSACExp extends StagedSAC with MDArrayBaseExp with MiscOpsExp
 
   def getCodeGenPkg(t: Target{val IR: StagedSACExp.this.type}) : GenericFatCodegen{val IR: StagedSACExp.this.type} = {
     t match {
-      case _:TargetScala => new StagedSACCodegenScala {
+      case _:TargetScala => new ScalaGenIntegerSupport with ScalaGenTimedSupport with StagedSACCodegenScala {
 															val IR: StagedSACExp.this.type = StagedSACExp.this
 															val TY = typer
 														}

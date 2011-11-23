@@ -18,9 +18,9 @@ trait GameOfLifeStaged extends StagedSACApplication with GameOfLifeStagedFakeRea
       2. run testGameOfLife(1000, <array>)
       3. print the result? -- we don't have any effects, is there another way to do this?
      */
-    val matrix = reshape(300::300::Nil, values(90000, 0)) // simulating some matrix :|
+    val matrix = With(step=2::1::Nil, function = iv => 1).GenArray(300::300::Nil) // simulating some matrix :|
     val start = startTimer(matrix::Nil)
-    val result = testGameOfLife(1000, matrix)
+    val result = testGameOfLife(10, matrix)
     val stop = stopTimer(result::Nil)
   }
 
@@ -35,40 +35,45 @@ trait GameOfLifeStaged extends StagedSACApplication with GameOfLifeStagedFakeRea
     alive
   }
 
-  def computeIfDead(neigh: Rep[MDArray[Int]], alive: Rep[MDArray[Int]]): Rep[MDArray[Int]] = {
-
-    if (alive === 1) {
-      if ((neigh - alive) < 2)
-        1 // Rule1: Any live cell with fewer than two live neighbours dies, as if caused by under-population.
-      else if ((neigh - alive) < 4)
-        0 // Rule2: Any live cell with two or three live neighbours lives on to the next generation.
+  def computeIfDead(neigh: Rep[Int], alive: Rep[Int]): Rep[Int] = {
+    timed(if (alive === 1) {
+      val intermed = neigh - alive
+      if (intermed < 2)
+        int(1) // Rule1: Any live cell with fewer than two live neighbours dies, as if caused by under-population.
+      else if (intermed < 4)
+        int(0) // Rule2: Any live cell with two or three live neighbours lives on to the next generation.
       else
-        1 // Rule3: Any live cell with more than three live neighbours dies, as if by overcrowding.
+        int(1) // Rule3: Any live cell with more than three live neighbours dies, as if by overcrowding.
     }
     else
-      0
+      int(0), "compute if dead")
   }
 
-  def computeIfReborn(neigh: Rep[MDArray[Int]], alive: Rep[MDArray[Int]]): Rep[MDArray[Int]] = {
-    if (alive === 0) {
+  def computeIfReborn(neigh: Rep[Int], alive: Rep[Int]): Rep[Int] = {
+    timed(if (alive === 0) {
       if (neigh === 3)
-        1 // Rule 4: Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
+        int(1) // Rule 4: Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
       else
-        0
+        int(0)
     }
     else
-      0
+      int(0),"compute if reborn")
   }
 
   def gameOfLife(alive: Rep[MDArray[Int]]) = {
 
-    val dead = With(lbStrict = true, ubStrict = true, function =
-      iv => computeIfDead(sum(tile(values(dim(alive), 3), iv-1, alive)), alive(iv))).GenArray(shape(alive))
+    val dead = timed(With(lbStrict = true, ubStrict = true, function =
+      iv => computeIfDead(timed(sum(tile(values(dim(alive), 3), iv-1, alive)), "dead-sum"), alive(iv))).GenArray(shape(alive)), "dead")
 
-    val reborn = With(lbStrict = true, ubStrict = true, function =
-      iv => computeIfReborn(sum(tile(values(dim(alive), 3), iv-1, alive)), alive(iv))).GenArray(shape(alive))
+    val reborn = timed(With(lbStrict = true, ubStrict = true, function =
+      iv => computeIfReborn(timed(sum(tile(values(dim(alive), 3), iv-1, alive)), "reborn-sum"), alive(iv))).GenArray(shape(alive)), "reborn")
 
-    val result = alive - dead + reborn
+    val result = timed(alive - dead + reborn, "result")
+
+//    System.out.println("dead: " + dead)
+//    System.out.println("reborn: " + reborn)
+//    System.out.println("result: " + result)
+
     result
   }
 }

@@ -35,6 +35,14 @@ trait TypedGenMDArray extends BaseGenMDArray {
   def emitShapeValue(sym: Sym[_], rhs: Def[_])(implicit stream: PrintWriter): Unit = {
     stream.println("/* " + sym + " <= " + rhs + " */")
     stream.println("/*   ... " + TY.getTypingString(sym) + " */")
+    /* Enable the following lines to get a trace of the execution:
+
+        var newRhs = rhs.toString.replace('"','\'')
+        if (newRhs.indexOf('\n') != -1)
+          newRhs = newRhs.substring(0, newRhs.indexOf('\n'))
+        stream.println("println(\"" + sym + " <= " + newRhs + "      " + TY.getTypingString(sym) +"\")")
+        stream.println("println(\"" + sym + " <= " + newRhs + "      " + TY.getTypingString(sym) +"\")")
+     */
   }
 }
 
@@ -66,8 +74,8 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
   def getNewIndex = { currentIndex += 1; currentIndex}
 
   // Mark values generated outside
-  var emittedOutside = false
   var emittedOutsideSyms: List[Sym[_]] = Nil
+  var emittedInKernel = false
 
   // This function stores the action of the innermost with loop
   var withLoopAction: (String, String, String)=>Unit = (a, b, c)=> { sys.error("No with loop action set!") }
@@ -408,6 +416,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
         emitShapeDecl(sym)
         stream.println("Array(" + kc.value.shape.content.mkString(", ") + ")")
         emitValDecl(sym)
+        // TODO: Should be able to use quote
         val m = strip(sym.Type)
         if (m == "String")
           stream.println("Array(" + kc.value.content.map("\"" + _ + "\"").mkString(", ") + ") //" + m)
@@ -551,6 +560,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
       case in: InfixOp[_, _] =>
         // emit operation for (array OP array) or (array OP scalar)
         def emitOperation(scalar: Boolean) = {
+          //stream.println("var timer" + sym.id + " = - System.currentTimeMillis")
           val index = getNewIndex
           emitOperationPrologue(sym, in.array1, index)
           scalar match {
@@ -558,6 +568,8 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
             case false => stream.println(quoteValue(sym) + "(i_" + index +") = (" + quoteValue(in.array1) + "(i_" + index +") " + in.opName + "  " + quoteValue(in.array2) + "(i_" + index +"))")
           }
           emitOperationEpilogue(sym, in.array1, index)
+          //stream.println("timer" + sym.id + " += System.currentTimeMillis")
+          //stream.println("println(\"executed operation " + quote(sym) + " = " + quote(in.array1) + " " + in.opName + " " + quote(in.array2) + "(scalar = " + scalar + ") in \" + " + "timer" + sym.id + " + \"ms\")")
         }
         getShapeLength(in.array2) match {
           case Some(0) => // we have a scalar element
@@ -567,11 +579,13 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
           case None => // we don't know what's there
             //TODO: Find out why this is the most common case
             stream.println("// WARNING: Operation not specialized on {arrays|scalars}!")
-            stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = {")
+            stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = {")
             stream.println("if (" + quoteShape(in.array2) + ".length == 0) {")
             emitOperation(true)
+            stream.println(quote(sym))
             stream.println("} else {")
             emitOperation(false)
+            stream.println(quote(sym))
             stream.println("}")
             stream.println("}")
         }
@@ -599,18 +613,15 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
       case wn: WithNode[_] =>
         emitWithLoopModifier(sym, wn, withLoopAction)
       case ga: GenArrayWith[_] =>
-        stream.println
-        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
+        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
         emitGenArray(sym, ga.lExpr, ga.shp)
         stream.println
       case ma: ModArrayWith[_] =>
-        stream.println
-        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
+        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
         emitModArray(sym, ma.lExpr, ma.a)
         stream.println
       case fa: FoldArrayWith[_] =>
-        stream.println
-        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
+        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
         emitFoldArray(sym, fa.wExpr, fa.neutral, fa.foldTerm1, fa.foldTerm2, fa.foldExpression)
         stream.println
       case soa: ScalarOperatorApplication[_,_,_] =>
@@ -621,34 +632,34 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
       // If must also be translated to account for the scope changes
       // TODO: Is there an architecture where it's not necessary to do this?
       case ite: IfThenElse[_] =>
-        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
+        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
         // The condition is always Rep[Boolean] therefore we can use the value directly
         stream.println("if (" + quote(ite.cond) + ") {")
         TY.withinDifferentScopes(sym,
           (ite.thenp.asInstanceOf[Sym[_]], () => {
             emitBlock(ite.thenp)
-            stream.println("(" + quoteShape(getBlockResult(ite.thenp)) + ", " + quoteValue(getBlockResult(ite.thenp)) + ")")
+            stream.println(quote(ite.thenp))
             stream.println("} else {")
           })::
           (ite.elsep.asInstanceOf[Sym[_]], () => {
             emitBlock(ite.elsep)
-            stream.println("(" + quoteShape(getBlockResult(ite.elsep)) + ", " + quoteValue(getBlockResult(ite.elsep)) + ")")
+            stream.println(quote(ite.elsep))
             stream.println("}")
           })::
           Nil)
       case ite: DeliteIfThenElse[_] => // handle delite ite, too
-        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
+        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
         // The condition is always Rep[Boolean] therefore we can use the value directly
         stream.println("if (" + quote(ite.cond) + ") {")
         TY.withinDifferentScopes(sym,
           (ite.thenp.asInstanceOf[Sym[_]], () => {
             emitBlock(ite.thenp)
-            stream.println("(" + quoteShape(getBlockResult(ite.thenp)) + ", " + quoteValue(getBlockResult(ite.thenp)) + ")")
+            stream.println(quote(ite.thenp))
             stream.println("} else {")
           })::
           (ite.elsep.asInstanceOf[Sym[_]], () => {
             emitBlock(ite.elsep)
-            stream.println("(" + quoteShape(getBlockResult(ite.elsep)) + ", " + quoteValue(getBlockResult(ite.elsep)) + ")")
+            stream.println(quote(ite.elsep))
             stream.println("}")
           })::
           Nil)
@@ -663,16 +674,16 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
         stream.println("//ASSIGN")
         val isInput = (deliteInputs intersect syms(rhs)).nonEmpty
         if (isInput)
-          emitValDef(sym, quote(lhs) + ".set((" + quoteShape(x) + ", " + quoteValue(x) + "))")
+          emitValDef(sym, quote(lhs) + ".set(" + quote(x) + ")")
         else
-          emitAssignment(quote(lhs), "(" + quoteShape(x) + ", " + quoteValue(x) + ")")
+          emitAssignment(quote(lhs), "(" + quote(x) + ")")
       case ReadVar(Variable(x)) =>
         stream.println("//READVAR")
         val isInput = (deliteInputs intersect syms(rhs)).nonEmpty
         if (isInput)
-          stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = " + quote(x) + ".get")
+          stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = " + quote(x) + ".get")
         else
-          stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = " + quote(x))
+          stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = " + quote(x))
       case pn: PrintLn => pn.x match {
         case s: Sym[_] if (s.Type.erasure == classOf[MDArray[Any]]) =>
           emitValDef(sym, "println(getString(" + quoteShape(s) + ", " + quoteValue(s) + "))")
@@ -683,7 +694,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
         emitSymDecl(sym)
         stream.println("getString(" + quoteShape(st.value) + ", " + quoteValue(st.value) + ")")
       case rd: ReadMDArray[_] =>
-        stream.println("val (" + quoteShape(sym) + ", " + quoteValue(sym) + "): (Array[Int], Array[" + strip(sym.Type) + "]) = ")
+        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
         stream.println("// " + rd.fileName.Type)
         val m = strip(sym.Type)
         if (m == "Int")
@@ -710,21 +721,23 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
       case _ =>
         stream.println("// emitting outside!")
         emittedOutsideSyms = sym::emittedOutsideSyms
-        val oldEmittedOutside = emittedOutside
-        emittedOutside = true
         super.emitNode(sym, rhs)
-        emittedOutside = oldEmittedOutside
     }
   }
+
 
   override def emitSource[A,B](f: Exp[A] => Exp[B], className: String, stream: PrintWriter)(implicit mA: Manifest[A], mB: Manifest[B]): List[(Sym[Any], Any)] = {
     super.emitSource(f, className, stream)(mA, mB)
   }
 
   override def emitKernelHeader(syms: List[Sym[Any]], vals: List[Sym[Any]], vars: List[Sym[Any]], resultType: String, resultIsVar: Boolean, external: Boolean)(implicit stream: PrintWriter): Unit = {
+
+    val oldEmittedInKernel = emittedInKernel
+    emittedInKernel = true
     // unfortunately pair deconstruction is not supported in the method definition => it needs to be inside and add the
     // elements outside as
     super.emitKernelHeader(syms, vals, vars, resultType, resultIsVar, external)
+    emittedInKernel = oldEmittedInKernel
 
     stream.println("// syms: " + syms.mkString(" "))
     stream.println("// vals: " + vals.mkString(" "))
@@ -745,10 +758,10 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
     stream.println("// vars: " + vars.mkString(" "))
 
     // The kernel footer should generate symbols as seen from outside
-    val oldEmittedOutside = emittedOutside
-    emittedOutside = true
+    val oldEmittedInKernel = emittedInKernel
+    //emittedInKernel = true
     super.emitKernelFooter(syms, vals, vars, resultType, resultIsVar, external)
-    emittedOutside = oldEmittedOutside
+    emittedInKernel = oldEmittedInKernel
   }
 
   override def emitImports(implicit stream:PrintWriter): Unit = {
@@ -756,7 +769,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
   }
 
   override def quote(x: Exp[Any]) : String =
-    if (emittedOutside)
+    if (!emittedInKernel)
       x match {
         case sym: Sym[_] if (sym.Type.erasure == classOf[MDArray[Any]]) =>
           if (emittedOutsideSyms.contains(sym))

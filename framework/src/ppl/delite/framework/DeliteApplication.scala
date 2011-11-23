@@ -76,9 +76,9 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile {
       reset
     }
     deliteGenerator.initializeGenerator(Config.buildDir)
-    deliteGenerator.emitSource(liftedMain, "Application", stream)    
+    deliteGenerator.emitSource(liftedMain, "Application", stream)
     deliteGenerator.finalizeGenerator()
-    
+
     generators foreach { _.finalizeGenerator()}
   }
 
