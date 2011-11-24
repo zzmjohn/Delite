@@ -4,6 +4,9 @@ import ppl.dsl.optiml._
 import ppl.dsl.optiml.datastruct.scala.{Vector,Matrix}
 import ppl.delite.framework.DeliteApplication
 
+object GDARunnerNCNR extends OptiMLApplicationRunnerBase with OptiMLNoCSE with OptiMLExp with GDA
+object GDARunnerNC extends OptiMLApplicationRunner with OptiMLNoCSE with GDA
+object GDARunnerNR extends OptiMLApplicationRunnerBase with OptiMLExp with GDA
 object GDARunner extends OptiMLApplicationRunner with GDA
 
 trait GDA extends OptiMLApplication {
@@ -53,10 +56,10 @@ trait GDA extends OptiMLApplication {
     /* x(i) is a row vector for us, while it is defined a column vector in the formula */
     val sigma = sum(0, m) { i =>
       if (y(i) == false){
-        (((x(i)-mu0).t)**(x(i)-mu0))
+        (((x(i)-mu0).t) ** (x(i)-mu0))
       }
       else{
-        (((x(i)-mu1).t)**(x(i)-mu1))
+        (((x(i)-mu1).t) ** (x(i)-mu1))
       }
     }
 

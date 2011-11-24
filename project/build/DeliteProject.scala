@@ -14,7 +14,7 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
   
   // use the local scala-virtualized compiler and library
   override def localScala =
-    defineScala("2.9.x-virtualized-SNAPSHOT", new File(local.scalaVirtualizedHome.get.getOrElse {
+    defineScala("2.10.0-virtualized-SNAPSHOT", new File(local.scalaVirtualizedHome.get.getOrElse {
       log.error("scala.virtualized.home needs to be defined in delite.properties and "+
       "must point to a valid scala-virtualized home directory"); "<undefined>"
     }))::Nil
@@ -32,10 +32,14 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
   override def testScalaSourcePath = "tests" / "src" / "ppl" / "tests" / "scalatest" 
   override def testResourcesPath = "tests" / "resources"
 
-  val virtualization_lms_core = "scala" % "virtualization-lms-core_2.9.x-virtualized-SNAPSHOT" % "0.1"
+  val virtualization_lms_core = "scala" % "virtualization-lms-core_2.10.0-virtualized-SNAPSHOT" % "0.1"
   
   val scalaToolsSnapshots = ScalaToolsSnapshots
-  val scalatest = "org.scalatest" % "scalatest" % "1.4-SNAPSHOT"
+
+  // FIXME: custom-built scalatest
+  val dropboxRepo = "Dropbox" at "http://dl.dropbox.com/u/12870350/scala-virtualized"
+  val scalatest = "org.scalatest" % "scalatest_2.10.0-virtualized-SNAPSHOT" % "1.6.1-SNAPSHOT" //% "test"
+
   //create a listener that writes to the normal output directory
   def junitXmlListener: TestReportListener = new JUnitXmlTestsListener(outputPath.toString)
   //add the new listener to the already configured ones
@@ -53,20 +57,26 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
     override def compileOptions = super.compileOptions ++ compileOptions("-Yno-generic-signatures") // speed up bytecode gen a little
     override def testCompileOptions = super.testCompileOptions ++ compileOptions("-Yno-generic-signatures")
     
-    val virtualization_lms_core = "scala" % "virtualization-lms-core_2.9.x-virtualized-SNAPSHOT" % "0.1"
+    val virtualization_lms_core = "scala" % "virtualization-lms-core_2.10.0-virtualized-SNAPSHOT" % "0.1"
     
     override def localScala =
-    defineScala("2.9.x-virtualized-SNAPSHOT", new File(local.scalaVirtualizedHome.get.getOrElse {
+    defineScala("2.10.0-virtualized-SNAPSHOT", new File(local.scalaVirtualizedHome.get.getOrElse {
       log.error("scala.virtualized.home needs to be defined in delite.properties and "+
       "must point to a valid scala-virtualized home directory"); "<undefined>"
     }))::Nil 
   }
   
+  // Using OptiQL plugin
+  class OptiQLProject(info: ProjectInfo) extends FlatProject(info) {
+    //override def compileOptions = CompileOption("-Xplugin:dsls/optiql/plugin/querysyntax.jar") :: super.compileOptions.toList    
+  }
+  
   // Define projects
   lazy val framework = project("framework", "Delite Framework", new FlatProject(_))  
-  lazy val runtime = project("runtime", "Delite Runtime", new FlatProject(_) {
-    override def mainClass = Some("ppl.delite.runtime.Delite")
-  })
+  //HC: We should not include runtime here as it is compiled with release versions of Scala.
+  //lazy val runtime = project("runtime", "Delite Runtime", new FlatProject(_) {
+  //  override def mainClass = Some("ppl.delite.runtime.Delite")
+  //})
 
   class DSLs(info: ProjectInfo) extends DefaultProject(info) {
     lazy val optiml = project("optiml", "OptiML", new FlatProject(_){
@@ -75,6 +85,7 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
     lazy val sac = project("sac-staged", "sac", new FlatProject(_){
       override def mainClass = Some("epfl.mdarrays.staged.TestStaged")
     }, framework)
+    lazy val optiql = project("optiql", "OptiQL", new OptiQLProject(_), framework)
   }
 
   lazy val dsls = project("dsls", "DSLs", new DSLs(_), framework)
@@ -82,6 +93,7 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
   lazy val apps = project("apps", "Applications", new APPs(_), framework, dsls)
   class APPs(info: ProjectInfo) extends DefaultProject(info) {
 	  lazy val scala = project("scala", "Scala Apps", new FlatProject(_), framework, dsls)
+    override def compileOptions = CompileOption("-Xprint:typer -Ydebug -Ylog:typer") :: super.compileOptions.toList    
   }
   
   //TR is anybody using this? conflict with defining 'tests' as test source path above...
