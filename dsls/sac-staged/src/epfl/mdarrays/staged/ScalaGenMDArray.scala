@@ -7,7 +7,7 @@ import epfl.mdarrays.library.scala.MDArray
 import java.io.PrintWriter
 
 import ppl.delite.framework.ops.{DeliteOpsExp}
-import ppl.delite.framework.codegen.delite.overrides.{DeliteScalaGenAllOverrides, DeliteScalaGenIfThenElse, DeliteScalaGenVariables}
+import ppl.delite.framework.codegen.delite.overridez.{DeliteScalaGenAllOverrides, DeliteScalaGenIfThenElse, DeliteScalaGenVariables}
 
 trait BaseGenMDArray extends GenericNestedCodegen {
 
@@ -410,7 +410,7 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
   override def emitNode(sym: Sym[Any], rhs: Def[Any])(implicit stream: PrintWriter) = {
     //emitChecks(sym, rhs)
     emitShapeValue(sym, rhs)
-
+    
     rhs match {
       case kc: KnownAtCompileTime[_] =>
         emitShapeDecl(sym)

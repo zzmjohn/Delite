@@ -79,18 +79,18 @@ final class DeliteProject(info: ProjectInfo) extends DefaultProject(info) with M
   //})
 
   class DSLs(info: ProjectInfo) extends DefaultProject(info) {
-    lazy val optiml = project("optiml", "OptiML", new FlatProject(_){
-      override def mainClass = Some("ppl.dsl.tests.SimpleVectorTest")
-    }, framework)   
+    //lazy val optiml = project("optiml", "OptiML", new FlatProject(_){
+    //  override def mainClass = Some("ppl.dsl.tests.SimpleVectorTest")
+    //}, framework)   
     lazy val sac = project("sac-staged", "sac", new FlatProject(_){
       override def mainClass = Some("epfl.mdarrays.staged.TestStaged")
     }, framework)
-    lazy val optiql = project("optiql", "OptiQL", new OptiQLProject(_), framework)
+    //lazy val optiql = project("optiql", "OptiQL", new OptiQLProject(_), framework)
   }
 
   lazy val dsls = project("dsls", "DSLs", new DSLs(_), framework)
 
-  lazy val apps = project("apps", "Applications", new APPs(_), framework, dsls)
+  //lazy val apps = project("apps", "Applications", new APPs(_), framework, dsls)
   class APPs(info: ProjectInfo) extends DefaultProject(info) {
 	  lazy val scala = project("scala", "Scala Apps", new FlatProject(_), framework, dsls)
     override def compileOptions = CompileOption("-Xprint:typer -Ydebug -Ylog:typer") :: super.compileOptions.toList    
