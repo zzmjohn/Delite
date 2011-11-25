@@ -411,317 +411,332 @@ trait ScalaGenMDArray extends ScalaGenEffect with DeliteScalaGenIfThenElse with 
     //emitChecks(sym, rhs)
     emitShapeValue(sym, rhs)
     
-    rhs match {
-      case kc: KnownAtCompileTime[_] =>
-        emitShapeDecl(sym)
-        stream.println("Array(" + kc.value.shape.content.mkString(", ") + ")")
-        emitValDecl(sym)
-        // TODO: Should be able to use quote
-        val m = strip(sym.Type)
-        if (m == "String")
-          stream.println("Array(" + kc.value.content.map("\"" + _ + "\"").mkString(", ") + ") //" + m)
-        else if (m == "Char")
-          stream.println("Array(" + kc.value.content.map("'" + _ + "'").mkString(", ") + ") //" + m)
-        else
-          stream.println("Array(" + kc.value.content.mkString(", ") + ") //" + m)
-
-      case kr: KnownAtRuntime[_] =>
-        // don't emit anything :)
-      case fl: FromList[_] =>
-        fl.value match {
-          case Const(list) =>
-            emitShapeDecl(sym)
-            stream.println("Array(" + list.length + ")")
-            emitValDecl(sym)
-            stream.println("Array(" + list.mkString(", ") + ")")
-          case _ =>
-            emitShapeDecl(sym)
-            stream.println("Array(" + quote(fl.value) + ".length)")
-            emitValDecl(sym)
-            stream.println(quote(fl.value))
-        }
-      case fa: FromArray[_] =>
-        fa.value match {
-          case Const(array) =>
-            emitShapeDecl(sym)
-            stream.println("Array(" + array.length + ")")
-            emitValDecl(sym)
-            stream.println("Array(" + array.mkString(", ") + ")")
-          case _ =>
-            emitShapeDecl(sym)
-            stream.println("Array(" + quote(fa.value) + ".length)")
-            emitValDecl(sym)
-            stream.println(quote(fa.value))
-        }
-      case fv: FromValue[_] =>
-        fv.value match {
-          case Const(scalar) =>
-            emitShapeDecl(sym)
-            stream.println("Array()")
-            emitValDecl(sym)
-            stream.println("Array(" + scalar + ")")
-          case _ =>
-            emitShapeDecl(sym)
-            stream.println("Array()")
-            emitValDecl(sym)
-            stream.println("Array(" + quote(fv.value) + ")")
-        }
-      case fml: FromMDArrayList[_] => fml.list match {
-        case Nil =>
-          // empty symbol
-          emitShapeDecl(sym)
-          stream.println("Array(0)")
-          emitValDecl(sym)
-          stream.println("Array()")          
-        case head::rest =>
-          val index = getNewIndex
-          stream.println("var i_" + index + ": Int = 1")
-          stream.println("var j_" + index + ": Int = 0")
-          stream.println("var size_" + index + ": Int = " + quoteValue(head) + ".length")
-          emitShapeDecl(sym)
-          stream.println("new Array(1 + " + quoteShape(head) + ".length)")
-          stream.println(quoteShape(sym) + "(0) = " + fml.list.length)
-          stream.println("while (i_" + index + " < " + quoteShape(sym) + ".length) {")
-          stream.println(quoteShape(sym) +"(i_" + index + ") = " + quoteShape(head) + "(i_" + index + " - 1)")
-          stream.println("i_" + index + " += 1")
-          stream.println("} // while (i_" + index + " < ...)")
-          emitValDecl(sym)
-          stream.println("new Array(prod(" + quoteShape(sym) + "))")
-          for (listIndex <- Range(0, fml.list.length)) {
-            stream.println("i_" + index + " = 0")
-            stream.println("while (i_" + index + " < size_" + index + ") {")
-            stream.println(quoteValue(sym) +"(i_" + index + " + size_" + index + " * " + listIndex + ") = " + quoteValue(fml.list(listIndex)) + "(i_" + index + ")")
-            stream.println("i_" + index + " += 1")
-            stream.println("} // while (i_" + index + " < ...)")        
-          }
-        }
-      case tl: ToList[_] =>
-        stream.println("val " + quote(sym) + ": " + remap(sym.Type) + " = " + quoteValue(tl.value))
-      case ta: ToArray[_] =>
-        stream.println("val " + quote(sym) + ": " + remap(sym.Type) + " = " + quoteValue(ta.value))
-      case tv: ToValue[_] =>
-        stream.println("val " + quote(sym) + ": " + remap(sym.Type) + " = " + quoteValue(tv.value) + "(0)")
-      case td: ToDim[_] =>
-        stream.println("val " + quote(sym) + ": Int = " + quoteShape(td.a) + ".length")
-      case ts: ToShape[_] =>
-        emitShapeDecl(sym)
-        stream.println("Array(" + quoteShape(ts.a) + ".length)")
-        emitValDecl(sym)
-        stream.println(quoteShape(ts.a))
-      case rs: Reshape[_] =>
-        emitShapeDecl(sym)
-        stream.println(quoteValue(rs.shp))
-        emitValDecl(sym)
-        stream.println(quoteValue(rs.a))
-      case sel: Sel[_] =>
-        val index = getNewIndex
-        val flatIndex = getNewIndex
-        stream.println("var i_" + index + ": Int = " + quoteValue(sel.iv) + ".length")
-        emitShapeDecl(sym)
-        stream.println("new Array(" + quoteShape(sel.a) + ".length -" + quoteValue(sel.iv) + ".length)")
-        stream.println("while (i_" + index + " < " + quoteShape(sel.a) + ".length) {")
-        stream.println(quoteShape(sym) +"(i_" + index + " - " + quoteValue(sel.iv) + ".length) = " + quoteShape(sel.a) + "(i_" + index + ")")
-        stream.println("i_" + index + " += 1")
-        stream.println("} // while (i_" + index + " < ...)")
-        stream.println("val flat_" + flatIndex + " = flatten(" + quoteValue(sel.iv) + ", " + quoteShape(sel.a) + ")")
-        emitValDecl(sym)
-        stream.println("new Array(prod(" + quoteShape(sym) + "))")
-        stream.println("i_" + index + " = 0")
-        stream.println("while (i_" + index + " < " + quoteValue(sym) + ".length) {")
-        stream.println(quoteValue(sym) +"(i_" + index + ") = " + quoteValue(sel.a) + "(i_" + index + " + flat_" + flatIndex + ")")
-        stream.println("i_" + index + " += 1")
-        stream.println("} // while (i_" + index + " < ...)")
-      case cat: Cat[_] => cat.d match {
-//        case KnownAtCompileTime(mdArray) if ((shape(mdArray).content().length == 0)&&(mdArray.content()(0) == 0)) =>
-//          val index = getNewIndex
-//          stream.println("var i_" + index + ": Int = 1")
-//          emitShapeDecl(sym)
-//          stream.println("new Array(" + quoteShape(cat.a) + ".length)")
-//          stream.println(quoteShape(sym) + "(0) = " + quoteShape(cat.a) + "(0) + " + quoteShape(cat.b) + "(0)")
-//          stream.println("while (i_" + index + " < " + quoteShape(sel.a) + ".length) {")
-//          stream.println(quoteShape(sym) +"(i_" + index + ") = " + quoteShape(sel.a) + "(i_" + index + ")")
-//          stream.println("i_" + index + " += 1")
-//          stream.println("} // while (i_" + index + " < ...)")
-//          emitValDecl(sym)
-//          stream.println("new Array(" + quoteValue(cat.a) + ".length + " + quoteValue(cat.b) + ".length)")
-//          stream.println("i_" + index + " = 0")
-//          stream.println("while (i_" + index + " < " + quoteValue(sym.a) + ".length) {")
-//          stream.println(quoteValue(sym) +"(i_" + index + ") = " + quoteValue(cat.a) + "(i_" + index + ")")
-//          stream.println("i_" + index + " += 1")
-//          stream.println("} // while (i_" + index + " < ...)")
-//          stream.println("i_" + index + " = 0")
-//          stream.println("while (i_" + index + " < " + quoteValue(cat.b) + ".length) {")
-//          stream.println(quoteValue(sym) +"(i_" + index + " + " + quoteValue(cat.a) + ".length + ) = " + quoteValue(cat.b) + "(i_" + index + ")")
-//          stream.println("i_" + index + " += 1")
-//          stream.println("} // while (i_" + index + " < ...)")
-        case _ =>
-          sys.error("NOT IMPLEMENTED YET!")
-      }
-      case in: InfixOp[_, _] =>
-        // emit operation for (array OP array) or (array OP scalar)
-        def emitOperation(scalar: Boolean) = {
-          //stream.println("var timer" + sym.id + " = - System.currentTimeMillis")
-          val index = getNewIndex
-          emitOperationPrologue(sym, in.array1, index)
-          scalar match {
-            case true => stream.println(quoteValue(sym) + "(i_" + index +") = (" + quoteValue(in.array1) + "(i_" + index +") " + in.opName + "  " + quoteValue(in.array2) + "(0))")
-            case false => stream.println(quoteValue(sym) + "(i_" + index +") = (" + quoteValue(in.array1) + "(i_" + index +") " + in.opName + "  " + quoteValue(in.array2) + "(i_" + index +"))")
-          }
-          emitOperationEpilogue(sym, in.array1, index)
-          //stream.println("timer" + sym.id + " += System.currentTimeMillis")
-          //stream.println("println(\"executed operation " + quote(sym) + " = " + quote(in.array1) + " " + in.opName + " " + quote(in.array2) + "(scalar = " + scalar + ") in \" + " + "timer" + sym.id + " + \"ms\")")
-        }
-        getShapeLength(in.array2) match {
-          case Some(0) => // we have a scalar element
-            emitOperation(true)
-          case Some(_) => // we have an array
-            emitOperation(false)
-          case None => // we don't know what's there
-            //TODO: Find out why this is the most common case
-            stream.println("// WARNING: Operation not specialized on {arrays|scalars}!")
-            stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = {")
-            stream.println("if (" + quoteShape(in.array2) + ".length == 0) {")
-            emitOperation(true)
-            stream.println(quote(sym))
-            stream.println("} else {")
-            emitOperation(false)
-            stream.println(quote(sym))
-            stream.println("}")
-            stream.println("}")
-        }
-      case un: UnaryOp[_, _] =>
-        val index = getNewIndex
-        emitOperationPrologue(sym, un.array, index)
-        stream.println(quoteValue(sym) + "(i_" + index +") = " + un.opName + quoteValue(un.array) + "(i_" + index +")")
-        emitOperationEpilogue(sym, un.array, index)
-      case wh: Where[_] =>
-        val index = getNewIndex
-        emitOperationPrologue(sym, wh.array1, index)
-        stream.println(quoteValue(sym) + "(i_" + index +") = if (" + quoteValue(wh.cond) + "(i_" + index +")) " + quoteValue(wh.array1) + "(i_" + index +") else " + quoteValue(wh.array2) + "(i_" + index +")")
-        emitOperationEpilogue(sym, wh.array1, index)
-      case va: Values[_] =>
-        val index = getNewIndex
-        emitShapeDecl(sym)
-        stream.println("Array(" + quoteValue(va.dim) + "(0))")
-        emitValDecl(sym)
-        stream.println("new Array[Int](" + quoteValue(va.dim) + "(0))")
-        stream.println("var i_" + index + ": Int = 0")
-        stream.println("while (i_" + index + " < " + quoteValue(sym) + ".length) {")
-        stream.println(quoteValue(sym) + "(i_" + index + ") = " + quoteValue(va.value) + "(0)")
-        stream.println("i_" + index + " += 1")
-        stream.println("} // while (i_" + index + " ...")
-      case wn: WithNode[_] =>
-        emitWithLoopModifier(sym, wn, withLoopAction)
-      case ga: GenArrayWith[_] =>
-        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
-        emitGenArray(sym, ga.lExpr, ga.shp)
-        stream.println
-      case ma: ModArrayWith[_] =>
-        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
-        emitModArray(sym, ma.lExpr, ma.a)
-        stream.println
-      case fa: FoldArrayWith[_] =>
-        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
-        emitFoldArray(sym, fa.wExpr, fa.neutral, fa.foldTerm1, fa.foldTerm2, fa.foldExpression)
-        stream.println
-      case soa: ScalarOperatorApplication[_,_,_] =>
-        emitShapeDecl(sym)
-        stream.println("Array()")
-        emitValDecl(sym)
-        stream.println("Array(((a: " + soa.getMfA.toString + ", b: " + soa.getMfB.toString + ") => a " + soa.operator + " b)(" + quoteValue(soa.a) + "(0), " + quoteValue(soa.b) + "(0)))")
-      // If must also be translated to account for the scope changes
-      // TODO: Is there an architecture where it's not necessary to do this?
-      case ite: IfThenElse[_] =>
-        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
-        // The condition is always Rep[Boolean] therefore we can use the value directly
-        stream.println("if (" + quote(ite.cond) + ") {")
-        TY.withinDifferentScopes(sym,
-          (ite.thenp.asInstanceOf[Sym[_]], () => {
-            emitBlock(ite.thenp)
-            stream.println(quote(ite.thenp))
-            stream.println("} else {")
-          })::
-          (ite.elsep.asInstanceOf[Sym[_]], () => {
-            emitBlock(ite.elsep)
-            stream.println(quote(ite.elsep))
-            stream.println("}")
-          })::
-          Nil)
-      case ite: DeliteIfThenElse[_] => // handle delite ite, too
-        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
-        // The condition is always Rep[Boolean] therefore we can use the value directly
-        stream.println("if (" + quote(ite.cond) + ") {")
-        TY.withinDifferentScopes(sym,
-          (ite.thenp.asInstanceOf[Sym[_]], () => {
-            emitBlock(ite.thenp)
-            stream.println(quote(ite.thenp))
-            stream.println("} else {")
-          })::
-          (ite.elsep.asInstanceOf[Sym[_]], () => {
-            emitBlock(ite.elsep)
-            stream.println(quote(ite.elsep))
-            stream.println("}")
-          })::
-          Nil)
-      case NewVar(x) =>
-        stream.println("//NEWVAR")
-        val symIsResult = !deliteResult.isEmpty && (deliteResult.get contains sym)
-        if (symIsResult)
-          emitValDef(sym, "new generated.scala.Ref((" + quoteShape(x) + ", " + quoteValue(x) + "))")
-        else
-          emitVarDef((sym.asInstanceOf[Sym[Variable[Any]]]), "(" + quoteShape(x) + ", " + quoteValue(x) + ")")
-      case Assign(Variable(lhs), x) =>
-        stream.println("//ASSIGN")
-        val isInput = (deliteInputs intersect syms(rhs)).nonEmpty
-        if (isInput)
-          emitValDef(sym, quote(lhs) + ".set(" + quote(x) + ")")
-        else
-          emitAssignment(quote(lhs), "(" + quote(x) + ")")
-      case ReadVar(Variable(x)) =>
-        stream.println("//READVAR")
-        val isInput = (deliteInputs intersect syms(rhs)).nonEmpty
-        if (isInput)
-          stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = " + quote(x) + ".get")
-        else
-          stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = " + quote(x))
-      case pn: PrintLn => pn.x match {
-        case s: Sym[_] if (s.Type.erasure == classOf[MDArray[Any]]) =>
-          emitValDef(sym, "println(getString(" + quoteShape(s) + ", " + quoteValue(s) + "))")
-        case _ =>
-          super.emitNode(sym, rhs)
-      }
-      case st: ToString[_] =>
-        emitSymDecl(sym)
-        stream.println("getString(" + quoteShape(st.value) + ", " + quoteValue(st.value) + ")")
-      case rd: ReadMDArray[_] =>
-        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
-        stream.println("// " + rd.fileName.Type)
-        val m = strip(sym.Type)
-        if (m == "Int")
-          stream.println("readMDArrayInt(" + quoteValue(rd.fileName) + "(0))")
-        else if (m == "Double")
-          stream.println("readMDArrayDouble(" + quoteValue(rd.fileName) + "(0))")
-        else if (m == "Float")
-          stream.println("readMDArrayFloat(" + quoteValue(rd.fileName) + "(0))")
-        else if (m == "Boolean")
-          stream.println("readMDArrayBoolean(" + quoteValue(rd.fileName) + "(0))")
-        else if (m == "Char")
-          stream.println("readMDArrayChar(" + quoteValue(rd.fileName) + "(0))")
-        else
-          sys.error("Unable to generate readMDArray: Unrecognized type " + m)
-      case wr: WriteMDArray[_] =>
-        emitSymDecl(sym)
-        stream.println("writeMDArray[" + wr.getManifest + "](" + quoteValue(wr.fileName) + "(0), " + quoteShape(wr.array) + ", " + quoteValue(wr.array) + ")")
-      case st: StartTimer =>
-        emitSymDecl(sym)
-        stream.println("startTimer()")
-      case st: StopTimer =>
-        emitSymDecl(sym)
-        stream.println("stopTimer()")
+    (getShapeValue(sym), getValueValue(sym)) match {
+        
+      case (Some(shape), Some(value)) if (sym.Type.erasure == classOf[MDArray[Any]])=>
+        // if the value and shape are known we can skip generating the member
+        println("Shortcutting: " + quoteValue(sym) + "(shape=[" + shape.mkString + "] <= " + rhs)
+            stream.println("// Shortcutting eval:")
+	        emitShapeDecl(sym)
+	        stream.println("Array(" + shape.mkString(", ") + ")")
+	        emitValDecl(sym)
+	        // only Ints get here, no need to do any special quoting
+            stream.println("Array(" + value.mkString(", ") + ")")
+        
       case _ =>
-        stream.println("// emitting outside!")
-        emittedOutsideSyms = sym::emittedOutsideSyms
-        super.emitNode(sym, rhs)
+        // we need to generate the member completely
+	    rhs match {
+	      case kc: KnownAtCompileTime[_] =>
+	        emitShapeDecl(sym)
+	        stream.println("Array(" + kc.value.shape.content.mkString(", ") + ")")
+	        emitValDecl(sym)
+	        // TODO: Should be able to use quote
+	        val m = strip(sym.Type)
+	        if (m == "String")
+	          stream.println("Array(" + kc.value.content.map("\"" + _ + "\"").mkString(", ") + ") //" + m)
+	        else if (m == "Char")
+	          stream.println("Array(" + kc.value.content.map("'" + _ + "'").mkString(", ") + ") //" + m)
+	        else
+	          stream.println("Array(" + kc.value.content.mkString(", ") + ") //" + m)
+	
+	      case kr: KnownAtRuntime[_] =>
+	        // don't emit anything :)
+	      case fl: FromList[_] =>
+	        fl.value match {
+	          case Const(list) =>
+	            emitShapeDecl(sym)
+	            stream.println("Array(" + list.length + ")")
+	            emitValDecl(sym)
+	            stream.println("Array(" + list.mkString(", ") + ")")
+	          case _ =>
+	            emitShapeDecl(sym)
+	            stream.println("Array(" + quote(fl.value) + ".length)")
+	            emitValDecl(sym)
+	            stream.println(quote(fl.value))
+	        }
+	      case fa: FromArray[_] =>
+	        fa.value match {
+	          case Const(array) =>
+	            emitShapeDecl(sym)
+	            stream.println("Array(" + array.length + ")")
+	            emitValDecl(sym)
+	            stream.println("Array(" + array.mkString(", ") + ")")
+	          case _ =>
+	            emitShapeDecl(sym)
+	            stream.println("Array(" + quote(fa.value) + ".length)")
+	            emitValDecl(sym)
+	            stream.println(quote(fa.value))
+	        }
+	      case fv: FromValue[_] =>
+	        fv.value match {
+	          case Const(scalar) =>
+	            emitShapeDecl(sym)
+	            stream.println("Array()")
+	            emitValDecl(sym)
+	            stream.println("Array(" + scalar + ")")
+	          case _ =>
+	            emitShapeDecl(sym)
+	            stream.println("Array()")
+	            emitValDecl(sym)
+	            stream.println("Array(" + quote(fv.value) + ")")
+	        }
+	      case fml: FromMDArrayList[_] => fml.list match {
+	        case Nil =>
+	          // empty symbol
+	          emitShapeDecl(sym)
+	          stream.println("Array(0)")
+	          emitValDecl(sym)
+	          stream.println("Array()")          
+	        case head::rest =>
+	          val index = getNewIndex
+	          stream.println("var i_" + index + ": Int = 1")
+	          stream.println("var j_" + index + ": Int = 0")
+	          stream.println("var size_" + index + ": Int = " + quoteValue(head) + ".length")
+	          emitShapeDecl(sym)
+	          stream.println("new Array(1 + " + quoteShape(head) + ".length)")
+	          stream.println(quoteShape(sym) + "(0) = " + fml.list.length)
+	          stream.println("while (i_" + index + " < " + quoteShape(sym) + ".length) {")
+	          stream.println(quoteShape(sym) +"(i_" + index + ") = " + quoteShape(head) + "(i_" + index + " - 1)")
+	          stream.println("i_" + index + " += 1")
+	          stream.println("} // while (i_" + index + " < ...)")
+	          emitValDecl(sym)
+	          stream.println("new Array(prod(" + quoteShape(sym) + "))")
+	          for (listIndex <- Range(0, fml.list.length)) {
+	            stream.println("i_" + index + " = 0")
+	            stream.println("while (i_" + index + " < size_" + index + ") {")
+	            stream.println(quoteValue(sym) +"(i_" + index + " + size_" + index + " * " + listIndex + ") = " + quoteValue(fml.list(listIndex)) + "(i_" + index + ")")
+	            stream.println("i_" + index + " += 1")
+	            stream.println("} // while (i_" + index + " < ...)")        
+	          }
+	        }
+	      case tl: ToList[_] =>
+	        stream.println("val " + quote(sym) + ": " + remap(sym.Type) + " = " + quoteValue(tl.value))
+	      case ta: ToArray[_] =>
+	        stream.println("val " + quote(sym) + ": " + remap(sym.Type) + " = " + quoteValue(ta.value))
+	      case tv: ToValue[_] =>
+	        stream.println("val " + quote(sym) + ": " + remap(sym.Type) + " = " + quoteValue(tv.value) + "(0)")
+	      case td: ToDim[_] =>
+	        stream.println("val " + quote(sym) + ": Int = " + quoteShape(td.a) + ".length")
+	      case ts: ToShape[_] =>
+	        emitShapeDecl(sym)
+	        stream.println("Array(" + quoteShape(ts.a) + ".length)")
+	        emitValDecl(sym)
+	        stream.println(quoteShape(ts.a))
+	      case rs: Reshape[_] =>
+	        emitShapeDecl(sym)
+	        stream.println(quoteValue(rs.shp))
+	        emitValDecl(sym)
+	        stream.println(quoteValue(rs.a))
+	      case sel: Sel[_] =>
+	        val index = getNewIndex
+	        val flatIndex = getNewIndex
+	        stream.println("var i_" + index + ": Int = " + quoteValue(sel.iv) + ".length")
+	        emitShapeDecl(sym)
+	        stream.println("new Array(" + quoteShape(sel.a) + ".length -" + quoteValue(sel.iv) + ".length)")
+	        stream.println("while (i_" + index + " < " + quoteShape(sel.a) + ".length) {")
+	        stream.println(quoteShape(sym) +"(i_" + index + " - " + quoteValue(sel.iv) + ".length) = " + quoteShape(sel.a) + "(i_" + index + ")")
+	        stream.println("i_" + index + " += 1")
+	        stream.println("} // while (i_" + index + " < ...)")
+	        stream.println("val flat_" + flatIndex + " = flatten(" + quoteValue(sel.iv) + ", " + quoteShape(sel.a) + ")")
+	        emitValDecl(sym)
+	        stream.println("new Array(prod(" + quoteShape(sym) + "))")
+	        stream.println("i_" + index + " = 0")
+	        stream.println("while (i_" + index + " < " + quoteValue(sym) + ".length) {")
+	        stream.println(quoteValue(sym) +"(i_" + index + ") = " + quoteValue(sel.a) + "(i_" + index + " + flat_" + flatIndex + ")")
+	        stream.println("i_" + index + " += 1")
+	        stream.println("} // while (i_" + index + " < ...)")
+	      case cat: Cat[_] => cat.d match {
+	//        case KnownAtCompileTime(mdArray) if ((shape(mdArray).content().length == 0)&&(mdArray.content()(0) == 0)) =>
+	//          val index = getNewIndex
+	//          stream.println("var i_" + index + ": Int = 1")
+	//          emitShapeDecl(sym)
+	//          stream.println("new Array(" + quoteShape(cat.a) + ".length)")
+	//          stream.println(quoteShape(sym) + "(0) = " + quoteShape(cat.a) + "(0) + " + quoteShape(cat.b) + "(0)")
+	//          stream.println("while (i_" + index + " < " + quoteShape(sel.a) + ".length) {")
+	//          stream.println(quoteShape(sym) +"(i_" + index + ") = " + quoteShape(sel.a) + "(i_" + index + ")")
+	//          stream.println("i_" + index + " += 1")
+	//          stream.println("} // while (i_" + index + " < ...)")
+	//          emitValDecl(sym)
+	//          stream.println("new Array(" + quoteValue(cat.a) + ".length + " + quoteValue(cat.b) + ".length)")
+	//          stream.println("i_" + index + " = 0")
+	//          stream.println("while (i_" + index + " < " + quoteValue(sym.a) + ".length) {")
+	//          stream.println(quoteValue(sym) +"(i_" + index + ") = " + quoteValue(cat.a) + "(i_" + index + ")")
+	//          stream.println("i_" + index + " += 1")
+	//          stream.println("} // while (i_" + index + " < ...)")
+	//          stream.println("i_" + index + " = 0")
+	//          stream.println("while (i_" + index + " < " + quoteValue(cat.b) + ".length) {")
+	//          stream.println(quoteValue(sym) +"(i_" + index + " + " + quoteValue(cat.a) + ".length + ) = " + quoteValue(cat.b) + "(i_" + index + ")")
+	//          stream.println("i_" + index + " += 1")
+	//          stream.println("} // while (i_" + index + " < ...)")
+	        case _ =>
+	          sys.error("NOT IMPLEMENTED YET!")
+	      }
+	      case in: InfixOp[_, _] =>
+	        // emit operation for (array OP array) or (array OP scalar)
+	        def emitOperation(scalar: Boolean) = {
+	          //stream.println("var timer" + sym.id + " = - System.currentTimeMillis")
+	          val index = getNewIndex
+	          emitOperationPrologue(sym, in.array1, index)
+	          scalar match {
+	            case true => stream.println(quoteValue(sym) + "(i_" + index +") = (" + quoteValue(in.array1) + "(i_" + index +") " + in.opName + "  " + quoteValue(in.array2) + "(0))")
+	            case false => stream.println(quoteValue(sym) + "(i_" + index +") = (" + quoteValue(in.array1) + "(i_" + index +") " + in.opName + "  " + quoteValue(in.array2) + "(i_" + index +"))")
+	          }
+	          emitOperationEpilogue(sym, in.array1, index)
+	          //stream.println("timer" + sym.id + " += System.currentTimeMillis")
+	          //stream.println("println(\"executed operation " + quote(sym) + " = " + quote(in.array1) + " " + in.opName + " " + quote(in.array2) + "(scalar = " + scalar + ") in \" + " + "timer" + sym.id + " + \"ms\")")
+	        }
+	        getShapeLength(in.array2) match {
+	          case Some(0) => // we have a scalar element
+	            emitOperation(true)
+	          case Some(_) => // we have an array
+	            emitOperation(false)
+	          case None => // we don't know what's there
+	            //TODO: Find out why this is the most common case
+	            stream.println("// WARNING: Operation not specialized on {arrays|scalars}!")
+	            stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = {")
+	            stream.println("if (" + quoteShape(in.array2) + ".length == 0) {")
+	            emitOperation(true)
+	            stream.println(quote(sym))
+	            stream.println("} else {")
+	            emitOperation(false)
+	            stream.println(quote(sym))
+	            stream.println("}")
+	            stream.println("}")
+	        }
+	      case un: UnaryOp[_, _] =>
+	        val index = getNewIndex
+	        emitOperationPrologue(sym, un.array, index)
+	        stream.println(quoteValue(sym) + "(i_" + index +") = " + un.opName + quoteValue(un.array) + "(i_" + index +")")
+	        emitOperationEpilogue(sym, un.array, index)
+	      case wh: Where[_] =>
+	        val index = getNewIndex
+	        emitOperationPrologue(sym, wh.array1, index)
+	        stream.println(quoteValue(sym) + "(i_" + index +") = if (" + quoteValue(wh.cond) + "(i_" + index +")) " + quoteValue(wh.array1) + "(i_" + index +") else " + quoteValue(wh.array2) + "(i_" + index +")")
+	        emitOperationEpilogue(sym, wh.array1, index)
+	      case va: Values[_] =>
+	        val index = getNewIndex
+	        emitShapeDecl(sym)
+	        stream.println("Array(" + quoteValue(va.dim) + "(0))")
+	        emitValDecl(sym)
+	        stream.println("new Array[Int](" + quoteValue(va.dim) + "(0))")
+	        stream.println("var i_" + index + ": Int = 0")
+	        stream.println("while (i_" + index + " < " + quoteValue(sym) + ".length) {")
+	        stream.println(quoteValue(sym) + "(i_" + index + ") = " + quoteValue(va.value) + "(0)")
+	        stream.println("i_" + index + " += 1")
+	        stream.println("} // while (i_" + index + " ...")
+	      case wn: WithNode[_] =>
+	        emitWithLoopModifier(sym, wn, withLoopAction)
+	      case ga: GenArrayWith[_] =>
+	        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
+	        emitGenArray(sym, ga.lExpr, ga.shp)
+	        stream.println
+	      case ma: ModArrayWith[_] =>
+	        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
+	        emitModArray(sym, ma.lExpr, ma.a)
+	        stream.println
+	      case fa: FoldArrayWith[_] =>
+	        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
+	        emitFoldArray(sym, fa.wExpr, fa.neutral, fa.foldTerm1, fa.foldTerm2, fa.foldExpression)
+	        stream.println
+	      case soa: ScalarOperatorApplication[_,_,_] =>
+	        emitShapeDecl(sym)
+	        stream.println("Array()")
+	        emitValDecl(sym)
+	        stream.println("Array(((a: " + soa.getMfA.toString + ", b: " + soa.getMfB.toString + ") => a " + soa.operator + " b)(" + quoteValue(soa.a) + "(0), " + quoteValue(soa.b) + "(0)))")
+	      // If must also be translated to account for the scope changes
+	      // TODO: Is there an architecture where it's not necessary to do this?
+	      case ite: IfThenElse [_] =>
+	        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
+	        // The condition is always Rep[Boolean] therefore we can use the value directly
+	        stream.println("if (" + quote(ite.cond) + ") {")
+	        TY.withinDifferentScopes(sym,
+	          (ite.thenp.asInstanceOf[Sym[_]], () => {
+	            emitBlock(ite.thenp)
+	            stream.println(quote(ite.thenp))
+	            stream.println("} else {")
+	          })::
+	          (ite.elsep.asInstanceOf[Sym[_]], () => {
+	            emitBlock(ite.elsep)
+	            stream.println(quote(ite.elsep))
+	            stream.println("}")
+	          })::
+	          Nil)
+	      case ite: DeliteIfThenElse[_] => // handle delite ite, too
+	        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
+	        // The condition is always Rep[Boolean] therefore we can use the value directly
+	        stream.println("if (" + quote(ite.cond) + ") {")
+	        TY.withinDifferentScopes(sym,
+	          (ite.thenp.asInstanceOf[Sym[_]], () => {
+	            emitBlock(ite.thenp)
+	            stream.println(quote(ite.thenp))
+	            stream.println("} else {")
+	          })::
+	          (ite.elsep.asInstanceOf[Sym[_]], () => {
+	            emitBlock(ite.elsep)
+	            stream.println(quote(ite.elsep))
+	            stream.println("}")
+	          })::
+	          Nil)
+	      case NewVar(x) =>
+	        stream.println("//NEWVAR")
+	        val symIsResult = !deliteResult.isEmpty && (deliteResult.get contains sym)
+	        if (symIsResult)
+	          emitValDef(sym, "new generated.scala.Ref((" + quoteShape(x) + ", " + quoteValue(x) + "))")
+	        else
+	          emitVarDef((sym.asInstanceOf[Sym[Variable[Any]]]), "(" + quoteShape(x) + ", " + quoteValue(x) + ")")
+	      case Assign(Variable(lhs), x) =>
+	        stream.println("//ASSIGN")
+	        val isInput = (deliteInputs intersect syms(rhs)).nonEmpty
+	        if (isInput)
+	          emitValDef(sym, quote(lhs) + ".set(" + quote(x) + ")")
+	        else
+	          emitAssignment(quote(lhs), "(" + quote(x) + ")")
+	      case ReadVar(Variable(x)) =>
+	        stream.println("//READVAR")
+	        val isInput = (deliteInputs intersect syms(rhs)).nonEmpty
+	        if (isInput)
+	          stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = " + quote(x) + ".get")
+	        else
+	          stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = " + quote(x))
+	      case pn: PrintLn => pn.x match {
+	        case s: Sym[_] if (s.Type.erasure == classOf[MDArray[Any]]) =>
+	          emitValDef(sym, "println(getString(" + quoteShape(s) + ", " + quoteValue(s) + "))")
+	        case _ =>
+	          super.emitNode(sym, rhs)
+	      }
+	      case st: ToString[_] =>
+	        emitSymDecl(sym)
+	        stream.println("getString(" + quoteShape(st.value) + ", " + quoteValue(st.value) + ")")
+	      case rd: ReadMDArray[_] =>
+	        stream.println("val " + quote(sym) + ": " + remap(sym.typeManifest) + " = ")
+	        stream.println("// " + rd.fileName.Type)
+	        val m = strip(sym.Type)
+	        if (m == "Int")
+	          stream.println("readMDArrayInt(" + quoteValue(rd.fileName) + "(0))")
+	        else if (m == "Double")
+	          stream.println("readMDArrayDouble(" + quoteValue(rd.fileName) + "(0))")
+	        else if (m == "Float")
+	          stream.println("readMDArrayFloat(" + quoteValue(rd.fileName) + "(0))")
+	        else if (m == "Boolean")
+	          stream.println("readMDArrayBoolean(" + quoteValue(rd.fileName) + "(0))")
+	        else if (m == "Char")
+	          stream.println("readMDArrayChar(" + quoteValue(rd.fileName) + "(0))")
+	        else
+	          sys.error("Unable to generate readMDArray: Unrecognized type " + m)
+	      case wr: WriteMDArray[_] =>
+	        emitSymDecl(sym)
+	        stream.println("writeMDArray[" + wr.getManifest + "](" + quoteValue(wr.fileName) + "(0), " + quoteShape(wr.array) + ", " + quoteValue(wr.array) + ")")
+	      case st: StartTimer =>
+	        emitSymDecl(sym)
+	        stream.println("startTimer()")
+	      case st: StopTimer =>
+	        emitSymDecl(sym)
+	        stream.println("stopTimer()")
+	      case _ =>
+	        stream.println("// emitting outside!")
+	        emittedOutsideSyms = sym::emittedOutsideSyms
+	        super.emitNode(sym, rhs)
+	    }
     }
   }
 

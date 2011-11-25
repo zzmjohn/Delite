@@ -16,4 +16,4 @@ echo "" >> matrix.txt
 
 maxelt=`expr $size \* $size` 
  
-#seq 1 $maxelt >> matrix.txt 
+seq 1 $maxelt >> matrix.txt 
