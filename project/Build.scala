@@ -22,7 +22,9 @@ object DeliteBuild extends Build {
     // used in delitec to access jars
     retrieveManaged := true,
     scalacOptions += "-Yno-generic-signatures",
-    scalacOptions += "-Yvirtualize" 
+    scalacOptions += "-Yvirtualize", 
+    unmanagedSourceDirectories in Compile <<= (scalaSource in Compile)(Seq(_)),
+    unmanagedSourceDirectories in Test := Nil
   )
 
   /*
@@ -67,7 +69,9 @@ object DeliteBuild extends Build {
   lazy val tests = Project("tests", file("tests"), settings = virtBuildSettings ++ Seq(
     scalaSource in Test := file("tests/src/ppl/tests/scalatest"),
     libraryDependencies += scalatest,
-    parallelExecution in Test := false
+    parallelExecution in Test := false,
+    unmanagedSourceDirectories in Compile := Nil,
+    unmanagedSourceDirectories in Test <<= (scalaSource in Test)(Seq(_))
     // don't appear to be able to depend on a different scala version simultaneously, so just using scala-virtualized for everything
   )) dependsOn(framework % "test->compile;compile->compile", optiml % "test->compile;compile->compile", optiql % "test", optimlApps % "test->compile;compile->compile", runtime % "test->compile;compile->compile")
 }
