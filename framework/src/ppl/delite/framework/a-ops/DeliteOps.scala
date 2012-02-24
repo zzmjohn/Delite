@@ -1248,6 +1248,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     stream.println("val " + quote(elem.rV._2) + " = " + emitted)
     stream.println(redFunc)
     stream.println(prefixSym + quote(sym) + " = " + quote(getBlockResult(elem.rFunc)))
+    stream.println(emitValDef(elem.gen.asInstanceOf[Sym[Any]], "()") + "// yield")
   }
 
   def emitInitializeOrReductionYield(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "", emitted: String, redFunc: String)(implicit stream: PrintWriter) {
