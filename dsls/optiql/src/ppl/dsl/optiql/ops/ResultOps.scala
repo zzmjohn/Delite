@@ -4,9 +4,11 @@ import scala.virtualization.lms.common._
 import java.io.PrintWriter
 import scala.virtualization.lms.common.{ScalaGenBase, ScalaGenEffect, BaseExp, Base}
 
+// FIXME: Compilation of Delite was failing due to the missing definition
+trait Row[T[X]]
 
 trait ResultOps extends Base {
-  
+   
   class Result extends Row[Rep]
       
   def __new[T<:Row[Rep]:Manifest](fields: (String, Rep[T] => Rep[_])*): Rep[T] = newResult[T](fields)

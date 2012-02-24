@@ -50,7 +50,7 @@ trait TPCH extends OptiQLApplication {
     //val res = lineItems Select(e => new Result { val l_shipdate = e.l_shipdate  }) Where(_.l_shipdate <= Date("1998-12-01"))
    
     ///*
-    val res = lineItems Where(_.l_shipdate <= Date("1998-12-01")) GroupBy(l => (l.l_returnflag,l.l_linestatus)) Select(g => new Result {
+/*    val res = lineItems Where(_.l_shipdate <= Date("1998-12-01")) GroupBy(l => (l.l_returnflag,l.l_linestatus)) Select(g => new Result {
       val returnFlag = g.key._1
       val lineStatus = g.key._2
       val sumQty = g.Sum(_.l_quantity)
@@ -63,8 +63,8 @@ trait TPCH extends OptiQLApplication {
       val countOrder = g.Count            
     }) //*/
     
-    toc(res)
-    res.printAsTable() 
+ //   toc(res)
+  //  res.printAsTable() 
 /*
     val res1 = lineItems Where(_.shipDate <= Date("1998-12-01")) GroupBy(l => (l.returnFlag,l.lineStatus)) Select(e => {
       val returnFlag = e.key._1
