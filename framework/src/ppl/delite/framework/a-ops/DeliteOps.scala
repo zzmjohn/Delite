@@ -1413,9 +1413,13 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
           stream.println(quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s)
           emitValDef(sym, "()")
         })
-      case DeliteReduceElem(g, y, _, _, _, _) =>
-        // TODO (VJ) apply the function that you defined previously
-        (g, (s: String) => stream.println(quote(sym) + " += " + s + "\n" + emitValDef(sym, "()")))                      
+      case elem@DeliteReduceElem(g, y, _, _, _, _) =>
+        val result = new StringWriter()
+        val writer = new PrintWriter(result)
+        emitBlock(elem.rFunc)(writer)
+        (g, (s: String) => {
+          emitReduceElemYield(op, sym, elem, "", s, result.toString)
+        })                             
     }
 
     withGens(gens) {
@@ -1649,12 +1653,11 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
           emitValDef(elem.resultSym(sym), "()")
         })
       case elem@DeliteCollectElem(_, _, g, Block(y)) =>
-        (g, (s: String) =>{
+        (g, (s: String) => {
           stream.println("__act." + quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s)
           emitValDef(elem.resultSym(sym), "()")
         })
-      case elem@DeliteReduceElem(g, y, _, _, _, _) =>
-        // TODO (VJ) hack discuss with Tiark when we put this inside the loop the result is not dislayed as it renders it in the inner scope
+      case elem@DeliteReduceElem(g, y, _, _, _, _) =>        
         val result = new StringWriter()
         val writer = new PrintWriter(result)
         emitBlock(elem.rFunc)(writer)
