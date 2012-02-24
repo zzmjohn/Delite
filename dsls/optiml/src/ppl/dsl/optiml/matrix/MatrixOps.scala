@@ -1,6 +1,6 @@
 package ppl.dsl.optiml.matrix
 
-import ppl.dsl.optiml.datastruct.{OpenCLGenDataStruct, CudaGenDataStruct}
+import ppl.dsl.optiml.datastruct.{ OpenCLGenDataStruct, CudaGenDataStruct }
 import java.io.{PrintWriter}
 
 import ppl.delite.framework.{DeliteApplication, DSLType}
@@ -650,16 +650,14 @@ trait MatrixOpsExp extends MatrixOps with VariablesExp {
     
     lazy val body: Def[Vector[A]] = copyBodyOrElse({
       var g: Exp[Gen[Vector[A]]] = null
-      val y: Block[Gen[Vector[A]]] = reifyEffects {
-        // TODO (VJ) fix priority 1
-        g = null
-//        g = Yield(List(v), x(v))
-	      g
+      val y: Block[Gen[Vector[A]]] = reifyEffects {        
+        g = toAtom(Yield(v :: Nil, x(v)))
+	    g
       }
 
       DeliteReduceElem[Vector[A]](
         gen = g,
-	      func = y,
+	    func = y,
         zero = reifyEffects(this.zero),
         rV = this.rV,
         rFunc = reifyEffects(this.func(rV._1, rV._2)),

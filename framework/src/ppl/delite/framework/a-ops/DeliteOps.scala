@@ -451,7 +451,10 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
     // loop    
     lazy val body: Def[A] = copyBodyOrElse({
       var g: Exp[Gen[A]] = null
-      val y: Block[Gen[A]] = reifyEffects {g = toAtom(Yield(List(v), dc_apply(in,v))); g}
+      val y: Block[Gen[A]] = reifyEffects {
+        g = toAtom(Yield(List(v), dc_apply(in,v)))
+        g
+      }
 
       DeliteReduceElem[A](
       func = y,
