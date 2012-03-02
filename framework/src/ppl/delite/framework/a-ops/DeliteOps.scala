@@ -1404,7 +1404,8 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     val gens = for (
         (sym, elem) <- (symList zip op.body) 
         if !elem.isInstanceOf[DeliteForeachGenElem[_]]
-        if !elem.isInstanceOf[DeliteForeachElem[_]])
+        if !elem.isInstanceOf[DeliteForeachElem[_]]
+        if !elem.isInstanceOf[DeliteReduceTupleElem[_, _]])
       yield elem match {
       case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
         (g, (s: String) => {
@@ -1422,7 +1423,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         emitBlock(elem.rFunc)(writer)
         (g, (s: String) => {
           emitReduceElemYield(op, sym, elem, "", s, result.toString)
-        })                             
+        })          
     }
 
     withGens(gens) {
@@ -1586,7 +1587,11 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     stream.println("val __act2 = new " + actType)
 
     if (op.body exists (loopBodyNeedsCombine _)) {
-      val gens = for ((sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]]) yield elem match {
+      val gens = for ((sym, elem) <- (symList zip op.body) 
+          if !elem.isInstanceOf[DeliteForeachGenElem[_]]
+          if !elem.isInstanceOf[DeliteForeachElem[_]]
+          if !elem.isInstanceOf[DeliteReduceTupleElem[_,_]]
+      ) yield elem match {
         case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
           stream.println("__act2." + quote(sym) + "_buf_init")
           (g, (s: String) => {
@@ -1648,7 +1653,8 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     val gens = for (
         (sym, elem) <- (symList zip op.body) 
         if !elem.isInstanceOf[DeliteForeachGenElem[_]]
-        if !elem.isInstanceOf[DeliteForeachElem[_]])
+        if !elem.isInstanceOf[DeliteForeachElem[_]]
+        if !elem.isInstanceOf[DeliteReduceTupleElem[_, _]])
       yield elem match {
       case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
         (g, (s: String) => {
