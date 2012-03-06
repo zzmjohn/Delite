@@ -651,7 +651,7 @@ trait MatrixOpsExp extends MatrixOps with VariablesExp {
     lazy val body: Def[Vector[A]] = copyBodyOrElse({
       var g: Exp[Gen[Vector[A]]] = null
       val y: Block[Gen[Vector[A]]] = reifyEffects {        
-        g = toAtom(Yield(v :: Nil, x(v)))
+        g = toAtom(YieldSingle(v :: Nil, x(v)))
 	    g
       }
 
