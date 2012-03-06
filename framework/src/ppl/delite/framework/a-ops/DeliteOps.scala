@@ -137,8 +137,7 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
 
 
   case class DeliteReduceTupleElem[A,B](
-    func: (Block[A],Block[B]),
-    cond: List[Block[Boolean]] = Nil,
+    func: (Block[A],Block[B]),    
     zero: (Block[A],Block[B]),
     rVPar: ((Sym[A], Sym[B]),(Sym[A], Sym[B])),
     rVSeq: ((Sym[A], Sym[B]),(Sym[A], Sym[B])),
@@ -1073,7 +1072,6 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
 */
 
 
-
   override def unapplySimpleDomain(e: Def[Int]): Option[Exp[Any]] = e match {
     case ArrayLength(a) => Some(a)
     case _ => super.unapplySimpleDomain(e)
@@ -1085,7 +1083,7 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
   }
 
   override def unapplySimpleCollectIf(e: Def[Any]) = e match {
-      // TODO (VJ) fix this issue
+    // TODO (VJ) fix this issue
     //    case DeliteCollectElem(_, _, g, Block(Def(IfThenElse(c, Block(Def(SimpleCollectIf(a, cs))), Block(Def(Skip(_))))))) =>
     case DeliteCollectElem(_, _, g, Block(Def(IfThenElse(c, Def(SimpleCollectIf(a, cs)), Def(Skip(_)))))) =>
       Some((a, c :: cs))
@@ -1139,22 +1137,23 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
     case _ => super.plugInHelper(oldGen, context, plug)
   }
 
-  override def applyPlugIntoContext(d: Def[Any], r: Def[Any], newGen: Exp[Any]) = (d, r) match {
+  override def applyPlugIntoContext(d: Def[Any], r: Def[Any], newGen: Exp[Gen[Any]]) = (d, r) match {
     case (DeliteCollectElem(av, alloc, g, a), DeliteCollectElem(av2, alloc2, g2, b)) =>
-      DeliteCollectElem(av, alloc, newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
+      DeliteCollectElem(av, alloc, newGen, plugInHelper(g, a, b))
 
     case (DeliteReduceElem(g, a, _, _, _, _), DeliteCollectElem(av, alloc, g2, b)) =>
-      DeliteCollectElem(av, alloc, newGen.asInstanceOf[Exp[Gen[Nothing]]], plugInHelper(g, a, b))
+      DeliteCollectElem(av, alloc, newGen, plugInHelper(g, a, b))
 
     case (DeliteCollectElem(_, _, g, a), DeliteReduceElem(g2, b, zero, rV, rFunc, stripFirst)) =>
-      DeliteReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b), zero, rV, rFunc, stripFirst)
+      DeliteReduceElem(newGen, plugInHelper(g, a, b), zero, rV, rFunc, stripFirst)
 
     case (DeliteReduceElem(g, a, _, _, _, _), DeliteReduceElem(g2, b, zero, rV, rFunc, stripFirst)) =>
-      DeliteReduceElem(newGen.asInstanceOf[Exp[Gen[Double]]], plugInHelper(g, a, b), zero, rV, rFunc, stripFirst)
+      DeliteReduceElem(newGen, plugInHelper(g, a, b), zero, rV, rFunc, stripFirst)
 
     case _ => super.applyPlugIntoContext(d, r, newGen)
   }
 
+ 
   override def applyExtendGenerator[A](d: Def[Any], r: Def[Any]) = (d, r) match {
     case (DeliteCollectElem(_, _, g@Def(Yield(varList, _)), _), DeliteCollectElem(_, _, g2@Def(Yield(l, y)), _)) =>
       (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
@@ -1163,7 +1162,7 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
     case (DeliteCollectElem(_, _, g@Def(Yield(varList, _)), _), DeliteReduceElem(g2@Def(Yield(l, y)), _, _, _, _, _)) =>
       (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
     case (DeliteReduceElem(g@Def(Yield(varList, _)), _, _, _, _, _), DeliteCollectElem(_, _, g2@Def(Yield(l, y)), _)) =>
-      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
+      (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]    
   }
 
   override def shouldApplyFusion(currentScope: List[TTP])(result: List[Exp[Any]]) = Config.opfusionEnabled
@@ -1253,7 +1252,22 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     stream.println(prefixSym + quote(sym) + " = " + quote(getBlockResult(elem.rFunc)))
     stream.println(emitValDef(elem.gen.asInstanceOf[Sym[Any]], "()") + "// yield")
   }
-
+  
+  def emitReduceTupleElemYield(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "", emitted: List[String], redFunc: String)(implicit stream: PrintWriter) {
+    val rV = elem.rVSeq
+    val rFunc = elem.rFuncSeq
+  
+    stream.println("val " + quote(rV._1._1) + " = " + prefixSym + quote(sym) + "  ")
+    stream.println("val " + quote(rV._1._2) + " = " + prefixSym + quote(sym) + "_2")
+    stream.println("val " + quote(rV._2._1) + " = " + emitted.head
+    stream.println("val " + quote(rV._2._2) + " = " + emitted.tail
+  
+    stream.println(redFunc)
+    
+    stream.println(prefixSym + quote(sym) + " = " + quote(getBlockResult(elem.rFunc)))
+    stream.println(emitValDef(elem.gen.asInstanceOf[Sym[Any]], "()") + "// yield")
+  }
+  
   def emitInitializeOrReductionYield(op: AbstractFatLoop, sym: Sym[Any], elem: DeliteReduceElem[_], prefixSym: String = "", emitted: String, redFunc: String)(implicit stream: PrintWriter) {
     stream.println("// TODO: we could optimize this check away with more convoluted runtime support if necessary")
     stream.println("if (" + prefixSym + quote(sym) + " == " + prefixSym + quote(sym) + "_zero" + ") " + prefixSym + quote(sym) + " = {")
@@ -1405,7 +1419,6 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         (sym, elem) <- (symList zip op.body) 
         if !elem.isInstanceOf[DeliteForeachGenElem[_]]
         if !elem.isInstanceOf[DeliteForeachElem[_]]
-        if !elem.isInstanceOf[DeliteReduceTupleElem[_, _]])
       yield elem match {
       case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
         (g, (s: String) => {
@@ -1423,7 +1436,14 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         emitBlock(elem.rFunc)(writer)
         (g, (s: String) => {
           emitReduceElemYield(op, sym, elem, "", s, result.toString)
-        })          
+        })
+      case elem: DeliteReduceTupleElem[_,_] =>
+        val result = new StringWriter()
+        val writer = new PrintWriter(result)
+        emitBlock(elem.rFunc)(writer)
+        (g, (s: String) => {
+          emitReduceTupleElemYield(op, sym, elem, "", s.split("xyz").toList, result.toString)
+        })        
     }
 
     withGens(gens) {
@@ -1435,8 +1455,6 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         stream.println(quote(sym) + " = {"/*}*/)                             
         emitForeachElem(op, sym, elem)
         stream.println(/*{*/"}")
-      case (sym, elem: DeliteReduceTupleElem[_,_]) =>
-        emitReduceTupleElem(op, sym, elem)
       case _ => // others are handled by the yield statement
     }
     stream.println(quote(op.v) + " += 1")
