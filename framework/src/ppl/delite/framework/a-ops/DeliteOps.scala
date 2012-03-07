@@ -1133,10 +1133,7 @@ trait BaseGenDeliteOps extends BaseGenLoopsFat with LoopFusionOpt with BaseGenSt
     case _ => super.applyPlugIntoContext(d, r, newGen)
   }
 
- 
-  /**
-   * TODO (VJ) fix the problem with YielGeneration. Yield needs a copy.
-   */
+   
   override def applyExtendGenerator[A](d: Def[Any], r: Def[Any]) = (d, r) match {
     case (DeliteCollectElem(_, _, g @ Def(Yield(varList, _)), _), DeliteCollectElem(_, _, g2 @ Def(Yield(l, y)), _)) =>
       (g2, toAtom2(Yield(varList ::: l, y))).asInstanceOf[(Exp[A], Exp[A])]
@@ -1407,28 +1404,28 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         if !elem.isInstanceOf[DeliteForeachElem[_]])
       yield elem match {
       case elem@DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
-        (g, (s: String) => {
-          stream.println(quote(sym) + "_buf_append(" + s + ")")
+        (g, (s: List[String]) => {
+          stream.println(quote(sym) + "_buf_append(" + s.head + ")")
           emitValDef(sym, "()")
         })
       case elem @ DeliteCollectElem(_, _, g, Block(y)) =>
-        (g, (s: String) => {
-          stream.println(quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s)
+        (g, (s: List[String]) => {
+          stream.println(quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s.head)
           emitValDef(sym, "()")
         })
       case elem @ DeliteReduceElem(g, y, _, _, _, _) =>
         val result = new StringWriter()
         val writer = new PrintWriter(result)
         emitBlock(elem.rFunc)(writer)
-        (g, (s: String) => {
-          emitReduceElemYield(op, sym, elem, "", s, result.toString)
+        (g, (s: List[String]) => {
+          emitReduceElemYield(op, sym, elem, "", s.head, result.toString)
         })
       case elem @ DeliteReduceTupleElem(g, y, _, _, _, _, _ , _) =>
         val result = new StringWriter()
         val writer = new PrintWriter(result)
         emitFatBlock(List(elem.rFuncSeq._1, elem.rFuncSeq._2))(writer)
-        (g, (s: String) => {
-          emitReduceTupleElemYield(op, sym, elem, "", s.split("xyz").toList, result.toString)
+        (g, (s: List[String]) => {
+          emitReduceTupleElemYield(op, sym, elem, "", s, result.toString)
         })
     }
 
@@ -1602,21 +1599,21 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
       ) yield elem match {
         case elem @ DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
           stream.println("__act2." + quote(sym) + "_buf_init")
-          (g, (s: String) => {
-            stream.println("__act2." + quote(sym) + "_buf_append(" + s + ")")
+          (g, (s: List[String]) => {
+            stream.println("__act2." + quote(sym) + "_buf_append(" + s.head + ")")
             emitValDef(elem.resultSym(sym), "()")
           })
         case elem @ DeliteCollectElem(_, _, g, Block(y)) =>
-          (g, (s: String) => {
+          (g, (s: List[String]) => {
             stream.println("__act2." + quote(sym) + "_data = " + "__act." + quote(sym) + "_data")
-            stream.println("__act2." + quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s)
+            stream.println("__act2." + quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s.head)
             emitValDef(elem.resultSym(sym), "()")
           })
         case elem @ DeliteReduceElem(g, y, _, _, _, _) =>
           val result = new StringWriter()
           val writer = new PrintWriter(result)
           emitBlock(elem.rFunc)(writer)
-          (g, (s: String) => {
+          (g, (s: List[String]) => {
             if (elem.stripFirst) {
               stream.println("__act2." + quote(sym) + "_zero = " + "__act." + quote(sym) + "_zero") // do we need zero here? yes, for comparing against...
               stream.println("__act2." + quote(sym) + " = __act2." + quote(sym) + "_zero")
@@ -1628,19 +1625,19 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
                 stream.println("__act2." + quote(sym) + " = " + "__act2." + quote(sym) + "_zero.cloneL") // separate zero buffer
               }
             }
-            emitReduceElemYield(op, sym, elem, "__act2.", s, result.toString)
+            emitReduceElemYield(op, sym, elem, "__act2.", s.head, result.toString)
           })
         case elem @ DeliteReduceTupleElem(g, y, _, _, _, _, _ , _) =>
           val result = new StringWriter()
           val writer = new PrintWriter(result)
           emitFatBlock(List(elem.rFuncSeq._1, elem.rFuncSeq._2))(writer)          
-          (g, (s: String) => {
+          (g, (s: List[String]) => {
             stream.println("__act2." + quote(sym) + "_zero   = " + "__act." + quote(sym) + "_zero  ")
             stream.println("__act2." + quote(sym) + "_zero_2 = " + "__act." + quote(sym) + "_zero_2")
             stream.println("__act2." + quote(sym) + "   = " + "__act2." + quote(sym) + "_zero  ")
             stream.println("__act2." + quote(sym) + "_2 = " + "__act2." + quote(sym) + "_zero_2")
           
-            emitReduceTupleElemYield(op, sym, elem, "__act2.", s.split("xyz").toList, result.toString)
+            emitReduceTupleElemYield(op, sym, elem, "__act2.", s, result.toString)
           })          
       }
 
@@ -1670,28 +1667,29 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
       if !elem.isInstanceOf[DeliteForeachElem[_]]
     ) yield elem match {
       case elem @ DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
-        (g, (s: String) => {
-          stream.println("__act." + quote(sym) + "_buf_append(" + s + ")")
+        (g, (s: List[String]) => {
+          stream.println("__act." + quote(sym) + "_buf_append(" + s.head + ")")
           emitValDef(elem.resultSym(sym), "()")
         })
+      // TODO(VJ) why is this here?
       case elem @ DeliteCollectElem(_, _, g, Block(y)) =>
-        (g, (s: String) => {
-          stream.println("__act." + quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s)
+        (g, (s: List[String]) => {
+          stream.println("__act." + quote(sym) + "_data" + "(" + quote(op.v) + ") = " + s.head)
           emitValDef(elem.resultSym(sym), "()")
         })
       case elem @ DeliteReduceElem(g, y, _, _, _, _) =>
         val result = new StringWriter()
         val writer = new PrintWriter(result)
         emitBlock(elem.rFunc)(writer)
-        (g, (s: String) => {
-          emitReduceElemYield(op, sym, elem, "__act.", s, result.toString)
+        (g, (s: List[String]) => {
+          emitReduceElemYield(op, sym, elem, "__act.", s.head, result.toString)
         })
       case elem @ DeliteReduceTupleElem(g, y, _, _, _, _, _ , _) =>
         val result = new StringWriter()
         val writer = new PrintWriter(result)
         emitFatBlock(List(elem.rFuncSeq._1, elem.rFuncSeq._2))(writer)
-        (g, (s: String) => {
-          emitReduceTupleElemYield(op, sym, elem, "__act.", s.split("xyz").toList, result.toString)
+        (g, (s: List[String]) => {
+          emitReduceTupleElemYield(op, sym, elem, "__act.", s, result.toString)
         })
     }
 

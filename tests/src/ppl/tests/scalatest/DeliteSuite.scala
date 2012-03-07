@@ -136,14 +136,20 @@ trait DeliteSuite extends Suite with DeliteTestConfig {
     println("CHECKING...")
     val resultStr = outStr substring (outStr.indexOf(MAGICDELIMETER) + MAGICDELIMETER.length, outStr.lastIndexOf(MAGICDELIMETER))
     val results = resultStr split ","
-    println("Listing failed conditions:")
+    val failed = scala.collection.mutable.ArrayBuffer[String]
     for (i <- 0 until results.length) {      
       val passed = results(i).toLowerCase() == "true"
-      if (!passed) {
-        print("  condition " + i + ": FAILED")        
+      if (!passed) {                      
+        failed += "  condition " + i + ": FAILED"        
       }      
       assert(passed)
-    }
+    }    
+    
+    if (failed.notEmpty) {
+      println("FAILED - Listing failed conditions:")
+      failed.foreach(println)
+    } else 
+      println("PASSED")
   }
 }
 
