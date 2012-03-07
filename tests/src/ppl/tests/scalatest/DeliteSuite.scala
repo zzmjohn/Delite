@@ -136,10 +136,12 @@ trait DeliteSuite extends Suite with DeliteTestConfig {
     println("CHECKING...")
     val resultStr = outStr substring (outStr.indexOf(MAGICDELIMETER) + MAGICDELIMETER.length, outStr.lastIndexOf(MAGICDELIMETER))
     val results = resultStr split ","
-    for (i <- 0 until results.length) {
-      print("  condition " + i + ": ")
+    println("Listing failed conditions:")
+    for (i <- 0 until results.length) {      
       val passed = results(i).toLowerCase() == "true"
-      if (passed) println("PASSED") else println("FAILED")
+      if (!passed) {
+        print("  condition " + i + ": FAILED")        
+      }      
       assert(passed)
     }
   }
