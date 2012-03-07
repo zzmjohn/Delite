@@ -1426,8 +1426,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
       case elem @ DeliteReduceTupleElem(g, y, _, _, _, _, _ , _) =>
         val result = new StringWriter()
         val writer = new PrintWriter(result)
-        emitBlock(elem.rFuncSeq._1)(writer)
-        emitBlock(elem.rFuncSeq._2)(writer)
+        emitFatBlock(List(elem.rFuncSeq._1, elem.rFuncSeq._2))(writer)
         (g, (s: String) => {
           emitReduceTupleElemYield(op, sym, elem, "", s.split("xyz").toList, result.toString)
         })
@@ -1634,8 +1633,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         case elem @ DeliteReduceTupleElem(g, y, _, _, _, _, _ , _) =>
           val result = new StringWriter()
           val writer = new PrintWriter(result)
-          emitBlock(elem.rFuncSeq._1)(writer)
-          emitBlock(elem.rFuncSeq._2)(writer)
+          emitFatBlock(List(elem.rFuncSeq._1, elem.rFuncSeq._2))(writer)          
           (g, (s: String) => {
             stream.println("__act2." + quote(sym) + "_zero   = " + "__act." + quote(sym) + "_zero  ")
             stream.println("__act2." + quote(sym) + "_zero_2 = " + "__act." + quote(sym) + "_zero_2")
@@ -1688,14 +1686,13 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         (g, (s: String) => {
           emitReduceElemYield(op, sym, elem, "__act.", s, result.toString)
         })
-        case elem @ DeliteReduceTupleElem(g, y, _, _, _, _, _ , _) =>
-          val result = new StringWriter()
-          val writer = new PrintWriter(result)
-          emitBlock(elem.rFuncSeq._1)(writer)
-          emitBlock(elem.rFuncSeq._2)(writer)
-          (g, (s: String) => {
-            emitReduceTupleElemYield(op, sym, elem, "__act.", s.split("xyz").toList, result.toString)
-          })
+      case elem @ DeliteReduceTupleElem(g, y, _, _, _, _, _ , _) =>
+        val result = new StringWriter()
+        val writer = new PrintWriter(result)
+        emitFatBlock(List(elem.rFuncSeq._1, elem.rFuncSeq._2))(writer)
+        (g, (s: String) => {
+          emitReduceTupleElemYield(op, sym, elem, "__act.", s.split("xyz").toList, result.toString)
+        })
     }
 
     withGens(gens) {
