@@ -1506,12 +1506,15 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
       case (sym, elem: DeliteReduceElem[_]) =>
         stream.println("var " + quote(sym) + ": " + remap(sym.Type) + " = _")
         stream.println("var " + quote(sym) + "_zero: " + remap(sym.Type) + " = _")
-      case (sym, elem: DeliteReduceTupleElem[_, _]) =>
-      // TODO (VJ)fix this with yield tuple
-      //        stream.println("var " + quote(sym) + "  : " + remap(sym.Type) + " = _")
-      //        stream.println("var " + quote(sym) + "_2: " + remap(elem.func._2.Type) + " = _")
-      //        stream.println("var " + quote(sym) + "_zero  : " + remap(sym.Type) + " = _")
-      //        stream.println("var " + quote(sym) + "_zero_2" + ": " + remap(elem.func._2.Type) + " = _")
+      case (sym, elem @ DeliteReduceTupleElem(Def(Yield(_, l: List[Exp[Any]])), _, _, _, _, _, _ , _)) =>
+        val quotedSym = quote(sym)
+        val aT :: bT :: Nil = l.map(_.Type).map(stripGen)
+                
+        stream.println("var " + quotedSym  + "  : " + aT + " = _")
+        stream.println("var " + quotedSym  + "_2: " + bT + " = _")
+        stream.println("var " + quotedSym  + "_zero  : " + aT + " = _")
+        stream.println("var " + quotedSym  + "_zero_2" + ": " + bT + " = _")
+        
     }
     stream.println( /*{*/ "}")
   }
@@ -1594,7 +1597,9 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
 
     if (op.body exists (loopBodyNeedsCombine _)) {
       val gens = for (
-        (sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]] if !elem.isInstanceOf[DeliteForeachElem[_]] if !elem.isInstanceOf[DeliteReduceTupleElem[_, _]]
+        (sym, elem) <- (symList zip op.body) 
+        if !elem.isInstanceOf[DeliteForeachGenElem[_]] 
+        if !elem.isInstanceOf[DeliteForeachElem[_]] 
       ) yield elem match {
         case elem @ DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
           stream.println("__act2." + quote(sym) + "_buf_init")
@@ -1626,6 +1631,19 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
             }
             emitReduceElemYield(op, sym, elem, "__act2.", s, result.toString)
           })
+        case elem @ DeliteReduceTupleElem(g, y, _, _, _, _, _ , _) =>
+          val result = new StringWriter()
+          val writer = new PrintWriter(result)
+          emitBlock(elem.rFuncSeq._1)(writer)
+          emitBlock(elem.rFuncSeq._2)(writer)
+          (g, (s: String) => {
+            stream.println("__act2." + quote(sym) + "_zero   = " + "__act." + quote(sym) + "_zero  ")
+            stream.println("__act2." + quote(sym) + "_zero_2 = " + "__act." + quote(sym) + "_zero_2")
+            stream.println("__act2." + quote(sym) + "   = " + "__act2." + quote(sym) + "_zero  ")
+            stream.println("__act2." + quote(sym) + "_2 = " + "__act2." + quote(sym) + "_zero_2")
+          
+            emitReduceTupleElemYield(op, sym, elem, "__act2.", s.split("xyz").toList, result.toString)
+          })          
       }
 
       withGens(gens) {
@@ -1638,13 +1656,7 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
           emitForeachElem(op, sym, elem)
           stream.println( /*{*/ "}")
         case (sym, elem: DeliteReduceElem[_]) =>
-        case (sym, elem: DeliteReduceTupleElem[_, _]) =>
-          // no strip first here ... stream.println("assert(false, \"TODO: tuple reduce\")")
-          stream.println("__act2." + quote(sym) + "_zero   = " + "__act." + quote(sym) + "_zero  ")
-          stream.println("__act2." + quote(sym) + "_zero_2 = " + "__act." + quote(sym) + "_zero_2")
-          stream.println("__act2." + quote(sym) + "   = " + "__act2." + quote(sym) + "_zero  ")
-          stream.println("__act2." + quote(sym) + "_2 = " + "__act2." + quote(sym) + "_zero_2")
-          emitReduceTupleElem(op, sym, elem, "__act2.")
+        case (sym, elem: DeliteReduceTupleElem[_, _]) =>          
       }
       stream.println("__act2")
     } else {
@@ -1655,7 +1667,9 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
     stream.println("def process(__act: " + actType + ", " + quotearg(op.v) + "): Unit = {" /*}*/ )
 
     val gens = for (
-      (sym, elem) <- (symList zip op.body) if !elem.isInstanceOf[DeliteForeachGenElem[_]] if !elem.isInstanceOf[DeliteForeachElem[_]] if !elem.isInstanceOf[DeliteReduceTupleElem[_, _]]
+      (sym, elem) <- (symList zip op.body)
+      if !elem.isInstanceOf[DeliteForeachGenElem[_]] 
+      if !elem.isInstanceOf[DeliteForeachElem[_]]
     ) yield elem match {
       case elem @ DeliteCollectElem(_, _, g, y) if elem.condNonEmpty =>
         (g, (s: String) => {
@@ -1674,18 +1688,26 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
         (g, (s: String) => {
           emitReduceElemYield(op, sym, elem, "__act.", s, result.toString)
         })
+        case elem @ DeliteReduceTupleElem(g, y, _, _, _, _, _ , _) =>
+          val result = new StringWriter()
+          val writer = new PrintWriter(result)
+          emitBlock(elem.rFuncSeq._1)(writer)
+          emitBlock(elem.rFuncSeq._2)(writer)
+          (g, (s: String) => {
+            emitReduceTupleElemYield(op, sym, elem, "__act.", s.split("xyz").toList, result.toString)
+          })
     }
 
     withGens(gens) {
       emitMultiLoopFuncs(op, symList)
     }
+    
     (symList zip op.body) foreach {
       case (sym, elem: DeliteForeachElem[_]) =>
         stream.println("val " + quote(sym) + " = {")
         emitForeachElem(op, sym, elem)
-        stream.println("}")
-      case (sym, elem: DeliteReduceTupleElem[_, _]) =>
-        emitReduceTupleElem(op, sym, elem, "__act.")
+        stream.println("}")      
+        
       case _ => // processed by yield
     }
     stream.println( /*{*/ "}")
