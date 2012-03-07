@@ -136,7 +136,7 @@ trait DeliteSuite extends Suite with DeliteTestConfig {
     println("CHECKING...")
     val resultStr = outStr substring (outStr.indexOf(MAGICDELIMETER) + MAGICDELIMETER.length, outStr.lastIndexOf(MAGICDELIMETER))
     val results = resultStr split ","
-    val failed = scala.collection.mutable.ArrayBuffer[String]
+    val failed = ArrayBuffer[String]()
     for (i <- 0 until results.length) {      
       val passed = results(i).toLowerCase() == "true"
       if (!passed) {                      
