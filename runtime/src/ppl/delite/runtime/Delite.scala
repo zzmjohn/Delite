@@ -86,6 +86,9 @@ object Delite {
       //val graph = new TestGraph
       Config.deliteBuildHome = graph.kernelPath
 
+      //naming the degFile with the name given at the command line
+      Config.degFilename = args(0)
+
       //load kernels & data structures
       loadSources(graph)
 

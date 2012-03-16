@@ -23,6 +23,9 @@ object Config {
     else if (p1 != null) p1 else if (p2 != null) p2 else default
   }
 
+  var degFilename = System.getProperty("delite.deg.filename", "out.deg")
+  def degName = degFilename.substring(0, degFilename.length() - 4)
+
   val numThreads: Int = getProperty("delite.threads", "1").toInt
   val numGPUs: Int = getProperty("delite.gpus", "0").toInt
   val useOpenCL: Boolean = getProperty("delite.use.opencl", "false") != "false"
@@ -30,7 +33,8 @@ object Config {
   val executor: String = getProperty("delite.executor", "default")
   val numRuns: Int = getProperty("delite.runs", "1").toInt
   val deliteHome: String = getProperty("delite.home", System.getProperty("user.dir"))
-  val codeCacheHome: String = getProperty("delite.code.cache.home", deliteHome + java.io.File.separator + "generatedCache")
+  var buildDir = getProperty("delite.build.dir", System.getProperty("user.dir") + java.io.File.separator + "generated" + java.io.File.separator + degName)
+val codeCacheHome: String = getProperty("delite.code.cache.home", System.getProperty("user.dir") + java.io.File.separator + "generatedCache" + java.io.File.separator + degName)
   val useFsc: Boolean = getProperty("delite.usefsc", "false") != "false"
 
   /* Debug options */
@@ -40,8 +44,6 @@ object Config {
   val profile: Boolean = getProperty("delite.debug.profile", "false") != "false"
   val printSources: Boolean = getProperty("delite.debug.print.sources", "false") != "false"
 
-
-  var degFilename = System.getProperty("delite.deg.filename", "out.deg")
   
   /**
    * DEG specific, set after its parsed
@@ -63,7 +65,8 @@ object Config {
    val dumpStatsComponent: String = getProperty("stats.dump.component", "all")
    val dumpStatsOverwrite: Boolean = getProperty("stats.dump.overwrite", "false") != "false"
 
-   val statsOutputDirectory: String = getProperty("stats.output.dir", "")
+   val statsOutputDirectory: String = getProperty("stats.output.dir", System.getProperty("user.dir") + java.io.File.separator + "generated"
+       + java.io.File.separator + degName +java.io.File.separator+ "profile")
    if(dumpStats && statsOutputDirectory == "") error("stats.dump option enabled but did not provide a statsOutputDirectory")
 
    val statsOutputFilename: String = getProperty("stats.output.filename", "")

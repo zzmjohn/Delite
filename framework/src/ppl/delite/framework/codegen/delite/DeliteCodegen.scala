@@ -136,9 +136,19 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
     //stream.println(quote(getBlockResult(y)))
     stream.println("{\"type\":\"EOP\"}\n]}}")
 
+    def getOrCreateOutputDirectory(): File = {
+      // check that directory is there or make it
+      val directory = new File(Config.profileDir)
+      if(directory.exists == false)
+        directory.mkdirs
+      else if(directory.isDirectory == false)
+        throw new RuntimeException("profileDir doesn't refer to a directory")
+      directory
+    }
+
     if (Config.enableProfiler) {
       val symbolsFilename =
-        Config.degFilename.substring(0, Config.degFilename.length() - 4) + "-symbols.json"
+        new File(getOrCreateOutputDirectory(), "symbols.json")
       val writer = new FileWriter(symbolsFilename)
       val printer = new PrintWriter(writer)
       emitSymbolSourceContext(printer)

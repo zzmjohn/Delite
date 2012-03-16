@@ -31,7 +31,7 @@ def main():
     parser.add_option("-p", "--profile", dest="profile", action="store_true", default=False, help="enables application profiling")
     parser.add_option("--debug", dest="debug", action="store_true", default=False, help="enables verbose compiler output")
     parser.add_option("--Xdebug", dest="xdebug", action="store_true", default=False, help="enables LMS debug output; for compiler writers only")
-    parser.add_option("-d", "--dest", action="store", dest="build_dir", default=os.getenv("PWD"), help="output location for generated files")
+    parser.add_option("-d", "--dest", action="store", dest="build_dir", default=os.getenv("PWD")+"/generated", help="output location for generated files")
 
     (opts, args) = parser.parse_args()
     if len(args) != 1:
@@ -61,7 +61,7 @@ def checkLMSEnv():
 def stage(runner, opts):
     java_opts = os.getenv("JAVA_OPTS", "")
 
-    build_dir = opts.build_dir + "/generated/"
+    build_dir = opts.build_dir + "/" + runner
     java_opts = java_opts + " -server" + " -Ddelite.home.dir=" + delitecommon.DELITE_HOME + " -Ddelite.build.dir=" + build_dir + " -Ddelite.deg.filename=" + runner + ".deg"
     if opts.no_blas == False:
         java_opts = java_opts + " -Ddelite.extern.blas"
@@ -70,7 +70,7 @@ def stage(runner, opts):
     if opts.no_fusion == True:
         java_opts = java_opts + " -Ddelite.enable.fusion=false"
     if opts.profile == True:
-        java_opts = java_opts + " -Ddelite.enable.profiler=true"
+        java_opts = java_opts + " -Ddelite.enable.profiler=true -Ddelite.profiler.dir="+build_dir+"/profile"
     if opts.debug == True:
         java_opts = java_opts + " -Ddelite.debug"
     if opts.xdebug == True:

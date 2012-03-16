@@ -1,4 +1,5 @@
 # functionality common to delite and delitec
+# also contains some utility functions for both
 
 import os, sys
 import ConfigParser
@@ -79,4 +80,18 @@ def printEnv():
   print("JAVA_HOME = " + JAVA_HOME)
   print("SCALA_VIRT_HOME = " + SCALA_VIRT_HOME)
 
+def parseBuildDir(deg):
+    if not os.path.isfile(deg):
+        err("couldn't find DEG file " + deg)
+
+    with open(deg) as f:
+      head = [f.next() for x in xrange(3)]
+    
+    fields = ''.join(head).split(",")
+    kernelpath = fields[len(fields)-2].split(":") 
+    build_dir = kernelpath[len(kernelpath)-1]
+    if (build_dir.strip('\n') == ""):
+      err("DEG file " + deg + " appears to be invalid; could not parse kernelpath")
+
+    return build_dir[2:-1]
 

@@ -1,6 +1,11 @@
 .gen-sourcefile-header {
-  background-color:#b0c4de;
+  /*background-color:#b0c4de;*/
   border:1px solid;
   margin-top:2px;
   margin-bottom:2px;
  }
+
+.gen-sourcefile-header pre{
+  background-color: #d3d3d3;
+  margin:0px;
+}

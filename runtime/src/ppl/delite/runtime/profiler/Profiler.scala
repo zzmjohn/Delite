@@ -247,7 +247,7 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     
     def emitProperties(props: List[String]) {
       props.foreach(prop => writer.println("profileDataObj." + prop + " = " + prop + ";"))
-	}
+	  }
     
     writer.println("function profileData() {")
     emitProfileDataArrays(globalStartNanos, stats, writer)
@@ -267,7 +267,8 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
   def writeProfile(globalStart: Long, globalStartNanos: Long, stats: Map[String, List[Timing]]) {
     val directory = getOrCreateOutputDirectory()
     // emit JS file containing the profile data
-	emitProfileData(directory, "profileData.js", globalStartNanos, stats)
+	emitProfileData(directory, "profileData.js",
+    globalStartNanos, stats)
   }
   
   def writeProfile(globalStart: Long, stats: Map[String, List[Timing]], writer: PrintWriter) {
@@ -299,12 +300,13 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
    *  Requires that the following files have been generated: symbols.json, profileData.js
    */
   def main(args: Array[String]) {
+
     // only generate HTML profile
     // TODO: check that symbols.json and profileData.js have already been generated
 	
     // read symbol source info from file
-    val symbolsFilename =
-      Config.degFilename.substring(0, Config.degFilename.length() - 4) + "-symbols.json"
+    val symbolsFilename =    new File(getOrCreateOutputDirectory(), "symbols.json")
+
     val contents = scala.io.Source.fromFile(symbolsFilename).mkString
     
     // maps a symbol (name) to its source context(s): name -> (fileName, opName, line)

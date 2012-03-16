@@ -353,47 +353,49 @@ object Visualizer {
     {
     	val writer = new java.io.StringWriter
     	val printer = new PrintWriter(writer)
+    
+      // the source lines are split by file. Each file is displayed in a 
+      // new div. 
     	
-    	var allSourceLines: ListBuffer[String] = new ListBuffer()
-    	
-    	val dir = new File("generated/scala/kernels")
+    	val dir = new File(Config.buildDir+"/scala/kernels")
     	if (!dir.isDirectory)
     	  println(dir + " is not a dir")
     	else {
     	  val files = dir.listFiles.toList
     	  println("found generated files:")
     	  println(files)
-    	  for (file <- files) {
-            val source = Source.fromFile(file)
-            for (line <- source.getLines) {
-            	allSourceLines += line
+        val sourceFiles : ListBuffer[Pair[String, List[String]]] = new ListBuffer()
+        for (file <- files){
+          val tempList: ListBuffer[String] = new ListBuffer()
+          val source = Source.fromFile(file)
+          
+          for(line <- source.getLines) tempList += line
+          sourceFiles += Pair(file.getName(), tempList.toList)
+        }
+
+        val sourceNodes = for((fileName, fileCode) <- sourceFiles) yield {
+          <div id="{ fileName }">
+            <div class="gen-sourcefile-header"><pre><strong>{ fileName }</strong></pre></div>
+            <div class="gen-sourcefile" style="display:none">
+            <pre>
+            {
+              val sourceLines = for ((line, num) <- fileCode zipWithIndex) yield {
+
+                <span>{ (num + 1) + ":   " + line }</span>
+                <br/>
+
+              }
+              sourceLines
+
             }
-    	  }
+            </pre>
+            </div>
+          </div>
+        }
+
+        sourceNodes
     	}
     	
-        <pre>
-{
-  // strip path from file name
-  // id of single source line follows pattern "Source.scala:line"
-  //val baseName = relativePath(file)
-  
-  //val source = Source.fromFile(file)
-  /*
-  val sourceLines = for ((line, num) <- source.getLines zipWithIndex) yield {
-    val shownId =  baseName + ":" + (num + 1) + "-show"
-    val hiddenId = baseName + ":" + (num + 1)
-    <span id={ shownId }>{ (num + 1) + ":   " + line }</span>
-    <span id={ hiddenId } class="hidden">{ (num + 1) + ":   " + line }</span>
-    <br/>
-  }
-  */
-  val sourceLines = for ((line, num) <- allSourceLines.toList zipWithIndex) yield {
-    <span>{ (num + 1) + ":   " + line }</span>
-    <br/>
-  }
-  sourceLines
-}
-        </pre>
     }</div></div>
   }
   
@@ -502,8 +504,8 @@ object Visualizer {
     
     val deliteHomeProfiler = Config.deliteHome + "/profiler"
     
-    val cssFiles = List("hover.css", "less/bootstrap.css")
-    val jsFiles = List("jquery.js", "bootstrap-twipsy.js", "bootstrap-popover.js", "d3.js")
+    val cssFiles = List("page.css", "hover.css", "less/bootstrap.css")
+    val jsFiles = List("jquery.js", "bootstrap-twipsy.js", "bootstrap-popover.js", "d3.js", "page_behaviour.js")
     
     val htmlHeader = """
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
@@ -517,7 +519,7 @@ object Visualizer {
     for (js <- jsFiles.map(f => deliteHomeProfiler + "/" + f)) {
       writer.println("<script src=\"" + js + "\" type=\"text/javascript\"></script>")
     }
-    writer.println("<script src=\"" + "profileData.js" + "\" type=\"text/javascript\"></script>")
+    writer.println("<script src=\"profileData.js\" type=\"text/javascript\"></script>")
 
     copyFileTo(deliteHomeProfiler + "/" + "profile-viz-top.html", writer)
     

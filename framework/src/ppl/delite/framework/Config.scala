@@ -19,7 +19,8 @@ object Config {
   var generateC = getProperty("delite.generate.c", "false") != "false"
   var generateOpenCL = getProperty("delite.generate.opencl", "false") != "false"
   var homeDir = getProperty("delite.home.dir", System.getProperty("user.dir"))
-  var buildDir = getProperty("delite.build.dir", "generated")
+  var buildDir = getProperty("delite.build.dir", System.getProperty("user.dir") + java.io.File.separator + "generated" +
+      java.io.File.separator + degName)
   var useBlas = getProperty("delite.extern.blas", "false") != "false"
   var nestedVariantsLevel = getProperty("nested.variants.level", "0").toInt
   var debug = getProperty("delite.debug","false") != "false"
@@ -27,4 +28,7 @@ object Config {
   //Print generationFailedException info
   val dumpException: Boolean = getProperty("delite.dump.exception", "false") != "false"
   var enableProfiler = System.getProperty("delite.enable.profiler", "false") != "false"
+  val profileDir = System.getProperty("delite.profiler.dir", buildDir+ java.io.File.separator + "profile")
+
+  def degName = degFilename.substring(0, degFilename.length() - 4)
 }

@@ -30,7 +30,8 @@ def profile(deg, params, opts):
       else:
         deg = deg + ".deg"
 
-    java_opts = java_opts + "-Dstats.output.dir=profile -Dstats.output.filename=profile-" + deg + ".html -Ddelite.deg.filename=" + deg
+    build_dir = parseBuildDir(deg)
+    java_opts = java_opts + "-Dstats.output.dir="+ build_dir +"/profile -Dstats.output.filename=profile.html -Ddelite.deg.filename=" + deg
 
     #add classpaths
     cp = " -cp "
@@ -43,7 +44,7 @@ def profile(deg, params, opts):
 
     print "== profiling application: " + deg 
     print "== with options: " + java_opts + "\n" 
-    java_cmd = delitecommon.JAVA_HOME + "/bin/java " + java_opts + " ppl.delite.runtime.profiler.Profiler " + deg + " " + ' '.join(params)
+    java_cmd = delitecommon.JAVA_HOME + "/bin/java " + java_opts + " ppl.delite.runtime.profiler.Profiler " + ' '.join(params)
     #print java_cmd
     ecode = os.system(java_cmd)
     if ecode != 0:
