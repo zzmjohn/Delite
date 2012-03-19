@@ -347,7 +347,7 @@ object Visualizer {
   
   import scala.collection.mutable.ListBuffer
   
-  def genSourceViewHtml() = {
+  def genSourceViewHtml(taskInfoList: List[String]) = {
     <div class="span1">
     <div id="source"><h2>Generated Sources</h2>
     {
@@ -361,7 +361,8 @@ object Visualizer {
     	if (!dir.isDirectory)
     	  println(dir + " is not a dir")
     	else {
-    	  val files = dir.listFiles.toList
+        val files = taskInfoList.map(x => new File(dir, x +".scala")).filter(_.exists())
+    	  //val files = dir.listFiles.toList
     	  println("found generated files:")
     	  println(files)
         val sourceFiles : ListBuffer[Pair[String, List[String]]] = new ListBuffer()
@@ -498,7 +499,11 @@ object Visualizer {
   import java.util.Calendar
   import java.text.DateFormat
   
-  def writeHtmlProfile(writer: PrintWriter, symbolMap: Map[String, (String, String, Int)]) {
+  /**
+   * writes the html profile to a writer based on the tasklist and the symbol map
+   * the tasklist is already sorted by descending order of duration
+   */
+  def writeHtmlProfile(writer: PrintWriter, symbolMap: Map[String, (String, String, Int)], taskInfoList: List[String]) {
     println("PROFILER: writing HTML profile...")
     println("delite.home: "+Config.deliteHome)
     
@@ -532,7 +537,7 @@ object Visualizer {
     // post process to replace <br></br>
     writer.println(replaceHtmlLineBreaks(sourceHtmlAsString))
 
-    val gensourceHtmlNodes = genSourceViewHtml()
+    val gensourceHtmlNodes = genSourceViewHtml(taskInfoList)
     val gensourceHtmlAsString = gensourceHtmlNodes.toString()
     // post process to replace <br></br>
     writer.println(replaceHtmlLineBreaks(gensourceHtmlAsString))

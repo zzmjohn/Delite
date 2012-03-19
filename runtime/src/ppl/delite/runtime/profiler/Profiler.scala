@@ -74,6 +74,18 @@ object Profiler {
       (symbolName, (fileName, opName, line))
     })
   }
+
+  def createTaskList(json: Any) : List[(String, Int)] = {
+    val taskList = json match {
+      case m: List[Map[Any,Any]] => m
+      case err => error("JSON map not found")
+    }
+
+    for (task <- taskList) yield {
+      (getFieldString(task, "kernel"), getFieldString(task, "duration").toInt)
+    }
+   
+  }  
   
   def init(info: Map[String, (String, Int, String)], taskGraph: DeliteTaskGraph) {
     sourceInfo = info
@@ -159,8 +171,32 @@ object Profiler {
         }
       }
   }
-  
-  def emitProfileDataArrays(globalStartNanos: Long, stats: Map[String, List[Timing]], writer: PrintWriter) {
+
+  /**
+   * emit task info to a json writer
+   */
+
+  def emitTaskInfos(taskInfos: Iterable[TaskInfo], stream: PrintWriter) {
+
+    stream.println("[")
+
+    var first = true
+    for(taskInfo <- taskInfos) {
+      if(first) {first=  false} else stream.print(", ")
+      stream.print("{\"kernel\": \"" + taskInfo.kernel +"\",")
+      stream.print("\"duration\": \"" + taskInfo.duration + "\"")
+      stream.println("}")
+    }
+
+    stream.println("]")
+
+  }
+
+  /**
+   * emits data arrays to a writer, also emits task information in JSON format
+   * for later use
+   */
+  def emitProfileDataArrays(globalStartNanos: Long, stats: Map[String, List[Timing]], writer: PrintWriter, taskWriter: PrintWriter) {
 /*
 var duration = [280, 800, 400, 500, 1500, 600];
 var start = [1000, 10, 800, 820, 2, 200];
@@ -214,6 +250,10 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
         case other => List()
       })
     }
+
+    //emit the task infos to the taskWriter
+
+    emitTaskInfos(taskInfos, taskWriter)
     
     val parallelTaskIndices = taskInfos map { taskInfo =>
       val component = taskInfo.fromTiming.component
@@ -240,7 +280,7 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     writer.println(parallelTasksJS)
   }
 
-  def emitProfileData(dir: File, fileName: String, globalStartNanos: Long, stats: Map[String, List[Timing]]) {
+  def emitProfileData(dir: File, fileName: String, taskFileName: String, globalStartNanos: Long, stats: Map[String, List[Timing]]) {
     val dataFile = new File(dir, fileName)
     val fileWriter = new FileWriter(dataFile)
     val writer = new PrintWriter(fileWriter)
@@ -248,9 +288,13 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     def emitProperties(props: List[String]) {
       props.foreach(prop => writer.println("profileDataObj." + prop + " = " + prop + ";"))
 	  }
+
+    val taskDataFile = new File(dir, taskFileName)
+    val taskFileWriter = new FileWriter(taskDataFile)
+    val taskWriter = new PrintWriter(taskFileWriter)
     
     writer.println("function profileData() {")
-    emitProfileDataArrays(globalStartNanos, stats, writer)
+    emitProfileDataArrays(globalStartNanos, stats, writer, taskWriter)
     writer.println("var profileDataObj = new Object();")
     emitProperties(List("res", "duration", "start", "kernels", "location", "line_in_source", "tooltip"))
     writer.println("return profileDataObj; }")
@@ -258,17 +302,23 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     writer.flush()
     fileWriter.flush()
     fileWriter.close()
+
+    taskWriter.flush()
+    taskFileWriter.flush()
+    taskFileWriter.close()
   }
   
   /** Writes profile to JavaScript file (profileData.js).
+   *  also emits a JSON map (taskInfos.json) which will be used to print
+   *  the right sources when running the visualizer
    *  
    *  Requires system property stats.output.dir to be set.
    */
   def writeProfile(globalStart: Long, globalStartNanos: Long, stats: Map[String, List[Timing]]) {
     val directory = getOrCreateOutputDirectory()
     // emit JS file containing the profile data
-	emitProfileData(directory, "profileData.js",
-    globalStartNanos, stats)
+	emitProfileData(directory, "profileData.js", "taskInfos.json", globalStartNanos, stats)
+
   }
   
   def writeProfile(globalStart: Long, stats: Map[String, List[Timing]], writer: PrintWriter) {
@@ -315,10 +365,33 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
         case Some(json) => mapFromParsedJSON(json)
         case None => throw new RuntimeException("Couldn't parse the symbols file")
       }
-    
+
+    // read taskInfoMap from file
+
+    val taskInfoFilename = new File(getOrCreateOutputDirectory(), "taskInfos.json")
+    val taskInfoContents = scala.io.Source.fromFile(taskInfoFilename).mkString
+
+    // create a map for this
+    val taskInfoList: List[(String, Int)] = 
+      JSON.parseFull(taskInfoContents) match {
+        case Some(json) => createTaskList(json)
+        case _ => throw new RuntimeException("Couldn't parse the task info file")
+      }  
+
+    //merge the task lists by name, and sort by duration
+    val taskInfoSorted : List[(String, Int)] = 
+    (for((name, durations: List[(String, Int)]) <- taskInfoList.groupBy(_._1)) 
+      yield (name, durations.foldLeft(0){_ + _._2})
+    ).toList.sortWith{ case (x,y) => x._2.compareTo(y._2) >0}
+        
+        
+ /*       .map {
+      case ((name, durations : List[Int])) => (name, durations.foldLeft(0){_ +_})
+    }.toList.sortWith{ case (x,y) => x._2.compareTo(y._2) > 0}
+*/
     val htmlFile = new File(getOrCreateOutputDirectory(), Config.statsOutputFilename)
     val fileWriter = new PrintWriter(new FileWriter(htmlFile))
-    Visualizer.writeHtmlProfile(fileWriter, symbolMap)
+    Visualizer.writeHtmlProfile(fileWriter, symbolMap, taskInfoSorted.map(_._1))
   }
   
   def getOrCreateOutputDirectory(): File = {
