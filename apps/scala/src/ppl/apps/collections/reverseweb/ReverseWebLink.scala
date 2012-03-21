@@ -43,7 +43,7 @@ trait ReverseWebLink extends CollectionsApplication {
     // flatMap it
     val sourcedests = pagelinks flatMap {
       l =>
-      val sourcedests = l.split(":")
+      val sourcedests = l.split(":") // split(l, ":", 2)
       val source = Integer.parseInt(sourcedests(0))
       val dests = sourcedests(1).trim.split(" ")
       ArraySeq.fromArray(dests).map(d => (Integer.parseInt(d), source))
