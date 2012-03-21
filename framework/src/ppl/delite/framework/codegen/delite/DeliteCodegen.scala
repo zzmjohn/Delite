@@ -61,6 +61,41 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
 
   override def shouldApplyFusion(currentScope: List[TTP])(result: List[Exp[Any]]) = ifGenAgree(_.shouldApplyFusion(currentScope)(result))
 
+/*  def emitSourceContexts(sContexts: List[SourceContext], stream: PrintWriter, id: String) {
+    var first = true
+    stream.print("\"sourceContexts\":[")
+    if(sContexts.isEmpty) emitSourceContext(None, stream, id) else
+    for(sContext <- sContexts){
+      if(first){first = false} else stream.print(",")
+      emitSourceContext(Some(sContext), stream, id)
+    }
+    stream.print("]")
+  }
+*/
+  def emitSourceContextLineage(sContext: SourceContext, stream: PrintWriter, id: String){
+    //use of a stack because we want to get sourceContext in reverse order
+    //from closest to user source to furthest
+    val lineage = new scala.collection.mutable.Stack[SourceContext]; lineage.push(sContext)
+      //use of a stack because we want to get sourceContext in reverse order
+      //from closest to user source to furthest
+    var current = sContext
+    while(!current.parent.isEmpty){
+      current = current.parent.get
+      lineage.push(current)
+    }
+    stream.print("[")
+    var first = true
+    lineage.foreach{sc =>
+      if(first){first = false} else {stream.print(", ")}
+      stream.print("{\n   ")
+      stream.print("\"fileName\": \"" + sc.fileName + "\",\n    ")
+      stream.print("\"opName\": \"" + sc.methodName + "\",\n    ")
+      stream.print("\"line\": \"" + sc.line + "\" }")
+    }
+    stream.print("]")
+  }
+
+
   def emitSourceContext(sourceContext: Option[SourceContext], stream: PrintWriter, id: String) {
     // obtain root parent source context (if any)
     val parentContext: Option[SourceContext] =
@@ -85,17 +120,25 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
   
 /*
 {"SymbolMap": [
-  {"symbol": "x8", "sourceContext": {
+  {"symbol": "x8", "sourceContexts": [
+    ["sourceContext": {
     "fileName": "/Users/phaller/git/Delite-rw/apps/scala/src/ppl/apps/ml/gda/GDA.scala",
     "opName": "length",
-    "line": "16" }
-  }
-  {"symbol": "x9", "sourceContext": {
-    "fileName": "/Users/phaller/git/Delite-rw/apps/scala/src/ppl/apps/ml/gda/GDA.scala",
-    "opName": "count",
-    "line": "18" }
-  }
-] }
+    "line": "16" 
+    },
+    "sourceContext": {
+      "fileName": "/Users/phaller/git/Delite-rw/apps/scala/src/ppl/apps/ml/gda/GDA.scala",
+      "opName": "count",
+      "line": "18" 
+    }],
+    ["sourceContext": {
+      "fileName": "/Users/phaller/git/Delite-rw/apps/scala/src/ppl/apps/ml/gda/GDA.scala",
+      "opName": "count",
+      "line": "18" 
+    }]
+  ]},
+  {"symbol": "x9", "sourceContexts":[]}
+]}
  */
   def emitSymbolSourceContext(stream: PrintWriter): Unit = {
     // output header
@@ -106,7 +149,13 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
       if (first) { first = false }
       else stream.print(", ")
       stream.print("{\"symbol\": \"x" + sym.id + "\",")
-      emitSourceContext(if (sym.sourceContexts.isEmpty) None else Some(sym.sourceContexts.head), stream, "x"+sym.id)
+      stream.print("\"sourceContexts\": [")
+        var first2 = true
+        sym.sourceContexts.foreach{x => 
+          if(first2) {first2 = false} else stream.print(", ")
+          emitSourceContextLineage(x, stream, "x"+sym.id)
+        }
+      stream.print("]")
       stream.println("}")
     }
     stream.println("] }")

@@ -308,16 +308,24 @@ object Visualizer {
   }
   
   // symbolMap: name -> (fileName, opName, line)
-  def sourceViewHtml(symbolMap: Map[String, (String, String, Int)]) = {
+  def sourceViewHtml(symbolMap: Map[String, List[List[(String, String, Int)]]]) = {
     <div class="span1">
     <div id="source"><h2>Sources</h2>
     {
-      val sourceFiles = symbolMap.values.flatMap(sourceInfo => sourceInfo match {
+      //for source file we only take the head of each list
+      //do this with a mega foldRight operation
+      //
+
+      val sourceFiles = symbolMap.values.flatten.foldRight(List[String]()){case (sContexts, fileNames) =>
+        if(sContexts.isEmpty || sContexts.head._1 == "<unknown file>") fileNames else (sContexts.head._1)::fileNames
+      }.distinct
+
+      /*val sourceFiles = symbolMap.values.flatMap(sourceInfo => sourceInfo match {
           case (fileName, opName, line) if !fileName.equals("<unknown file>") => List(fileName)
           case _ => List()
         })
         .toList
-        .distinct
+        .distinct*/
       // TODO: there must be a better way
       for (file <- sourceFiles;
            if !(file.contains("ppl/dsl") ||
@@ -503,7 +511,7 @@ object Visualizer {
    * writes the html profile to a writer based on the tasklist and the symbol map
    * the tasklist is already sorted by descending order of duration
    */
-  def writeHtmlProfile(writer: PrintWriter, symbolMap: Map[String, (String, String, Int)], taskInfoList: List[String]) {
+  def writeHtmlProfile(writer: PrintWriter, symbolMap: Map[String, List[List[(String, String, Int)]]], taskInfoList: List[String]) {
     println("PROFILER: writing HTML profile...")
     println("delite.home: "+Config.deliteHome)
     

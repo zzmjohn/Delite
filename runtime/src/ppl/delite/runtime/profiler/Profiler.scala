@@ -16,7 +16,7 @@ object Profiler {
   
   var sourceInfo: Map[String, (String, Int, String)] = Map()
   var graph: Option[DeliteTaskGraph] = None
-  
+    
   def getFieldMap(map: Map[Any, Any], field: String): Map[Any,Any] = {
     map.get(field) match {
       case Some(field) => field match {
@@ -54,24 +54,37 @@ object Profiler {
     }
   }
 
-  def mapFromParsedJSON(json: Any): Map[String, (String, String, Int)] = {
+  def getFieldListofLists(map: Map[Any, Any], field: String): List[List[Any]] = {
+    map.get(field) match {
+      case Some(field) => field match {
+        case llist: List[List[Any]] => llist
+        case err => error("JSON list of lists not found")
+      }
+      case None => error("JSON field not found")
+    }
+  }
+
+  def mapFromParsedJSON(json: Any): Map[String, List[List[(String, String, Int)]]] = {
     val symMap = json match {
       case m: Map[Any, Any] => m
       case err => error("JSON map not found")
     }
+
     val mappings = getFieldList(symMap, "SymbolMap")
-    Map[String, (String, String, Int)]() ++ (for (_mapping <- mappings) yield {
+    Map[String, List[List[(String, String, Int)]]]() ++ (for (_mapping <- mappings) yield {
       val mapping = _mapping.asInstanceOf[Map[Any, Any]]
       val symbolName = getFieldString(mapping, "symbol")
       
-      // parse source context
-      val (fileName, line, opName) = getFieldMapOption(mapping, "sourceContext") match {
-	  	case None =>
-	  	  ("<unknown file>", 0, symbolName)
-        case Some(sourceContext) =>
-	  	  (getFieldString(sourceContext, "fileName"), getFieldString(sourceContext, "line").toInt, getFieldString(sourceContext, "opName"))
-      }
-      (symbolName, (fileName, opName, line))
+      // parse source contexts
+      val value : List[List[(String, String, Int)]] = 
+        getFieldListofLists(mapping, "sourceContexts").map{_sContexts =>
+          val sContexts = _sContexts.asInstanceOf[List[Map[Any,Any]]]
+          for(sContext : Map[Any,Any] <- sContexts) yield {
+            (getFieldString(sContext, "fileName"), getFieldString(sContext, "opName"), getFieldString(sContext, "line").toInt)
+          }
+        }
+
+      (symbolName -> value)
     })
   }
 
@@ -317,7 +330,7 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
   def writeProfile(globalStart: Long, globalStartNanos: Long, stats: Map[String, List[Timing]]) {
     val directory = getOrCreateOutputDirectory()
     // emit JS file containing the profile data
-	emitProfileData(directory, "profileData.js", "taskInfos.json", globalStartNanos, stats)
+	  emitProfileData(directory, "profileData.js", "taskInfos.json", globalStartNanos, stats)
 
   }
   
@@ -359,8 +372,8 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
 
     val contents = scala.io.Source.fromFile(symbolsFilename).mkString
     
-    // maps a symbol (name) to its source context(s): name -> (fileName, opName, line)
-    val symbolMap: Map[String, (String, String, Int)] =
+    // maps a symbol (name) to its source context(s): name -> List[List(fileName, opName, line)]]
+    val symbolMap: Map[String, List[List[(String, String, Int)]]] =
       JSON.parseFull(contents) match { // parse JSON into map
         case Some(json) => mapFromParsedJSON(json)
         case None => throw new RuntimeException("Couldn't parse the symbols file")
@@ -385,10 +398,8 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     ).toList.sortWith{ case (x,y) => x._2.compareTo(y._2) >0}
         
         
- /*       .map {
-      case ((name, durations : List[Int])) => (name, durations.foldLeft(0){_ +_})
-    }.toList.sortWith{ case (x,y) => x._2.compareTo(y._2) > 0}
-*/
+      
+
     val htmlFile = new File(getOrCreateOutputDirectory(), Config.statsOutputFilename)
     val fileWriter = new PrintWriter(new FileWriter(htmlFile))
     Visualizer.writeHtmlProfile(fileWriter, symbolMap, taskInfoSorted.map(_._1))
