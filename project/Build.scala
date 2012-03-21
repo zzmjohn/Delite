@@ -79,5 +79,5 @@ object DeliteBuild extends Build {
     scalaSource in Test <<= baseDirectory(_ / "src"),
     parallelExecution in Test := false
     // don't appear to be able to depend on a different scala version simultaneously, so just using scala-virtualized for everything
-  )) dependsOn(framework, runtime, optiml, optimlApps, runtime, deliteTest)
+  )) dependsOn(framework, runtime, optiml, apps, runtime, deliteTest)
 }
