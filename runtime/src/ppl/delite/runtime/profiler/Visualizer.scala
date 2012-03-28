@@ -383,7 +383,7 @@ object Visualizer {
         }
 
         val sourceNodes = for((fileName, fileCode) <- sourceFiles) yield {
-          <div id="{ fileName }">
+          <div id={fileName}>
             <div class="gen-sourcefile-header"><pre><strong>{ fileName }</strong></pre></div>
             <div class="gen-sourcefile" style="display:none">
             <pre>

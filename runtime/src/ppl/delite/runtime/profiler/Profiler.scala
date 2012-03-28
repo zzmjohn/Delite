@@ -2,6 +2,7 @@ package ppl.delite.runtime
 package profiler
 
 import java.io.{BufferedWriter, File, PrintWriter, FileWriter}
+import scala.io.Source
 import ppl.delite.runtime.Config
 import ppl.delite.runtime.graph.DeliteTaskGraph
 import ppl.delite.runtime.graph.ops._
@@ -90,13 +91,13 @@ object Profiler {
 
   def createTaskList(json: Any) : List[(String, Int)] = {
     val taskList = json match {
-      case m: List[Map[Any,Any]] => m
+      case m: List[Map[Any, Any]] => m
       case err => error("JSON map not found")
     }
 
-    for (task <- taskList) yield {
-      (getFieldString(task, "kernel"), getFieldString(task, "duration").toInt)
-    }
+    (for (elem <- taskList) yield {
+      (getFieldString(elem, "kernel"), getFieldString(elem, "duration").toInt)
+    }).toList
    
   }  
   
@@ -185,31 +186,12 @@ object Profiler {
       }
   }
 
-  /**
-   * emit task info to a json writer
-   */
-
-  def emitTaskInfos(taskInfos: Iterable[TaskInfo], stream: PrintWriter) {
-
-    stream.println("[")
-
-    var first = true
-    for(taskInfo <- taskInfos) {
-      if(first) {first=  false} else stream.print(", ")
-      stream.print("{\"kernel\": \"" + taskInfo.kernel +"\",")
-      stream.print("\"duration\": \"" + taskInfo.duration + "\"")
-      stream.println("}")
-    }
-
-    stream.println("]")
-
-  }
 
   /**
    * emits data arrays to a writer, also emits task information in JSON format
    * for later use
    */
-  def emitProfileDataArrays(globalStartNanos: Long, stats: Map[String, List[Timing]], writer: PrintWriter, taskWriter: PrintWriter) {
+  def emitProfileDataArrays(globalStartNanos: Long, stats: Map[String, List[Timing]], writer: PrintWriter) {
 /*
 var duration = [280, 800, 400, 500, 1500, 600];
 var start = [1000, 10, 800, 820, 2, 200];
@@ -222,7 +204,6 @@ var res = ["T0", "T1", "T2", "T3", "T4", "T5"];
 
 var parallelTasks = [[1, 4, 6], [2, 3, 5]];
 */
-    
     val allInitTimings = (for (id <- stats.keys; timing <- stats(id)) yield timing).toList
 
     // for skipping input
@@ -264,10 +245,6 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
       })
     }
 
-    //emit the task infos to the taskWriter
-
-    emitTaskInfos(taskInfos, taskWriter)
-    
     val parallelTaskIndices = taskInfos map { taskInfo =>
       val component = taskInfo.fromTiming.component
       // generate list of parallel task infos (their indices)
@@ -293,7 +270,128 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     writer.println(parallelTasksJS)
   }
 
-  def emitProfileData(dir: File, fileName: String, taskFileName: String, globalStartNanos: Long, stats: Map[String, List[Timing]]) {
+  /**
+   * emits kernel information for later use in JSON format
+   * also emits a map of symbols to kernel files to a different file
+   */
+  
+  def emitTaskInfo(globalStartNanos: Long, stats: Map[String, List[Timing]], stream: PrintWriter, symWriter: PrintWriter) {
+     // for skipping input
+    val globalAppStartNanos = stats.get("app") match {
+      case Some(appStats) =>
+      	//println("found stats for app")
+        val appStart = appStats(0).startTime
+        //println("app start nanos: "+appStart)
+      	appStart
+      case None =>
+        globalStartNanos
+    }
+
+    val kernelsToDuration: Map[String, Long] = (for((id,timings) <- stats; if(new File(Config.buildDir+"/scala/kernels", id+".scala").exists)) yield {
+      // only include timings started after globalAppStartNanos
+      val validTimings = timings filter { _.startTime >= globalAppStartNanos }
+      val duration = validTimings.map(_.elapsedMicros).foldLeft(0:Long){_+_}
+      (id,duration)
+    }).filter{case (kernel, duration) => duration >0}
+
+    
+    //emit all data related to kernel files for sorting purposes
+    var first = true
+    stream.println("[")
+    for((kernel,duration) <- kernelsToDuration; if duration > 0) {
+      if(first) {first=  false} else stream.print(", ")
+      stream.println("{")
+      stream.print("\"kernel\": \"" + kernel + "\",")
+      stream.print("\"duration\": \"" + duration + "\"")
+      stream.println("}")
+    }
+    stream.println("]")
+
+    
+    val symToKernelMap = getSymToGenfilesMap(kernelsToDuration.keys.toList)
+
+    //emit all data related to the symToKernel map
+    first = true
+    symWriter.println("{")
+    for((symbol, (declSite, otherSites)) <- symToKernelMap) {
+      if(first) {first=  false} else symWriter.print(", ")
+      symWriter.print("\"" + symbol + "\" : " + "{")
+      symWriter.print("\"declSite\" : "+ declSite + ",")
+      
+      symWriter.print("\"otherSites\" : [")
+      var first2 = true
+      for(otherSite <- otherSites){
+        if(first2){first2 = false}else{symWriter.print(",")}
+        symWriter.print("\""+otherSite+"\"")
+      }
+      symWriter.println("]")
+      symWriter.println("}")
+    }
+    symWriter.println("}")
+  }
+
+
+  /**
+   * create a map from a symbol to a generated file
+   * symbol -> Map [declSite -> list, otherSites -> list]
+   */
+  def getSymToGenfilesMap(kernels: List[String]) : Map[String, (String, Set[String])] = {
+    
+    val result = new scala.collection.mutable.HashMap[String, (String, Set[String])]{
+
+      def addMapping(sym: String, kernel: String, isDeclSite: Boolean) = {
+
+        val symInfo = this.get(sym).getOrElse{ ("", scala.collection.immutable.Set[String]())}
+        
+        this(sym) = if(isDeclSite) (kernel, symInfo._2) else (symInfo._1, symInfo._2 + kernel)
+        
+      }
+    }
+
+    for(kernel <- kernels){
+      val kernelFile = new File(Config.buildDir +"/scala/kernels", kernel+".scala")
+      val lines = Source.fromFile(kernelFile).getLines
+
+      val symbolRegex = "val (x\\d+)|x\\d+".r
+      for(line <- lines){
+        val syms = symbolRegex.findAllIn(line)
+        for(sym <- syms){
+          val isDeclSite = !sym.startsWith("x")
+          val realSym = if(!isDeclSite) sym else sym.split(" ")(1)
+          result.addMapping(realSym, kernelFile.getCanonicalPath(), isDeclSite) 
+        }
+      }
+    }
+
+    result.toMap
+  }
+
+  /**
+   * reads a kernel files, gathers all symbols
+   * defined in this file and output the info to json
+   */
+  def emitSymbols(kernel : String, stream: PrintWriter){
+      stream.println("[")
+      val kernelFile = new File(Config.buildDir+"/scala/kernels", kernel+".scala") 
+      val lines = Source.fromFile(kernelFile).getLines
+      val symbolRegex = "val (x\\d+)".r
+      var first = true;
+      for(line <- lines){
+        val syms = symbolRegex.findAllIn(line)
+        for (sym <- syms){
+          if(first){first = false}else{stream.print(", ")}
+          stream.print(sym.split(" ")(1))
+        }
+      }
+      stream.println("]")
+  }
+
+  /**
+   * emits profile data contained in the stats map
+   * visualizable info is printed to fileName
+   * kernel information and duration is printed to taskFileName
+   */
+  def emitProfileData(dir: File, fileName: String, taskFileName: String, symFileName: String, globalStartNanos: Long, stats: Map[String, List[Timing]]) {
     val dataFile = new File(dir, fileName)
     val fileWriter = new FileWriter(dataFile)
     val writer = new PrintWriter(fileWriter)
@@ -302,12 +400,9 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
       props.foreach(prop => writer.println("profileDataObj." + prop + " = " + prop + ";"))
 	  }
 
-    val taskDataFile = new File(dir, taskFileName)
-    val taskFileWriter = new FileWriter(taskDataFile)
-    val taskWriter = new PrintWriter(taskFileWriter)
-    
+   
     writer.println("function profileData() {")
-    emitProfileDataArrays(globalStartNanos, stats, writer, taskWriter)
+    emitProfileDataArrays(globalStartNanos, stats, writer)
     writer.println("var profileDataObj = new Object();")
     emitProperties(List("res", "duration", "start", "kernels", "location", "line_in_source", "tooltip"))
     writer.println("return profileDataObj; }")
@@ -316,11 +411,59 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     fileWriter.flush()
     fileWriter.close()
 
+    //emitting kernelInfo to taskWriter
+    val taskDataFile = new File(dir, taskFileName)
+    val taskFileWriter = new FileWriter(taskDataFile)
+    val taskWriter = new PrintWriter(taskFileWriter)
+
+    val symDataFile = new File(dir, symFileName)
+    val symFileWriter = new FileWriter(symDataFile)
+    val symWriter = new PrintWriter(symFileWriter)
+ 
+    emitTaskInfo(globalStartNanos, stats, taskWriter, symWriter)
+
     taskWriter.flush()
     taskFileWriter.flush()
     taskFileWriter.close()
+
+    symWriter.flush()
+    symFileWriter.flush()
+    symFileWriter.close()
   }
-  
+
+ /**
+   * emits profile data contained in the stats map
+   * visualizable info is printed to fileName
+   * kernel information and duration is printed to taskFileName
+   */
+  def emitLineidMap(dir: File, fileName: String, lineIds: Map[Lineid, Set[String]]) {
+    val dataFile = new File(dir, fileName)
+    val fileWriter = new FileWriter(dataFile)
+    val writer = new PrintWriter(fileWriter)
+    
+
+    writer.println("{")
+    var first = true;
+    for((line, kernels) <- lineIds){
+      if(first){first = false;}else{writer.print(", ")}
+      writer.print("\""+line+"\"" + " : ")
+      writer.print("[");
+      var first2 = true;
+      for(kernel <- kernels){
+        if(first2){first2 = false}else{writer.print(", ")}
+        writer.print(kernel)
+      }
+      writer.println("]")
+    
+    }
+    writer.println("}")
+
+    writer.flush()
+    fileWriter.flush()
+    fileWriter.close()
+
+  }
+ 
   /** Writes profile to JavaScript file (profileData.js).
    *  also emits a JSON map (taskInfos.json) which will be used to print
    *  the right sources when running the visualizer
@@ -330,7 +473,7 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
   def writeProfile(globalStart: Long, globalStartNanos: Long, stats: Map[String, List[Timing]]) {
     val directory = getOrCreateOutputDirectory()
     // emit JS file containing the profile data
-	  emitProfileData(directory, "profileData.js", "taskInfos.json", globalStartNanos, stats)
+	  emitProfileData(directory, "profileData.js", "taskInfos.json", "symstokernels.json", globalStartNanos, stats)
 
   }
   
@@ -379,6 +522,10 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
         case None => throw new RuntimeException("Couldn't parse the symbols file")
       }
 
+    val lineidMap : Map[Lineid, Set[String]] = toLineidMap(symbolMap)
+    //emit the lineidMap as json for later use
+    emitLineidMap(getOrCreateOutputDirectory(), "lineids.json", lineidMap)
+
     // read taskInfoMap from file
 
     val taskInfoFilename = new File(getOrCreateOutputDirectory(), "taskInfos.json")
@@ -389,17 +536,9 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
       JSON.parseFull(taskInfoContents) match {
         case Some(json) => createTaskList(json)
         case _ => throw new RuntimeException("Couldn't parse the task info file")
-      }  
-
-    //merge the task lists by name, and sort by duration
-    val taskInfoSorted : List[(String, Int)] = 
-    (for((name, durations: List[(String, Int)]) <- taskInfoList.groupBy(_._1)) 
-      yield (name, durations.foldLeft(0){_ + _._2})
-    ).toList.sortWith{ case (x,y) => x._2.compareTo(y._2) >0}
-        
-        
-      
-
+      }
+    
+    val taskInfoSorted = taskInfoList.sortWith{ case (x,y) => x._2.compareTo(y._2) > 0}
     val htmlFile = new File(getOrCreateOutputDirectory(), Config.statsOutputFilename)
     val fileWriter = new PrintWriter(new FileWriter(htmlFile))
     Visualizer.writeHtmlProfile(fileWriter, symbolMap, taskInfoSorted.map(_._1))
@@ -415,4 +554,29 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     directory
   }
   
+
+  def toLineidMap(symbolMap : Map[String, List[List[(String, String, Int)]]]) : Map[Lineid, Set[String]] = {
+
+    val result = new scala.collection.mutable.HashMap[Lineid, Set[String]] {
+
+      def addMapping(context : (String, String, Int), sym : String) = {
+        val lineid = Lineid(context._1, context._3)
+        val listOfSymbols = this.get(lineid).getOrElse{ scala.collection.immutable.HashSet[String]() }
+        this(lineid) = listOfSymbols + sym
+      }
+    }
+
+    for((sym, contexts) <- symbolMap; lineage <- contexts; context <- lineage){
+      result.addMapping(context, sym)
+    }
+
+    result.toMap
+  }
+}
+
+/**
+ * a Lineid represents a certain line number in a file
+ */
+case class Lineid(filename: String, line : Int){
+  override def toString = Profiler.relativePath(filename)+":"+line
 }

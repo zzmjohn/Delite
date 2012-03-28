@@ -121,7 +121,7 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
 /*
 {"SymbolMap": [
   {"symbol": "x8", "sourceContexts": [
-    ["sourceContext": {
+    [{
     "fileName": "/Users/phaller/git/Delite-rw/apps/scala/src/ppl/apps/ml/gda/GDA.scala",
     "opName": "length",
     "line": "16" 
