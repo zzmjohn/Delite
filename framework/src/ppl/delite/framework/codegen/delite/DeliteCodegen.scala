@@ -109,7 +109,7 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
     
     stream.print("  \"sourceContext\": {\n    ")
     val (fileName, line, opName) =
-      if (parentContext.isEmpty) ("<unknown file>", 0, id) else {
+      if (parentContext.isEmpty) ("&lt;unknown file&gt;", 0, id) else {
         val sc = parentContext.get
         (sc.fileName, sc.line, sc.methodName)
       }

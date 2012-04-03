@@ -138,7 +138,7 @@ object DeliteTaskGraph {
 
     // source context
     val (fileName, line, opName) = getFieldMapOption(op, "sourceContext") match {
-      case None => ("<unknown file>", 0, id)
+      case None => ("&lt;unknown file&gt;", 0, id)
       case Some(sourceContext) =>
         (getFieldString(sourceContext, "fileName"), getFieldString(sourceContext, "line").toInt, getFieldString(sourceContext, "opName"))
     }

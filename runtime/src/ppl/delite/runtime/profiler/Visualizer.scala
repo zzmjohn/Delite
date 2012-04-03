@@ -277,7 +277,7 @@ object Visualizer {
             for (timing <- timingsToDisplay) yield {
               
               val (fileName, line, opName) = Profiler.sourceInfo.get(timing.component) match {
-                case None => ("<unknown file>", 0, timing.component + " [" + Profiler.deliteOpType(timing.component) + "]")
+                case None => ("&lt;unknown file&gt;", 0, timing.component + " [" + Profiler.deliteOpType(timing.component) + "]")
                 case Some(tuple) => tuple
               }
               val source = Profiler.relativePath(fileName) + ":" + line
@@ -309,19 +309,20 @@ object Visualizer {
   
   // symbolMap: name -> (fileName, opName, line)
   def sourceViewHtml(symbolMap: Map[String, List[List[(String, String, Int)]]]) = {
-    <div class="span1">
-    <div id="source"><h2>Sources</h2>
+    <div class="span6">
+    <h2>Sources</h2>
+    <div id="source-code">
     {
       //for source file we only take the head of each list
       //do this with a mega foldRight operation
       //
 
       val sourceFiles = symbolMap.values.flatten.foldRight(List[String]()){case (sContexts, fileNames) =>
-        if(sContexts.isEmpty || sContexts.head._1 == "<unknown file>") fileNames else (sContexts.head._1)::fileNames
+        if(sContexts.isEmpty || List("<unknown file>", "&lt;unknown file&gt;").contains(sContexts.head._1)) fileNames else (sContexts.head._1)::fileNames
       }.distinct
 
       /*val sourceFiles = symbolMap.values.flatMap(sourceInfo => sourceInfo match {
-          case (fileName, opName, line) if !fileName.equals("<unknown file>") => List(fileName)
+          case (fileName, opName, line) if !fileName.equals("&lt;unknown file&gt;") => List(fileName)
           case _ => List()
         })
         .toList
@@ -331,21 +332,20 @@ object Visualizer {
            if !(file.contains("ppl/dsl") ||
                 file.contains("ppl/delite") ||
                 file.contains("lms-core"))) yield {
-        <h3>{ file }</h3>
-        <pre>
+        <div class="sourcefile-header"><pre><strong>{ file }</strong></pre></div>
+        <pre class="pre-scrollable prettyprint lang-scala linenums">
 {
   // strip path from file name
-  // id of single source line follows pattern "Source.scala:line"
-  val baseName = Profiler.relativePath(file)
-  
-  val source = Source.fromFile(file)
-  val sourceLines = for ((line, num) <- source.getLines zipWithIndex) yield {
-    val shownId =  baseName + ":" + (num + 1) + "-show"
-    val hiddenId = baseName + ":" + (num + 1)
-    <span id={ shownId }>{ (num + 1) + ":   " + line }</span>
-    <span id={ hiddenId } class="hidden">{ (num + 1) + ":   " + line }</span>
-    <br/>
-  }
+  // id of single source line follows pattern "Source_line"
+  // as it follows css conventions
+    val baseName = Profiler.relativePath(file)
+    val noExtension = if(baseName.contains(".scala")) baseName.substring(0, baseName.length - 6) else baseName
+
+    val source = Source.fromFile(file)
+    val sourceLines = for ((line, num) <- source.getLines zipWithIndex) yield {
+      val shownId =  noExtension + "_" + (num + 1)
+        <code class="source-line" id={shownId}>{ line }</code><br/>
+    }
   sourceLines
 }
         </pre>
@@ -356,8 +356,10 @@ object Visualizer {
   import scala.collection.mutable.ListBuffer
   
   def genSourceViewHtml(taskInfoList: List[String]) = {
-    <div class="span1">
-    <div id="source"><h2>Generated Sources</h2>
+
+    <div class="span6">
+    <h2>Generated Sources</h2>
+    <div id="gen-code"></div>
     {
     	val writer = new java.io.StringWriter
     	val printer = new PrintWriter(writer)
@@ -376,36 +378,36 @@ object Visualizer {
         val sourceFiles : ListBuffer[Pair[String, List[String]]] = new ListBuffer()
         for (file <- files){
           val tempList: ListBuffer[String] = new ListBuffer()
+          // strip path from file name
+          // id of single source line follows pattern "Source_line"
+          // as it follows css conventions
+          val baseName = Profiler.relativePath(file.getCanonicalPath)
+          val noExtension = if(baseName.contains(".scala")) baseName.substring(0, baseName.length - 6) else baseName
+
           val source = Source.fromFile(file)
           
           for(line <- source.getLines) tempList += line
-          sourceFiles += Pair(file.getName(), tempList.toList)
+          sourceFiles += Pair(noExtension, tempList.toList)
         }
 
         val sourceNodes = for((fileName, fileCode) <- sourceFiles) yield {
-          <div id={fileName}>
-            <div class="gen-sourcefile-header"><pre><strong>{ fileName }</strong></pre></div>
-            <div class="gen-sourcefile" style="display:none">
-            <pre>
+          <div class="hidden-code" style="display:none;" id={fileName}>
+            <div class="gen-sourcefile-header"><pre><strong>{fileName}</strong></pre></div>
+            <pre class="pre-scrollable prettyprint lang-scala linenums">
             {
               val sourceLines = for ((line, num) <- fileCode zipWithIndex) yield {
-
-                <span>{ (num + 1) + ":   " + line }</span>
-                <br/>
-
+                <code id={fileName+"_"+(num+1)}>{ line }</code><br/>
               }
               sourceLines
-
             }
             </pre>
-            </div>
           </div>
         }
 
         sourceNodes
     	}
     	
-    }</div></div>
+    }</div> 
   }
   
   def generateHtmlProfile(globalStart: Long, globalStartNanos: Long, stats: Map[String, List[Timing]]) = {
@@ -474,7 +476,7 @@ object Visualizer {
             for (timing <- timingsToDisplay) yield {
               
               val (fileName, line, opName) = Profiler.sourceInfo.get(timing.component) match {
-                case None => ("<unknown file>", 0, timing.component + " [" + Profiler.deliteOpType(timing.component) + "]")
+                case None => ("&lt;unknown file&gt;", 0, timing.component + " [" + Profiler.deliteOpType(timing.component) + "]")
                 case Some(tuple) => tuple
               }
               val source = Profiler.relativePath(fileName) + ":" + line
@@ -517,23 +519,6 @@ object Visualizer {
     
     val deliteHomeProfiler = Config.deliteHome + "/profiler"
     
-    val cssFiles = List("page.css", "hover.css", "less/bootstrap.css")
-    val jsFiles = List("jquery.js", "bootstrap-twipsy.js", "bootstrap-popover.js", "d3.js", "page_behaviour.js")
-    
-    val htmlHeader = """
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
-<html>
-<head>"""
-    
-    writer.println(htmlHeader)
-    for (css <- cssFiles.map(f => deliteHomeProfiler + "/" + f)) {
-      writer.println("<link href=\"" + css + "\" type=\"text/css\" rel=\"stylesheet\"></link>")
-    }
-    for (js <- jsFiles.map(f => deliteHomeProfiler + "/" + f)) {
-      writer.println("<script src=\"" + js + "\" type=\"text/javascript\"></script>")
-    }
-    writer.println("<script src=\"profileData.js\" type=\"text/javascript\"></script>")
-
     copyFileTo(deliteHomeProfiler + "/" + "profile-viz-top.html", writer)
     
     val cal = Calendar.getInstance()

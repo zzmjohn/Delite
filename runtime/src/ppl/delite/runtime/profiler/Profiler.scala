@@ -134,7 +134,7 @@ object Profiler {
   
   def safeSourceInfo(timing: Timing) =
     sourceInfo.get(timing.component) match {
-      case None => ("<unknown file>", 0, timing.component)
+      case None => ("&lt;unknown file&gt;", 0, timing.component)
       case Some(tuple) => tuple
     }
   
@@ -156,6 +156,7 @@ object Profiler {
     val kernel: String
     val location: Int
     val line: String
+    val cssline: String
     val tooltip: String
   }
   
@@ -172,8 +173,19 @@ object Profiler {
             case None =>        ("&lt;unknown file&gt;", 0, timing.component)
             case Some(tuple) => tuple
           }
-          relativePath(fileName) + ":" + line
+          relativePath(fileName)+":"+line
+        }       
+
+        val cssline = {
+          val (fileName, line, opName) = Profiler.sourceInfo.get(timing.component) match {
+            case None =>        ("&lt;unknown file&gt;", 0, timing.component)
+            case Some(tuple) => tuple
+          }
+          val baseName = relativePath(fileName)
+          val noExtension = if(baseName.contains(".scala")) baseName.substring(0, baseName.length - 6) else baseName 
+          noExtension + "_" + line
         }
+
         val tooltip = {
           val html =
           "<b>Start time:</b> " + ((timing.startTime - globalStartNanos) / 1000) + "us</br>" +
@@ -258,7 +270,8 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     val kernelsJS =    iterableToJSArray("kernels", taskInfos.map(_.kernel))
     val locationsJS =  iterableToJSArray("location", taskInfos.map(_.location), false)
     val linesJS =      iterableToJSArray("line_in_source", taskInfos.map(_.line).map("'" + _ + "'"), false)
-    val tooltipsJS =   iterableToJSArray("tooltip", taskInfos.map(_.tooltip), false)
+    val csslinesJS =      iterableToJSArray("cssline_in_source", taskInfos.map(_.cssline).map("'" + _ + "'"), false)
+val tooltipsJS =   iterableToJSArray("tooltip", taskInfos.map(_.tooltip), false)
     val parallelTasksJS = listOfListsToJSArray("parallelTasks", parallelTaskIndices)
     
     writer.println(durationJS)
@@ -266,6 +279,7 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     writer.println(kernelsJS)
     writer.println(locationsJS)
     writer.println(linesJS)
+    writer.println(csslinesJS)
     writer.println(tooltipsJS)
     writer.println(parallelTasksJS)
   }
@@ -315,14 +329,20 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     symWriter.println("{")
     for((symbol, (declSite, otherSites)) <- symToKernelMap) {
       if(first) {first=  false} else symWriter.print(", ")
+      
+      val declName = relativePath(declSite)
+      val noExtension = if(declName.contains(".scala")) declName.substring(0, declName.length - 6) else declName 
+
       symWriter.print("\"" + symbol + "\" : " + "{")
-      symWriter.print("\"declSite\" : "+ declSite + ",")
+      symWriter.print("\"declSite\" : \""+ noExtension + "\",")
       
       symWriter.print("\"otherSites\" : [")
       var first2 = true
       for(otherSite <- otherSites){
         if(first2){first2 = false}else{symWriter.print(",")}
-        symWriter.print("\""+otherSite+"\"")
+        val otherName = relativePath(otherSite)
+        val noExtension = if(otherName.contains(".scala")) otherName.substring(0, otherName.length - 6) else otherName 
+        symWriter.print("\""+noExtension+"\"")
       }
       symWriter.println("]")
       symWriter.println("}")
@@ -404,7 +424,7 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     writer.println("function profileData() {")
     emitProfileDataArrays(globalStartNanos, stats, writer)
     writer.println("var profileDataObj = new Object();")
-    emitProperties(List("res", "duration", "start", "kernels", "location", "line_in_source", "tooltip"))
+    emitProperties(List("res", "duration", "start", "kernels", "location", "line_in_source", "cssline_in_source", "tooltip"))
     writer.println("return profileDataObj; }")
     
     writer.flush()
@@ -445,13 +465,13 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     writer.println("{")
     var first = true;
     for((line, kernels) <- lineIds){
-      if(first){first = false;}else{writer.print(", ")}
+      if(first){first = false}else{writer.print(", ")}
       writer.print("\""+line+"\"" + " : ")
       writer.print("[");
       var first2 = true;
       for(kernel <- kernels){
         if(first2){first2 = false}else{writer.print(", ")}
-        writer.print(kernel)
+        writer.print("\"" + kernel + "\"")
       }
       writer.println("]")
     
@@ -486,7 +506,7 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
           ""
         
         val source = sourceInfo.get(id) match {
-          case None => "<unknown file>"
+          case None => "&lt;unknown file&gt;"
           case Some((fileName, line, opName)) => fileName + ":" + line
         }
         
@@ -511,7 +531,7 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
     // TODO: check that symbols.json and profileData.js have already been generated
 	
     // read symbol source info from file
-    val symbolsFilename =    new File(getOrCreateOutputDirectory(), "symbols.json")
+    val symbolsFilename = new File(getOrCreateOutputDirectory(), "symbols.json")
 
     val contents = scala.io.Source.fromFile(symbolsFilename).mkString
     
@@ -578,5 +598,9 @@ var parallelTasks = [[1, 4, 6], [2, 3, 5]];
  * a Lineid represents a certain line number in a file
  */
 case class Lineid(filename: String, line : Int){
-  override def toString = Profiler.relativePath(filename)+":"+line
+  private val _noExtension = {
+    val baseName = Profiler.relativePath(filename)
+    if(baseName.contains(".scala")) baseName.substring(0, baseName.length - 6) else baseName
+  }
+  override def toString = _noExtension+"_"+line
 }

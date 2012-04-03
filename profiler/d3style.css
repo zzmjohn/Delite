@@ -1,0 +1,31 @@
+.chart {
+    font: 10px sans-serif;
+    margin-left: 42px;
+    shape-rendering: crispedges;
+}
+.chart div {
+    background-color: steelblue;
+    color: white;
+    margin: 1px;
+    padding: 3px;
+    text-align: right;
+}
+.chart rect {
+    /*fill: slategray;*/
+    stroke: white;
+}
+.chart .header{
+  fill: none;
+}
+
+.chart .mainrect{
+  fill:white;
+}
+
+.chart text.bar {
+    fill: white;
+}
+
+.chart line {
+  /*stroke:white;*/
+}
