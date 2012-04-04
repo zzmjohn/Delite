@@ -354,7 +354,7 @@ object Visualizer {
   }
   
   import scala.collection.mutable.ListBuffer
-  
+
   def genSourceViewHtml(taskInfoList: List[String]) = {
 
     <div class="span6">
@@ -364,6 +364,7 @@ object Visualizer {
     	val writer = new java.io.StringWriter
     	val printer = new PrintWriter(writer)
     
+      val symbolRegex = "x\\d+".r
       // the source lines are split by file. Each file is displayed in a 
       // new div. 
     	
@@ -396,7 +397,11 @@ object Visualizer {
             <pre class="pre-scrollable prettyprint lang-scala linenums">
             {
               val sourceLines = for ((line, num) <- fileCode zipWithIndex) yield {
-                <code id={fileName+"_"+(num+1)}>{ line }</code><br/>
+                <code id={fileName+"_"+(num+1)}>{ 
+                  import scala.xml._
+                  val replaced = symbolRegex.replaceAllIn(Utility.escape(line), m => "<span class=\"code-sym\">"+m+"</span>")
+                  XML.loadString("<span>"+replaced+"</span>")
+                }</code><br/>
               }
               sourceLines
             }

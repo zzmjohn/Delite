@@ -66,25 +66,20 @@ object Profiler {
   }
 
   def mapFromParsedJSON(json: Any): Map[String, List[List[(String, String, Int)]]] = {
-    val symMap = json match {
-      case m: Map[Any, Any] => m
+    val mappings = json match {
+      case m: Map[String, List[List[Map[Any,Any]]]] => m
       case err => error("JSON map not found")
     }
 
-    val mappings = getFieldList(symMap, "SymbolMap")
-    Map[String, List[List[(String, String, Int)]]]() ++ (for (_mapping <- mappings) yield {
-      val mapping = _mapping.asInstanceOf[Map[Any, Any]]
-      val symbolName = getFieldString(mapping, "symbol")
-      
+    Map[String, List[List[(String, String, Int)]]]() ++ (for ((symbolName, sContextss) <- mappings) yield {
+
       // parse source contexts
       val value : List[List[(String, String, Int)]] = 
-        getFieldListofLists(mapping, "sourceContexts").map{_sContexts =>
-          val sContexts = _sContexts.asInstanceOf[List[Map[Any,Any]]]
-          for(sContext : Map[Any,Any] <- sContexts) yield {
+        for(sContexts <- sContextss) yield {
+          for(sContext : Map[Any, Any] <- sContexts) yield {
             (getFieldString(sContext, "fileName"), getFieldString(sContext, "opName"), getFieldString(sContext, "line").toInt)
           }
         }
-
       (symbolName -> value)
     })
   }
@@ -384,26 +379,6 @@ val tooltipsJS =   iterableToJSArray("tooltip", taskInfos.map(_.tooltip), false)
     }
 
     result.toMap
-  }
-
-  /**
-   * reads a kernel files, gathers all symbols
-   * defined in this file and output the info to json
-   */
-  def emitSymbols(kernel : String, stream: PrintWriter){
-      stream.println("[")
-      val kernelFile = new File(Config.buildDir+"/scala/kernels", kernel+".scala") 
-      val lines = Source.fromFile(kernelFile).getLines
-      val symbolRegex = "val (x\\d+)".r
-      var first = true;
-      for(line <- lines){
-        val syms = symbolRegex.findAllIn(line)
-        for (sym <- syms){
-          if(first){first = false}else{stream.print(", ")}
-          stream.print(sym.split(" ")(1))
-        }
-      }
-      stream.println("]")
   }
 
   /**

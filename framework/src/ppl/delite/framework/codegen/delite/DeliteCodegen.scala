@@ -61,17 +61,6 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
 
   override def shouldApplyFusion(currentScope: List[TTP])(result: List[Exp[Any]]) = ifGenAgree(_.shouldApplyFusion(currentScope)(result))
 
-/*  def emitSourceContexts(sContexts: List[SourceContext], stream: PrintWriter, id: String) {
-    var first = true
-    stream.print("\"sourceContexts\":[")
-    if(sContexts.isEmpty) emitSourceContext(None, stream, id) else
-    for(sContext <- sContexts){
-      if(first){first = false} else stream.print(",")
-      emitSourceContext(Some(sContext), stream, id)
-    }
-    stream.print("]")
-  }
-*/
   def emitSourceContextLineage(sContext: SourceContext, stream: PrintWriter, id: String){
     //use of a stack because we want to get sourceContext in reverse order
     //from closest to user source to furthest
@@ -119,46 +108,43 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
   }
   
 /*
-{"SymbolMap": [
-  {"symbol": "x8", "sourceContexts": [
+{"x8" : [
     [{
     "fileName": "/Users/phaller/git/Delite-rw/apps/scala/src/ppl/apps/ml/gda/GDA.scala",
     "opName": "length",
     "line": "16" 
     },
-    "sourceContext": {
+    {
       "fileName": "/Users/phaller/git/Delite-rw/apps/scala/src/ppl/apps/ml/gda/GDA.scala",
       "opName": "count",
       "line": "18" 
     }],
-    ["sourceContext": {
+    [{
       "fileName": "/Users/phaller/git/Delite-rw/apps/scala/src/ppl/apps/ml/gda/GDA.scala",
       "opName": "count",
       "line": "18" 
     }]
-  ]},
-  {"symbol": "x9", "sourceContexts":[]}
-]}
+  ],
+ "x9" : []}
+}
  */
   def emitSymbolSourceContext(stream: PrintWriter): Unit = {
     // output header
-    stream.println("{\"SymbolMap\": [")
+    stream.println("{")
     // output map from symbols to SourceContexts
     var first = true
     for (TP(sym, _) <- globalDefs) {
       if (first) { first = false }
       else stream.print(", ")
-      stream.print("{\"symbol\": \"x" + sym.id + "\",")
-      stream.print("\"sourceContexts\": [")
+      stream.print("\"x" + sym.id + "\" : [")
         var first2 = true
         sym.sourceContexts.foreach{x => 
           if(first2) {first2 = false} else stream.print(", ")
           emitSourceContextLineage(x, stream, "x"+sym.id)
         }
       stream.print("]")
-      stream.println("}")
     }
-    stream.println("] }")
+    stream.println("}")
   }
   
   def emitSource[A,B](f: Exp[A] => Exp[B], className: String, stream: PrintWriter)(implicit mA: Manifest[A], mB: Manifest[B]): List[(Sym[Any],Any)] = {
