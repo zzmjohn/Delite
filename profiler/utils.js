@@ -40,7 +40,6 @@ $.ajax({
 
 function toggleGenFiles(){
   $(".gen-sourcefile-header").each(function (index, domEle){
-    //  alert("whaaa");
     $(domEle).click(function(){
       $(domEle).next().toggle();
     });    
@@ -92,10 +91,15 @@ function showRelatedSymbols(){
       $(domEle).click(function(){
         var content = getContent($(domEle).attr("id"));
         $("#rel-symbols").html(content);
+        goToByScroll("rel-symbols");
+        $("#rel-symbols").effect("highlight",{color: "#ffdab9"},1000);
 
         //also attach a function to each of these elems so the 
         //source can be seen in the gen-source windows
         showGenSource();
+      });
+      $(domEle).hover(function(){
+        $(domEle).toggleClass("hovered-code");
       });
   });
 }
@@ -107,12 +111,13 @@ function showGenSource(){
         var gensymId = $(domEle).attr("id");
         var symId = gensymId.substring(7);
         var symEle = $("#"+symId).html();
-        $("#gen-code").html(symEle);
+        $("#gen-code").html(prettyPrintOne(symEle));
+        goToByScroll("gen-code");
+        $("#gen-code").effect("highlight",{color: "#ffdab9"},1000);
         showSourceContexts();
       });
    });
 }
-
 
 //for every symbol in gen-code tags
 //show its sourcecontexts onclick
@@ -120,29 +125,59 @@ function showSourceContexts(){
   $(".code-sym").each(function(index, domEle){
     $(domEle).click(function(){
       $("#rel-scontexts").html(getSourceContexts($(domEle).text()));
+      goToByScroll("rel-scontexts");
+      $("#rel-scontexts").effect("highlight",{color: "#ffdab9"},1000);
+      showSourceFiles();
+    });      
+    $(domEle).hover(function(){
+        $(domEle).toggleClass("hovered-code");
+    });
+    $(domEle).tooltip({title: "click to show source contexts"});
+  });
+}
+
+function showSourceFiles(){
+  $(".source-src").each(function(index, domEle){
+    $(domEle).click(function(){
+      var srcFileId = $(domEle).attr("targetsrc");
+      var srcHtml = $("#"+srcFileId).html();
+      $("#source-code").html(prettyPrintOne(srcHtml));
+      showRelatedSymbols();
     });
   });
 }
 
+
+//remove the prettyprint classes from source -gen divs
+//add it again
+//call prettyprint
+/*function prettyRefresh(){
+  $("#gen-code pre").addClass("prettyprint");
+  $("#source-code pre").addClass("prettyprint");
+prettyPrint();
+}*/
+
+
+
 //gets sourceContexts for a given symbol
 function getSourceContexts(aSym){
-  var res ="<div id=\"contexts-accordion\" class=\"accordion-group\">"
-    +"<div class=\"accordion-heading\">"
-    +"<a id=\"sym-"+aSym+"\" class =\"accordion-toggle\" href=\"#collapse-sym-"+aSym+"\" data-parent=\"#contexts-accordion\" data-toggle=\"collapse\">"
-    +"<b>"+aSym+"</b> (symbol)"
-    +"</a>"
-    +"</div>"; //close accordion-heading
-
-  res += "<div id=\"collapse-sym-"+aSym+"\" class=\"accordion-body collapse\" style=\"height:0px;\">"
-      +  "<div class=\"accordion-inner\">"
-      +  "<ul>";
-
+  var res ="<div id=\"contexts-accordion\" class=\"accordion-group\">";
+  
   var sContextss = symbolsToContexts[aSym];
   if(sContextss == null || sContextss.length==0) return res + "no contexts found </div>";
   //for every sourceContext, we get the top two Contexts
   for(idx in sContextss){
+    res += "<div class=\"accordion-heading\">"
+    +"<a id=\"sym-"+aSym+"\" class =\"accordion-toggle\" href=\"#collapse-sym-"+aSym+idx+"\" data-parent=\"#contexts-accordion\" data-toggle=\"collapse\">"
+    +"<b>"+aSym+"</b> (sourceContext " + idx + ")"
+    +"</a>"
+    +"</div>"; //close accordion-heading
+
+    res += "<div id=\"collapse-sym-"+aSym+idx+"\" class=\"accordion-body collapse\" style=\"height:0px;\">"
+    +  "<div class=\"accordion-inner\">"
+    +  "<ul>";
+
     var sContexts = sContextss[idx];
-    if(sContexts == null || sContexts.length ==0) return res + "no contexts found </div>";
     for(contextidx in sContexts){
       var sContext = sContexts[contextidx];
       
@@ -156,11 +191,11 @@ function getSourceContexts(aSym){
             +  "</li>";
       }
     }
-  }
-  res+= "</ul>"
+    res+= "</ul>"
       +"</div>" //close accordion-inner
       +"</div>"; //close accordion-body 
-
+  }
+  
   res += "</div>" //close accordion-group
   return res;
 }
@@ -174,3 +209,9 @@ function noExtension(baseName){
    return (baseName.indexOf(".scala") != -1) ?
      baseName.substring(0, baseName.length - 6) : baseName;
 }
+
+/* taken from http://djpate.com/2009/10/07/animated-scroll-to-anchorid-function-with-jquery/ */
+function goToByScroll(id){
+ 	$('html,body').animate({scrollTop: $("#"+id).offset().top},'slow');
+}
+

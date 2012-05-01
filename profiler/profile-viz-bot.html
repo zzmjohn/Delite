@@ -21,6 +21,7 @@
       </div> 
     </div> <!-- nav-bar -->
 
+    <div class="container">
     <div class="row">
     <div class="span6 pre-scrollable"> <!-- contains symbols related to source line -->
     <div class="accordion" id="rel-symbols"></div>  
@@ -29,9 +30,12 @@
     <div class="accordion" id="rel-scontexts"></div>
     </div>
     </div><!--row-->
+    </div><!--container-->
 
     <!-- Le javascript
-    ================================================== -->
+    ================================================== 
+    IMPORTANT: The order of these scripts SHOULD NOT BE changed
+    -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="/home/manojo/workspace/Delite/profiler/bootstrap/jquery.js"></script>
     <script src="/home/manojo/workspace/Delite/profiler/bootstrap/bootstrap-transition.js"></script>
@@ -49,7 +53,9 @@
     <script src="/home/manojo/workspace/Delite/profiler/bootstrap/bootstrap-popover-mod.js"></script>
 <script src="/home/manojo/workspace/Delite/profiler/prettify/src/prettify.js"></script>
     <script src="/home/manojo/workspace/Delite/profiler/d3.v2.js" type="text/javascript"></script>
-    <script src="/home/manojo/workspace/Delite/generated/ppl.apps.ml.gda.GDARunner/profile/profileData.js" type="text/javascript"></script>
+    <script src="/home/manojo/workspace/Delite/profiler/jquery-ui/jquery-ui-min.js" type="text/javascript"></script>
+<script src="/home/manojo/workspace/Delite/generated/ppl.apps.ml.gda.GDARunner/profile/profileData.js" type="text/javascript"></script>
+    <script src="/home/manojo/workspace/Delite/profiler/timeline.js" type="text/javascript"></script>
     <script src="/home/manojo/workspace/Delite/profiler/utils.js" type="text/javascript"></script>
 
     <script type="text/javascript">
@@ -57,207 +63,9 @@
     function load(){
       
       showRelatedSymbols();
-      
+      drawTimeline(); 
       //let the collapsing begin
       $(".collapse").collapse();
-
-  
-      var pdata = profileData();
-
-      var res = pdata.res;
-      var duration = pdata.duration;
-      var start = pdata.start;
-      var kernels = pdata.kernels;
-      var location = pdata.location;
-      var line_in_source = pdata.line_in_source;
-      var cssline_in_source = pdata.cssline_in_source;
-      var tooltip = pdata.tooltip;
-
-      var title_bar_width = 64; // the bar with the names of the taskRunners/threads
-      var row_height = 25; // height of the bars
-      var total_duration = totalDuration(duration, start, location); // the total duration of the computation, in us
-      var schedule_width = 1000;//1600; // width of the entire chart, in pixels
-      var task_width = .96 * row_height;
-      var numThreads = res.length;
-
-      var space_on_top = 20;
-      var space_for_ticks = 20;
-      var task_offset = space_on_top + 1;
-      var numTicks = 20;
-
-     var chart = d3.select("#svg")
-        .append("svg")
-        .attr("class", "chart")
-        .attr("width", schedule_width + title_bar_width + 50)
-        .attr("height", row_height * numThreads + space_on_top + space_for_ticks)
-        .append("svg:g")
-        .attr("transform", "translate(10,10)");
-
-      chart.selectAll("header")
-        .data([0])
-        .enter().append("rect")
-        .attr("class", "header")
-        .attr("x", 0)
-        .attr("y", space_on_top)
-        .attr("width", title_bar_width)
-        .attr("height", row_height * numThreads); 
-
-      chart.selectAll(".mainrect")
-        .data([0])
-        .enter().append("svg:rect")
-        .attr("class", "mainrect")
-        .attr("x", title_bar_width)
-        .attr("y", space_on_top)
-        .attr("width", schedule_width)
-        .attr("height", row_height * numThreads);
-
-
-      /* a dashed line per resource */
-      chart.selectAll(".resline")
-        .data(res)
-        .enter().append("svg:line")
-        .attr("y1", function(d, i) { return i * row_height + task_offset; })
-        .attr("y2", function(d, i) { return i * row_height + task_offset; })
-        .attr("x1", title_bar_width)
-        .attr("x2", title_bar_width + schedule_width);
-
-    //labelling the threads
-      chart.selectAll(".reslabel")
-        .data(res)
-        .enter().append("svg:text")
-        .attr("class", "reslabel")
-        .attr("y", function(d, i) { return i * row_height + task_offset +
-            (task_width / 2); })
-        .attr("x", title_bar_width)
-        .attr("dy", "+4")
-        .attr("dx", "-40")
-        .attr("text-anchor", "start")
-        .text(String);
-
-      var duration_scaled = d3.scale.linear()
-        .domain([0, total_duration])
-        .range([0, schedule_width]);
-
-      var start_scaled = d3.scale.linear()
-        .domain([0, total_duration])
-        .range([title_bar_width, title_bar_width + schedule_width]);
-
- /*     chart.selectAll(".startline")
-        .data(start)
-        .enter().append("svg:line")
-        .attr("y1", space_on_top - 8)
-        .attr("y2", function(d, i) { return location[i] * row_height + task_offset; })
-        .attr("x1", start_scaled)
-        .attr("x2", start_scaled)
-        .attr("stroke", "#ccc");
-
-      chart.selectAll(".startlabel")
-        .data(start)
-        .enter().append("svg:text")
-        .attr("class", "startlabel")
-        .attr("y", 0)
-        .attr("x", 0)
-        .attr("dy", space_on_top - 10)
-        .attr("dx", "+0")
-        .attr("text-anchor", "start")
-        .text(function(d, i) { return d + " us"; });
-
-      chart.selectAll(".startlabel")
-        .data(start)
-        .attr("x", start_scaled);
-*/
-      //vertical lines for time intervals
-      chart.selectAll(".startline")
-        .data(start_scaled.ticks(numTicks))
-        .enter().append("svg:line")
-        .attr("x1", start_scaled)
-        .attr("x2", start_scaled)
-        .attr("y1", 12)
-        .attr("y2", row_height * numThreads + space_on_top)
-        .attr("stroke", "#ccc");
-
-      //time
-      chart.selectAll("text.rule")
-        .data(start_scaled.ticks(numTicks))
-        .enter().append("svg:text")
-        .attr("class", "rule")
-        .attr("x", start_scaled)
-        .attr("y", 0)
-        .attr("dy", +5)
-        .attr("text-anchor", "middle")
-        .text(String);
-
-      chart.selectAll(".task")
-        .data(duration)
-        .enter().append("svg:rect")
-        .attr("class", "task")
-        .attr("y", function(d, i) { return location[i] * row_height + task_offset; })
-        .attr("id", function(d, i) { return i; })
-        .attr("height", task_width)
-        .attr("width", duration_scaled)
-        .attr("fill", "steelblue")
-        .on("mouseover", mouseover)
-        .on("mouseout", mouseout);
-
-
-      chart.selectAll(".task")
-        .data(start)
-        .attr("x", start_scaled);
-
-      chart.selectAll(".label")
-        .data(kernels)
-        .enter().append("svg:text")
-        .attr("class", "label")
-        .attr("y", function(d, i) { return location[i] * row_height + task_offset - 3; })
-        .attr("x", 20)
-        .attr("dy", +task_width-1 )
-        .attr("dx", "+1")
-        .attr("text-anchor", "start")
-        .attr("fill", "gainsboro")
-        .text(String);
-
-      chart.selectAll(".label")
-        .data(start)
-        .attr("x", start_scaled);
-
-      //popovers for every task
-       $(".task").each(function(index, domEle){
-           $(domEle).popoverMod({
-              'placement':'bottom', //for getting the arrow
-              'title': $(domEle).attr('title', kernels[parseInt($(domEle).attr("id"))]),
-              'content':$(domEle).attr('data-content', tooltip[parseInt($(domEle).attr("id"))]),
-              'manualPosition': true,
-              'position': {
-                top:parseInt($(domEle).attr("y"))+90, 
-                left:parseInt($(domEle).attr("x")) + 170
-               }
-              // 170 is a voodoo constant
-           });
-       });
-
-      function mouseover(d, i) {
-        d3.select(this)
-          .attr("fill", "#F4A460");
-        //showHide(cssline_in_source[i]);
-      }
-
-      function mouseout(d, i) {
-        d3.select(this)
-          .attr("fill", "steelblue");
-        //showHide(cssline_in_source[i]);
-      }
-
-      function showHide(shID) {
-        $("#"+shID).toggleClass("highlighted"); 
-      }
-
-      function totalDuration(durations, starts, locations) {
-        var endingTimes = new Array();
-        for (var i = 0; i < durations.length; i++) {
-          endingTimes[i] = durations[i] + starts[i];
-        }
-        return Math.max.apply(null, endingTimes);
-      }
     }
     </script>
 

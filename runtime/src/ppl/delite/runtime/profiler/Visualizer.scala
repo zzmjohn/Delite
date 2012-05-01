@@ -309,48 +309,61 @@ object Visualizer {
   
   // symbolMap: name -> (fileName, opName, line)
   def sourceViewHtml(symbolMap: Map[String, List[List[(String, String, Int)]]]) = {
+
+  //for source file we only take the head of each list
+  //do this with a mega foldRight operation
+
+    val sourceFiles = symbolMap.values.flatten.foldRight(List[String]()){ case (sContexts, fileNames) =>
+      if(sContexts.isEmpty || List("<unknown file>", "&lt;unknown file&gt;").contains(sContexts.head._1)) fileNames else (sContexts.head._1)::fileNames
+    }.distinct
+
+    val userSourceFiles = for(file <- sourceFiles; 
+        if !(file.contains("ppl/dsl") ||
+          file.contains("ppl/delite") ||
+          file.contains("lms-core"))) yield file
+
+
     <div class="span6">
     <h2>Sources</h2>
     <div id="source-code">
     {
-      //for source file we only take the head of each list
-      //do this with a mega foldRight operation
-      //
-
-      val sourceFiles = symbolMap.values.flatten.foldRight(List[String]()){case (sContexts, fileNames) =>
-        if(sContexts.isEmpty || List("<unknown file>", "&lt;unknown file&gt;").contains(sContexts.head._1)) fileNames else (sContexts.head._1)::fileNames
-      }.distinct
-
-      /*val sourceFiles = symbolMap.values.flatMap(sourceInfo => sourceInfo match {
-          case (fileName, opName, line) if !fileName.equals("&lt;unknown file&gt;") => List(fileName)
-          case _ => List()
-        })
-        .toList
-        .distinct*/
-      // TODO: there must be a better way
-      for (file <- sourceFiles;
-           if !(file.contains("ppl/dsl") ||
-                file.contains("ppl/delite") ||
-                file.contains("lms-core"))) yield {
-        <div class="sourcefile-header"><pre><strong>{ file }</strong></pre></div>
-        <pre class="pre-scrollable prettyprint lang-scala linenums">
-{
-  // strip path from file name
-  // id of single source line follows pattern "Source_line"
-  // as it follows css conventions
-    val baseName = Profiler.relativePath(file)
-    val noExtension = if(baseName.contains(".scala")) baseName.substring(0, baseName.length - 6) else baseName
-
-    val source = Source.fromFile(file)
-    val sourceLines = for ((line, num) <- source.getLines zipWithIndex) yield {
-      val shownId =  noExtension + "_" + (num + 1)
-        <code class="source-line" id={shownId}>{ line }</code><br/>
+      //emit the source code for the head of the user Files
+      emitSourceCode(userSourceFiles.head, true)
     }
-  sourceLines
-}
-        </pre>
+    </div>
+    {
+      for (file <- sourceFiles) yield {
+        val baseName = Profiler.relativePath(file)
+        val noExtension = if(baseName.contains(".scala")) baseName.substring(0, baseName.length - 6) else baseName
+
+        <div class="hidden-code" style="display:none;" id={noExtension}>
+        {emitSourceCode(file, false)}
+        </div>
       }
-    }</div></div>
+    }
+    </div> //closing span6
+  }
+
+
+  def emitSourceCode(fileName: String, prettyPrint: Boolean) = {
+    val preclass = "pre-scrollable linenums lang-scala " + (if(prettyPrint) "prettyprint" else "")
+    <div class="sourcefile-header"><pre><strong>{fileName}</strong></pre></div>
+    <pre class={preclass}>
+    { 
+      // strip path from file name
+      // id of single source line follows pattern "Source_line"
+      // as it follows css conventions
+      val baseName = Profiler.relativePath(fileName)
+      val noExtension = if(baseName.contains(".scala")) baseName.substring(0, baseName.length - 6) else baseName
+
+      val source = Source.fromFile(fileName)
+      val sourceLines = for((line, num) <- source.getLines zipWithIndex) yield {
+        val id = noExtension+"_" + (num + 1)
+        <code class="source-line" id={id}>{line}</code><br />
+      }
+      sourceLines
+    }
+    </pre>
   }
   
   import scala.collection.mutable.ListBuffer
@@ -359,7 +372,9 @@ object Visualizer {
 
     <div class="span6">
     <h2>Generated Sources</h2>
-    <div id="gen-code"></div>
+    <div id="gen-code">
+    This area displays generated source files
+    </div>
     {
     	val writer = new java.io.StringWriter
     	val printer = new PrintWriter(writer)
@@ -394,7 +409,7 @@ object Visualizer {
         val sourceNodes = for((fileName, fileCode) <- sourceFiles) yield {
           <div class="hidden-code" style="display:none;" id={fileName}>
             <div class="gen-sourcefile-header"><pre><strong>{fileName}</strong></pre></div>
-            <pre class="pre-scrollable prettyprint lang-scala linenums">
+            <pre class="pre-scrollable lang-scala linenums">
             {
               val sourceLines = for ((line, num) <- fileCode zipWithIndex) yield {
                 <code id={fileName+"_"+(num+1)}>{ 
