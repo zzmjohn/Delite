@@ -3,7 +3,7 @@ package ppl.dsl.optiml
 import java.io._
 import scala.reflect.SourceContext
 import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenericFatCodegen, GenericCodegen}
+import scala.virtualization.lms.internal.{Expressions, GenericFatCodegen, GenericCodegen}
 import ppl.delite.framework.{Config, DeliteApplication, DeliteInteractive, DeliteInteractiveRunner}
 import ppl.delite.framework.codegen.Target
 import ppl.delite.framework.codegen.scala.TargetScala
@@ -28,13 +28,23 @@ import ppl.dsl.optiml.library.regression._
 import ppl.dsl.optiml.application._
 import ppl.dsl.optiml.capabilities._
 
+/**
+ * Microbenchmark experiments: OptiMLApplicationRunners with optimizations disabled
+ */
+
+trait OptiMLNoCSE extends Expressions {
+  override def findDefinition[T](d: Def[T]) = None
+}
+
 
 /**
  * These separate OptiML applications from the Exp world.
  */
 
+trait OptiMLApplicationRunner extends OptiMLApplicationRunnerBase with OptiMLExpOpt
+
 // ex. object GDARunner extends OptiMLApplicationRunner with GDA
-trait OptiMLApplicationRunner extends OptiMLApplication with DeliteApplication with OptiMLExp
+trait OptiMLApplicationRunnerBase extends OptiMLApplication with DeliteApplication
 
 // ex. trait GDA extends OptiMLApplication
 trait OptiMLApplication extends OptiLAApplication with OptiML with OptiMLLift with OptiMLLibrary {
@@ -129,9 +139,14 @@ trait OptiMLExp extends OptiLAExp with OptiMLCompiler with OptiMLScalaOpsPkgExp 
       case _ => err("optiml does not support this target")
     }
   }
-
 }
 
+// add rewritings
+trait OptiMLExpOpt extends OptiMLExp
+  with VectorOpsExpOpt with MatrixOpsExpOpt with StreamOpsExpOpt with StreamRowOpsExpOpt {
+    
+  this: DeliteApplication with OptiMLApplication with OptiMLExp =>
+}
 
 trait OptiMLUtilities extends OptiLAUtilities {
   override def err(s: String)(implicit ctx: SourceContext) = {

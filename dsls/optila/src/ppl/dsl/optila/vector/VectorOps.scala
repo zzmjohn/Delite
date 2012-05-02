@@ -351,17 +351,17 @@ trait VectorOps extends Variables {
     
     // //def +(y: Rep[intf.ops.V[A]])(implicit a: Arith[A]) = intf.ops.toIntf(intf.ops.+(y)) // doesn't work, would need dynamic type of ops
     def +(y: Interface[Vector[A]])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.vplusToIntf(intf.ops.+(y))    
-    def +(y: Rep[A])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.vplusToIntf(intf.ops.+(y))
+    def +(y: Rep[A])(implicit a: Arith[A], o: Overloaded2, ctx: SourceContext) = intf.ops.vplusToIntf(intf.ops.+(y))
     def -(y: Interface[Vector[A]])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.vminusToIntf(intf.ops.-(y))    
-    def -(y: Rep[A])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.vminusToIntf(intf.ops.-(y))
+    def -(y: Rep[A])(implicit a: Arith[A], o: Overloaded2, ctx: SourceContext) = intf.ops.vminusToIntf(intf.ops.-(y))
     def *(y: Interface[Vector[A]])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.vtimesToIntf(intf.ops.*(y))    
-    def *(y: Rep[A])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.vtimesToIntf(intf.ops.*(y))  
-    //def *(y: Rep[DenseMatrix[A]])(implicit a: Arith[A],o: Overloaded2) = intf.ops.vtimesToIntf(intf.ops.*(y))
+    def *(y: Rep[A])(implicit a: Arith[A], o: Overloaded2, ctx: SourceContext) = intf.ops.vtimesToIntf(intf.ops.*(y))  
+    //def *(y: Rep[Matrix[A]])(implicit a: Arith[A],o: Overloaded2) = intf.ops.vtimesToIntf(intf.ops.*(y))
     def **(y: Interface[Vector[A]])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.**(y)
     def *:*(y: Interface[Vector[A]])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.*:*(y)
     def dot(y: Interface[Vector[A]])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.dot(y)
-    def /(y: Interface[Vector[A]])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.toIntf(intf.ops./(y))    
-    def /(y: Rep[A])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.toIntf(intf.ops./(y))      
+    def /(y: Interface[Vector[A]])(implicit a: Arith[A], ctx: SourceContext) = intf.ops.toIntf(intf.ops./(y))
+    def /(y: Rep[A])(implicit a: Arith[A], o: Overloaded2, ctx: SourceContext) = intf.ops.toIntf(intf.ops./(y))
     
     def sum(implicit a: Arith[A], ctx: SourceContext) = intf.ops.sum
     def abs(implicit a: Arith[A], ctx: SourceContext) = intf.ops.toIntf(intf.ops.abs)
@@ -506,7 +506,7 @@ trait VectorOpsExp extends VectorOps with DeliteCollectionOpsExp with VariablesE
   case class VectorClone[A:Manifest,VA:Manifest](x: Interface[Vector[A]])(implicit val b: VectorBuilder[A,VA])
     extends DeliteOpSingleWithManifest[A,VA](reifyEffectsHere(vector_clone_impl[A,VA](x)))
 
-  case class VectorPPrint[A](x: Interface[Vector[A]])(block: Exp[Unit]) // stupid limitation...
+  case class VectorPPrint[A](x: Interface[Vector[A]])(block: Block[Unit]) // stupid limitation...
     extends DeliteOpSingleTask(block)
     // reifyEffects(densevector_pprint_impl[A](x))
 
@@ -859,9 +859,9 @@ trait VectorOpsExp extends VectorOps with DeliteCollectionOpsExp with VariablesE
     val inB = intfB.ops.elem.asInstanceOf[Exp[Vector[A]]]  
     val inA = copyTransformedOrElse(_.inA)(unit(0)::intfB.length)
     val size = copyTransformedOrElse(_.size)(intfB.length)
-    val zero = (copyTransformedOrElse(_.zero._1)(unit(0)),copyTransformedOrElse(_.zero._2)(implicitly[HasMinMax[A]].maxValue)) // 0 sensible? maybe -1?
-    def zip = (a,b) => (a,b)
-    def reduce = (a,b) => (if (a._2 < b._2) a._1 else b._1, if (a._2 < b._2) a._2 else b._2)
+    val zero = (copyTransformedBlockOrElse(_.zero._1)(reifyEffects(unit(0))),copyTransformedBlockOrElse(_.zero._2)(reifyEffects(implicitly[HasMinMax[A]].maxValue))) // 0 sensible? maybe -1?
+    def zip = (a,b) => (reifyEffects(a),reifyEffects(b))
+    def reduce = (a,b) => (reifyEffects(if (a._2 < b._2) a._1 else b._1), reifyEffects(if (a._2 < b._2) a._2 else b._2))
 
     val mA = manifest[A]
     val o = implicitly[Ordering[A]]
@@ -874,9 +874,9 @@ trait VectorOpsExp extends VectorOps with DeliteCollectionOpsExp with VariablesE
     val inB = intfB.ops.elem.asInstanceOf[Exp[Vector[A]]]  
     val inA = copyTransformedOrElse(_.inA)(unit(0)::intfB.length)
     val size = copyTransformedOrElse(_.size)(intfB.length)
-    val zero = (copyTransformedOrElse(_.zero._1)(unit(0)),copyTransformedOrElse(_.zero._2)(implicitly[HasMinMax[A]].minValue)) // 0 sensible? maybe -1?
-    def zip = (a,b) => (a,b)
-    def reduce = (a,b) => (if (a._2 > b._2) a._1 else b._1, if (a._2 > b._2) a._2 else b._2)
+    val zero = (copyTransformedBlockOrElse(_.zero._1)(reifyEffects(unit(0))),copyTransformedBlockOrElse(_.zero._2)(reifyEffects(implicitly[HasMinMax[A]].minValue))) // 0 sensible? maybe -1?
+    def zip = (a,b) => (reifyEffects(a),reifyEffects(b))
+    def reduce = (a,b) => (reifyEffects(if (a._2 > b._2) a._1 else b._1), reifyEffects(if (a._2 > b._2) a._2 else b._2))
 
     val mA = manifest[A]
     val o = implicitly[Ordering[A]]

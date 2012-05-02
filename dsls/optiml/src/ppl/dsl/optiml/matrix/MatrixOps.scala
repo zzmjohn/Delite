@@ -19,7 +19,6 @@ trait MatrixOps extends ppl.dsl.optila.matrix.MatrixOps  {
 
 }
 
-
 trait MatrixOpsExp extends ppl.dsl.optila.matrix.MatrixOpsExp with MatrixOps with VariablesExp {
   this: OptiMLExp  =>
   

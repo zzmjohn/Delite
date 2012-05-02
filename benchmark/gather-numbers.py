@@ -14,19 +14,14 @@ DELITE_HOME = os.getenv("DELITE_HOME")
 apps_default = ['gda', 'nb', 'linreg', 'kmeans', 'rbm', 'svm']#, 'lbp']
 delite_threads_default = [1, 2, 4, 8]
 
-
 #delite_gpus = [ 1, 2 ]
 #matlab_apps = []
 #c_apps = []
-
-
-
 
 params = {}
 classes = {}
 props = {}
 options = {}
-
 
 def main():
     usage = "usage: %prog [options]"
@@ -41,6 +36,10 @@ def main():
     parser.add_option("--nv", dest="no_variants", action="store_true" , help="disables variant support in the framework")
     parser.add_option("--nb", dest="no_blas", action="store_true", help="disables blas calls in generated code")
     parser.add_option("--nf", dest="no_fusion", action="store_true", help="disables op fusion")
+    parser.add_option("--nc", dest="no_cse", action="store_true", help="disables common subexpression elimination")
+    parser.add_option("--nr", dest="no_rewrites", action="store_true", help="disables dsl rewriting")
+    parser.add_option("--ns", dest="no_stencil", action="store_true", help="disables stencil collection")
+    parser.add_option("--globals", dest="print_globals", action="store_true", help="print globals")
     parser.add_option("--home", dest="delite_home", default="_env", help="allows you to specify a different Delite Home than the one that should be specificed in the environment")
     parser.add_option("--stats-dir", dest="stats_dir", default=None, help="allows you to specify a different statistics output directory. environment variables are interpolated")
     parser.add_option("--timestamp", dest="stats_time", action="store_true", help="store statistics under a timestamped directory")
@@ -50,11 +49,11 @@ def main():
     if len(args) != 0:
         parser.error("incorrect number of arguments")
     
-
     loadOptions(opts)
     loadProps(options)
     loadParams(options)
     loadClasses(options)
+    
     launchApps(options)
 
 def loadOptions(opts):
@@ -81,7 +80,10 @@ def loadOptions(opts):
     options['variants'] = not opts.no_variants
     options['blas'] = not opts.no_blas
     options['fusion'] = not opts.no_fusion
-
+    options['cse'] = not opts.no_cse
+    options['rewrites'] = not opts.no_rewrites
+    options['stencil'] = not opts.no_stencil
+    options['print_globals'] = opts.print_globals
     options['keep-going'] = opts.keep_going
     options['input-size'] = opts.input_size
     
@@ -158,6 +160,10 @@ def launchApps(options):
             opts = opts + " --gpu"
         if options['fusion'] == False:
             opts = opts + " --nf"
+        if options['stencil'] == True:
+            opts = opts + " -Dliszt.stencil.enabled=true"
+        if options['print_globals'] == True:
+            opts = opts + " -Ddelite.print_globals.enabled=true"
         opts = opts
         #os.putenv("JAVA_OPTS", opts)
         
@@ -231,7 +237,7 @@ def loadClasses(options):
         if len(tokens) == 2:
             app = tokens.pop(0)
             clazz = tokens.pop(0)
-            classes[app] = clazz
+            classes[app] = clazz.strip()
         else:
             print "ignoring[" + line + "] from class list"
     f.close()
@@ -244,16 +250,18 @@ def loadParams(options):
 		
     if not 'datasets' in options:
       f = open(props['delite.home'] + '/benchmark/config/datasets.' + hostname + "." + options['input-size'], 'r')
+      #print " " + props['delite.home'] + '/benchmark/config/datasets.' + hostname + "." + options['input-size']
     else:
       f = open(options['datasets'], 'r')
+      #print " " + options['datasets']
     for line in f:
-        settings = line.split('|')
+        settings = line.strip().split('|')
         app = settings.pop(0)
         app_params = ''
         for param in settings:
             param = expand(param)
             app_params = app_params + ' ' + param
-        params[app] = app_params
+        params[app] = app_params.strip()
     f.close()
  
 def expand(param):
