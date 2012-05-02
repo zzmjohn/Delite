@@ -1,3 +1,9 @@
+/**
+ * Inspired from bunkat's supercool lane views using d3 js
+ * http://bl.ocks.org/1962173 
+ * https://gist.github.com/2338034*
+ */
+
 //draw the timeline
 //
 
