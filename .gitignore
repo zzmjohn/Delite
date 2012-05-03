@@ -27,3 +27,8 @@ test-out/*/*-skel
 test-out/*/*-src
 dsls/deliszt/lisztlib
 profiler/less
+*~
+scripts/setupenv
+dsls/collections/links-sorted-big.txt
+benchmark/CollectionsExperiments/target
+benchmark/CollectionsExperiments/project/boot

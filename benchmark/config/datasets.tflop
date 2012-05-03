@@ -11,3 +11,4 @@ lbpdenoiseraw|$data/ml/lbpdenoise/noisy200x200.raw
 tpchsf1|$data/query/tpch/SF1
 tpchsf5|$data/query/tpch/SF5
 graph_test|
+reverseweb|

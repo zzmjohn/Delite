@@ -291,6 +291,7 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt {
    emitConstOrSym(size, "size")
    stream.print(",\"needsCombine\":" + needsCombine)
    stream.print(",\"needsPostProcess\":" + needsPostProcess)
+   stream.print(",\"needsPostProcess2\":" + needsPostProcess2)
    emitExecutionOpCommon(id, outputs, inputs, mutableInputs, controlDeps, antiDeps)
    stream.println("},")
   }

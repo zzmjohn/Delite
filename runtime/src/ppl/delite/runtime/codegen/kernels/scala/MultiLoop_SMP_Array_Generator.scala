@@ -14,7 +14,7 @@ import ppl.delite.runtime.Config
  * Stanford University
  */
 
-/**
+/** 
  * Creates a chunk for OP_MultiLoop and generates an executable kernel for that chunk
  * The generated kernels are designed to run in parallel on multiple threads in an SMP system
  * This implementation of MultiLoop is optimized for a DSL collection that is backed by an Array
@@ -72,6 +72,8 @@ object MultiLoop_SMP_Array_Generator {
 
     //tree reduction
     //first every chunk performs its primary (map-)reduction
+    out.append("val chunkIdx = %d\n".format(chunkIdx))
+    out.append("val numChunks = %d\n".format(numChunks))
     out.append("val size = head.closure.size\n")
     out.append("val out = head.out\n")
     out.append("var idx = size*")
@@ -93,7 +95,7 @@ object MultiLoop_SMP_Array_Generator {
     out.append("idx += 1\n")
     out.append("}\n")
 */
-    out.append("val acc = head.closure.processRange(out,idx,end)\n")
+    out.append("val acc = head.closure.processRange(out,idx,end,chunkIdx,numChunks)\n")
 
     // profiling
     if (Config.profile)
@@ -126,6 +128,24 @@ object MultiLoop_SMP_Array_Generator {
       if (chunkIdx != numChunks-1) out.append("head.getB"+(numChunks-1)+"\n") // wait for last one
       out.append("head.closure.postProcess(acc)\n")
     }
+    
+    if (op.needsPostProcess2) {
+      if (numChunks > 1) out.append("head.setC"+chunkIdx+"(acc)\n") // kick off others
+      if (chunkIdx != numChunks-1) out.append("head.getC"+(numChunks-1)+"\n") // wait for last one
+      
+      if (chunkIdx != 0) {
+        val neighbor = chunkIdx - 1
+        out.append("head.closure.postCombine2(acc, head.getD"+neighbor+")\n")
+      }
+      if (chunkIdx == numChunks - 1) {
+        out.append("head.closure.postProcInit2(acc)\n")
+      }
+
+      if (numChunks > 1) out.append("head.setD"+chunkIdx+"(acc)\n") // kick off others
+      if (chunkIdx != numChunks-1) out.append("head.getD"+(numChunks-1)+"\n") // wait for last one
+      out.append("head.closure.postProcess2(acc)\n")
+    }
+    
     if (chunkIdx == 0) out.append("head.closure.finalize(acc)\n")
     if (chunkIdx == 0) out.append("acc\n")
     out.append("}\n")
@@ -156,6 +176,14 @@ object MultiLoop_SMP_Array_Header_Generator {
     if (op.needsPostProcess && numChunks > 1) { //all chunks need to sync
       for (i <- 0 until numChunks)
         writeSync(out, "B"+i, op.outputType)
+    }
+    if (op.needsPostProcess2 && numChunks > 1) { //all chunks need to sync
+      for (i <- 0 until numChunks)
+        writeSync(out, "C"+i, op.outputType)
+    }
+    if (op.needsPostProcess2 && numChunks > 1) { //all chunks need to sync
+      for (i <- 0 until numChunks)
+        writeSync(out, "D"+i, op.outputType)
     }
     
     //the footer

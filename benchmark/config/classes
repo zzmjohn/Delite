@@ -32,3 +32,5 @@ tpchsf5|ppl.apps.dataquery.tpch.TPCHRunner
 cf|ppl.apps.ml.cf.TopNRunner
 interop|ppl.apps.interop.CustomerPricingRunner
 graph_test|ppl.apps.graph.TestApp.GraphAppRunner
+reverseweb|ppl.apps.collections.reverseweb.ReverseWebLinkRunner
+linefit|ppl.apps.collections.linefit.LineFitRunner
