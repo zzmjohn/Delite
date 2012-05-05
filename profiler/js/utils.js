@@ -215,3 +215,10 @@ function goToByScroll(id){
  	$('html,body').animate({scrollTop: $("#"+id).offset().top},'slow');
 }
 
+
+//loading the page
+function load(){
+  showRelatedSymbols();
+  drawTimeline();
+  //let the collapsing begin$(".collapse").collapse();
+}

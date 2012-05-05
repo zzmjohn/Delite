@@ -13,6 +13,124 @@ case class TaskNode(timing: Timing, parent: Option[TaskNode])
  * @author Philipp Haller
  */
 object Visualizer {
+  val headers = {
+      <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+      <meta charset="utf-8" />
+      <title>Delite Profiler</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta name="description" content="" />
+      <meta name="author" content="" />
+
+      // styles
+      <link href={Config.deliteHome + "/profiler/css/bootstrap.css"} rel="stylesheet" />
+      <link href={Config.deliteHome + "/profiler/css/bootstrap-responsive.css"} rel="stylesheet" />
+      <link href={Config.deliteHome + "/profiler/css/prettify.css"} rel="stylesheet" />
+      <link href={Config.deliteHome + "/profiler/css/d3style.css"} rel="stylesheet" />
+      <link href={Config.deliteHome + "/profiler/css/page.css"} rel="stylesheet" />
+  }
+  
+
+  val javascript = {
+    <!-- Le javascript
+    ================================================== 
+    IMPORTANT: The order of these scripts SHOULD NOT BE changed
+    -->
+    // Placed at the end of the document so the pages load faster
+    <script src={Config.deliteHome + "/profiler/js/jquery.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-transition.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-alert.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-modal.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-dropdown.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-scrollspy.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-tab.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-tooltip.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-popover.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-button.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-collapse.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-carousel.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-typeahead.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/bootstrap-popover-mod.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/prettify.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/d3.v2.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/jquery-ui-min.js"}></script>
+    <script src={Config.statsOutputDirectory + "/profileData.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/timeline.js"}></script>
+    <script src={Config.deliteHome + "/profiler/js/utils.js"}></script>
+  }
+
+  def body(sourceView : scala.xml.Node, genView: scala.xml.Node) = {
+      <body onload="prettyPrint(); load();">
+      <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+      <div class="container">
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+      </a>
+      <a class="brand" href="#">Delite Profiler</a>
+      <div class="nav-collapse">
+      <ul class="nav">
+      <li class="active"><a href="#">Home</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#contact">Contact</a></li>
+      </ul>
+      </div><!--/.nav-collapse -->
+      </div> <!--container -->
+      </div> 
+      </div>
+
+      <div class="container"><!-- main container-->
+
+      <div class="row">
+      <div id="svg" class="span12"></div>
+      </div><!--row -->
+
+      <div class="row"> <!-- row containing code -->
+
+      {sourceView}
+      {genView}
+
+      </div><!--row containing code -->  
+        </div><!--main container-->
+        <!-- navigation style bar -->
+        <div class="navbar">
+        <div class="navbar-inner">
+        <div class="container">
+        <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        </a>
+        <a class="brand" href="#">Related Symbols</a>
+        <div class="nav-collapse">
+        <!--     <ul class="nav">
+        <li class="active"><a href="#">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#contact">Contact</a></li>
+        </ul>
+        -->      </div><!--/.nav-collapse -->
+        </div> <!--container -->
+        </div> 
+        </div> <!-- nav-bar -->
+
+        <div class="container">
+        <div class="row">
+        <div class="span6 pre-scrollable"> <!-- contains symbols related to source line -->
+        <div class="accordion" id="rel-symbols"></div>  
+        </div>
+        <div class="span6 pre-scrollable"> <!-- contains the sContexts of a symbol -->
+        <div class="accordion" id="rel-scontexts"></div>
+        </div>
+        </div><!--row-->
+        </div><!--container-->
+
+        {javascript}
+
+      </body> 
+  }
+
+  
 
   def deliteOpById(id: String): DeliteOP =
     Profiler.deliteOpByIdOrNone(id) match {
@@ -537,25 +655,23 @@ object Visualizer {
     println("PROFILER: writing HTML profile...")
     println("delite.home: "+Config.deliteHome)
     
-    val deliteHomeProfiler = Config.deliteHome + "/profiler"
-    
-    copyFileTo(deliteHomeProfiler + "/" + "profile-viz-top.html", writer)
-    
     val cal = Calendar.getInstance()
     val df = DateFormat.getDateTimeInstance(DateFormat.FULL, DateFormat.MEDIUM)
-    writer.println("<p>profile generated on " + df.format(cal.getTime()) + "</p>")
+//    writer.println("<p>profile generated on " + df.format(cal.getTime()) + "</p>")
     
-    val sourceHtmlNodes = sourceViewHtml(symbolMap)
-    val sourceHtmlAsString = sourceHtmlNodes.toString()
-    // post process to replace <br></br>
-    writer.println(replaceHtmlLineBreaks(sourceHtmlAsString))
+    val html = {
+      <html lang="en">
+        <head>
+          { headers }
+        </head>
+        { body(sourceViewHtml(symbolMap), genSourceViewHtml(taskInfoList)) }
+      </html>
+    }
 
-    val gensourceHtmlNodes = genSourceViewHtml(taskInfoList)
-    val gensourceHtmlAsString = gensourceHtmlNodes.toString()
-    // post process to replace <br></br>
-    writer.println(replaceHtmlLineBreaks(gensourceHtmlAsString))
+    val htmlasString = html.toString()
+    writer.println("<!DOCTYPE html>")
+    writer.println(replaceHtmlLineBreaks(htmlasString))
 
-    copyFileTo(deliteHomeProfiler + "/" + "profile-viz-bot.html", writer)
     writer.flush()
   }
 }
