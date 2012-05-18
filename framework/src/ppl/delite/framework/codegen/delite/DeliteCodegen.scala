@@ -53,7 +53,7 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
   }
 
   // TODO: move to some other place? --> get rid of duplicate in embedded generators!
-  override def fatten(e: TP[Any]): TTP = ifGenAgree(_.fatten(e))
+  override def fatten(e: TP[Any]): TTP = ifGenAgree(_.fatten(e)).asInstanceOf[TTP]
 
   // fusion stuff...
   override def unapplySimpleIndex(e: Def[Any]) = ifGenAgree(_.unapplySimpleIndex(e))
@@ -167,7 +167,7 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
                    "\"ops\": [")
 
     stream.println("{\"type\" : \"Arguments\" , \"kernelId\" : \"x0\"},")
-    emitBlock(y)(stream)
+    emitBlock(y)
     //stream.println(quote(getBlockResult(y)))
     stream.println("{\"type\":\"EOP\"}\n]}}")
 
@@ -203,7 +203,7 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
    * This is all because we allow individual generators to refine their dependencies, which directly impacts
    * the generated schedule. We may want to consider another organization.
    */
-  override def emitFatBlockFocused(currentScope: List[TTP])(result: List[Block[Any]])(implicit stream: PrintWriter): Unit = {
+  override def emitFatBlockFocused(currentScope: List[TTP])(result: List[Block[Any]]): Unit = {
     printlog("-- block for "+result)
     currentScope.foreach(printlog(_))
 
@@ -304,13 +304,13 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
   }
 
 
-  def emitValDef(sym: Sym[Any], rhs: String)(implicit stream: PrintWriter): Unit = {
+  def emitValDef(sym: Sym[Any], rhs: String): Unit = {
     stream.println("val " + quote(sym) + " = " + rhs)
   }
-  def emitVarDef(sym: Sym[Any], rhs: String)(implicit stream: PrintWriter): Unit = {
+  def emitVarDef(sym: Sym[Any], rhs: String): Unit = {
     stream.println("var " + quote(sym) + " = " + rhs)
   }
-  def emitAssignment(lhs: String, rhs: String)(implicit stream: PrintWriter): Unit = {
+  def emitAssignment(lhs: String, rhs: String): Unit = {
     stream.println(lhs + " = " + rhs)
   }
 

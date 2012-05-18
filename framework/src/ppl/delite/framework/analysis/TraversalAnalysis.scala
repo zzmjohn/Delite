@@ -17,8 +17,8 @@ trait TraversalAnalysis extends GenericFatCodegen {
   val className: String
   var _result: Option[Any] = None
   
-  def traverseNode(sym: Sym[Any], a: Def[Any]) = emitNode(sym, a)(stream)
-  def traverseBlock(b: Block[Any]) = emitBlock(b)(stream)
+  def traverseNode(sym: Sym[Any], a: Def[Any]) = emitNode(sym, a)
+  def traverseBlock(b: Block[Any]) = emitBlock(b)
   def traverse[A:Manifest,B:Manifest](f: Exp[A] => Exp[B]) = { emitSource(f, className, stream); result }
   def emitValDef(sym: Sym[Any], rhs: String)(implicit stream: PrintWriter) {}
   def result: Option[Any] = _result

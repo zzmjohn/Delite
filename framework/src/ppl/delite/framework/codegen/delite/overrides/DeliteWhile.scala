@@ -90,7 +90,7 @@ trait DeliteCudaGenWhile extends CudaGenEffect with DeliteBaseGenWhile {
       rhs match {
         case DeliteWhile(c,b) =>
           emitBlock(c)
-          stream.println(addTab() + remap(getBlockResult(c).Type) + " " + quote(sym) + "_cond = " + quote(getBlockResult(c)) + ";")
+          stream.println(addTab() + remap(getBlockResult(c).tp) + " " + quote(sym) + "_cond = " + quote(getBlockResult(c)) + ";")
           stream.print(addTab() + "while (")
           stream.print(quote(sym) + "_cond")
           stream.println(") {")
@@ -114,7 +114,7 @@ trait DeliteOpenCLGenWhile extends OpenCLGenEffect with DeliteBaseGenWhile {
       rhs match {
         case DeliteWhile(c,b) =>
           emitBlock(c)
-          stream.println(addTab() + remap(getBlockResult(c).Type) + " " + quote(sym) + "_cond = " + quote(getBlockResult(c)) + ";")
+          stream.println(addTab() + remap(getBlockResult(c).tp) + " " + quote(sym) + "_cond = " + quote(getBlockResult(c)) + ";")
           stream.print(addTab() + "while (")
           stream.print(quote(sym) + "_cond")
           stream.println(") {")
