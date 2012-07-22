@@ -2,9 +2,9 @@ package ppl.dsl.optiml.matrix
 
 import java.io.{PrintWriter}
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common.DSLOpsExp
+import scala.virtualization.lms.common.{DSLOpsExp,FunctionBlocksExp}
 import scala.virtualization.lms.common.{VariablesExp, Variables}
-import scala.virtualization.lms.common.{CudaGenBase, ScalaGenBase, CGenBase, OpenCLGenBase}
+import scala.virtualization.lms.common.{CudaGenBase, ScalaGenBase, CGenBase, CGenFat, OpenCLGenBase}
 import scala.virtualization.lms.internal.{GenerationFailedException}
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.datastruct.scala.DeliteCollection
@@ -60,7 +60,16 @@ trait MatrixOps extends ppl.dsl.optila.matrix.MatrixOps  {
 
 trait MatrixOpsExp extends ppl.dsl.optila.matrix.MatrixOpsExp with MatrixOps with VariablesExp with SparseTransform {
   this: OptiMLExp  =>
- 
+  
+  // for c generation
+  case class MatrixMultiplyVectorizedFromIndexVectors[A:Manifest:Arith](lrows: Rep[IndexVectorRange], lcols: Rep[IndexVectorRange], lblk: Block2[Int,Int,A],
+                                                                        rrows: Rep[IndexVectorRange], rcols: Rep[IndexVectorRange], rblk: Block2[Int,Int,A])
+    extends Def[DenseMatrix[A]] {
+
+    val mA = manifest[A]  
+    val a = implicitly[Arith[A]]
+  }
+  
   ////////////////////////////////
   // implemented via delite ops
 
@@ -152,7 +161,7 @@ trait MatrixOpsExp extends ppl.dsl.optila.matrix.MatrixOpsExp with MatrixOps wit
 
 /**
  *  Optimizations for composite MatrixOps operations.
- */
+ :q*/
 
 trait MatrixOpsExpOpt extends ppl.dsl.optila.matrix.MatrixOpsExpOpt with MatrixOpsExp {
   this: OptiMLExp =>
@@ -169,14 +178,21 @@ trait MatrixOpsExpOpt extends ppl.dsl.optila.matrix.MatrixOpsExpOpt with MatrixO
 }
 
 trait DenseMatrixOpsExpOpt extends ppl.dsl.optila.matrix.DenseMatrixOpsExpOpt {
-  this: OptiMLExp =>
-  
+  this: OptiMLExp =>    
+
   override def densematrix_multiply[A:Manifest:Arith](x: Rep[DenseMatrix[A]], y: Rep[DenseMatrix[A]])(implicit ctx: SourceContext) = (x,y) match {
-    case (Def(IndexVector2Construct(lrows, lcols, f, fblk)), Def(IndexVector2Construct(rrows, rcols, g, gblk))) =>
-      // Predef.println("found matrix constructor multiply")
-      super.densematrix_multiply(x,y)
+    case (Def(IndexVector2Construct(lrows, lcols, f, fblk)), Def(IndexVector2Construct(rrows, rcols, g, gblk))) if (Config.generateCpp) =>
+      //Predef.println("found matrix constructor multiply")
+      // TODO: really need to check and handle ranges and dense indexvector separately
+      reflectPure(MatrixMultiplyVectorizedFromIndexVectors(lrows.ops.elem.asInstanceOf[Rep[IndexVectorRange]],lcols.ops.elem.asInstanceOf[Rep[IndexVectorRange]],fblk,rrows.ops.elem.asInstanceOf[Rep[IndexVectorRange]],rcols.ops.elem.asInstanceOf[Rep[IndexVectorRange]],gblk))
+      //super.densematrix_multiply(x,y)
     case _ => super.densematrix_multiply(x,y)
-  }  
+  } 
+
+  override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit ctx: SourceContext): Exp[A] = (e match {
+    case e@MatrixMultiplyVectorizedFromIndexVectors(lrows,lcols,fblk,rrows,rcols,gblk) => reflectPure(MatrixMultiplyVectorizedFromIndexVectors((lrows),f(lcols),Block2(f(fblk.blockArg1).asInstanceOf[Sym[Int]],f(fblk.blockArg2).asInstanceOf[Sym[Int]],f(fblk.blockRes))(manifest[Int],manifest[Int],e.mA),f(rrows),f(rcols),Block2(f(gblk.blockArg1).asInstanceOf[Sym[Int]],f(gblk.blockArg2).asInstanceOf[Sym[Int]],f(gblk.blockRes))(manifest[Int],manifest[Int],e.mA))(e.mA,e.a))(mtype(manifest[A]), implicitly[SourceContext])
+    case _ => super.mirror(e, f)
+  }).asInstanceOf[Exp[A]]
 }
 
 
@@ -184,9 +200,10 @@ trait ScalaGenMatrixOps extends ScalaGenBase {
   val IR: MatrixOpsExp
   import IR._
 
-  // override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-  //   case _ => super.emitNode(sym, rhs)
-  // }
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    case MatrixMultiplyVectorizedFromIndexVectors(lrows,lcols,lblk,rrows,rcols,rblk) => stream.println("val " + quote(sym) + ": " + remap(sym.tp) + " = throw new UnsupportedOperationException(\"should never be executed\")")
+    case _ => super.emitNode(sym, rhs)
+  }
 }
 
 trait CudaGenMatrixOps extends CudaGenBase with CudaGenDataStruct {
@@ -207,11 +224,154 @@ trait OpenCLGenMatrixOps extends OpenCLGenBase with OpenCLGenDataStruct {
   // }
 }
 
-trait CGenMatrixOps extends CGenBase {
-  val IR: MatrixOpsExp
+trait CGenMatrixOps extends CGenFat {
+  val IR: MatrixOpsExp with FunctionBlocksExp
   import IR._
 
-  // override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-  //   case _ => super.emitNode(sym, rhs)
-  // }
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+     case e@MatrixMultiplyVectorizedFromIndexVectors(lrows,lcols,lblk,rrows,rcols,rblk) => 
+        //stream.println("// vectorized mat mult here!")
+        // TODO: currently assuming 3 x N * N x 3 (from MSMBuilder) 
+        val ai = quote(lblk.blockArg1)
+        val aj = quote(lblk.blockArg2)
+        val bi = quote(rblk.blockArg1)
+        val bj = quote(rblk.blockArg2)
+        stream.println("// Will have 3 garbage elements at the end")
+        stream.println("float M_"+quote(sym)+"[12] __attribute__ ((aligned (16)));")
+        stream.println("{")
+        stream.println("int nrealatoms = "+quote(lcols)+"->end - "+quote(lcols)+"->start;")
+        stream.println("int npaddedatoms = nrealatoms;")
+        stream.println("while (npaddedatoms % 4 != 0) npaddedatoms += 1;")
+        stream.println("int niters = npaddedatoms >> 2;")                                                          
+        stream.println("__m128 xx,xy,xz,yx,yy,yz,zx,zy,zz;")
+        stream.println("__m128 ax,ay,az,b;")
+        stream.println("__m128 t0,t1,t2;")
+        stream.println("// Prologue")
+        stream.println("xx = _mm_xor_ps(xx,xx);")                                                                                                          
+        stream.println("xy = _mm_xor_ps(xy,xy);") 
+        stream.println("xz = _mm_xor_ps(xz,xz);")                                                                                                     
+        stream.println("yx = _mm_xor_ps(yx,yx);") 
+        stream.println("yy = _mm_xor_ps(yy,yy);") 
+        stream.println("yz = _mm_xor_ps(yz,yz);") 
+        stream.println("zx = _mm_xor_ps(zx,zx);") 
+        stream.println("zy = _mm_xor_ps(zy,zy);") 
+        stream.println("zz = _mm_xor_ps(zz,zz);")          
+        stream.println("int " + ai + " = 0;")
+        stream.println("int " + aj + " = 0;")
+        stream.println("int " + bi + " = 0;")
+        stream.println("int " + bj + " = 0;")
+        stream.println("float aTx[4], aTy[4], aTz[4];")
+        stream.println("float bTx[4], bTy[4], bTz[4];")
+        stream.println("for (int k = 0; k < niters; k++) {")                                                  
+        stream.println("int ka = k*4;")        
+        stream.println("int end_real = 4;")
+        stream.println("if (ka+4 > nrealatoms) end_real = nrealatoms+4 - npaddedatoms;")
+        stream.println("for (int i = 0; i < end_real; i++) {")
+        stream.println(aj + " = ka+i;")
+        stream.println(bi + " = ka+i;")
+
+        stream.println(ai + " = 0; // x")
+        stream.println(bj + " = 0; // x")
+        stream.println("{")
+        emitBlock(lblk.blockRes)
+        stream.println("aTx[i] = " + quote(getBlockResult(lblk.blockRes)) + ";")
+        stream.println("}")
+        stream.println("{")
+        emitBlock(rblk.blockRes)
+        stream.println("bTx[i] = " + quote(getBlockResult(rblk.blockRes)) + ";")
+        stream.println("}")
+
+        stream.println(ai + " = 1; // y")
+        stream.println(bj + " = 1; // y")
+        stream.println("{")
+        emitBlock(lblk.blockRes)
+        stream.println("aTy[i] = " + quote(getBlockResult(lblk.blockRes)) + ";")
+        stream.println("}")
+        stream.println("{")
+        emitBlock(rblk.blockRes)
+        stream.println("bTy[i] = " + quote(getBlockResult(rblk.blockRes)) + ";")
+        stream.println("}")
+
+        stream.println(ai + " = 2; // z")
+        stream.println(bj + " = 2; // z")
+        stream.println("{")
+        emitBlock(lblk.blockRes)
+        stream.println("aTz[i] = " + quote(getBlockResult(lblk.blockRes)) + ";")
+        stream.println("}")
+        stream.println("{")
+        emitBlock(rblk.blockRes)
+        stream.println("bTz[i] = " + quote(getBlockResult(rblk.blockRes)) + ";")
+        stream.println("}")
+        stream.println("}")
+
+        stream.println("for (int i = end_real; i < 4; i++) {")
+        stream.println("  aTx[i] = 0; aTy[i] = 0; aTz[i] = 0;")
+        stream.println("  bTx[i] = 0; bTy[i] = 0; bTz[i] = 0;")
+        stream.println("}")
+
+        stream.println("")
+        stream.println("    ax = _mm_load_ps(aTx);")                                                                                                        
+        stream.println("    ay = _mm_load_ps(aTy);") 
+        stream.println("    az = _mm_load_ps(aTz);")                                                         
+        stream.println("")
+        stream.println("    b = _mm_load_ps(bTx);") 
+        stream.println("    t0 = ax;") 
+        stream.println("    t1 = ay;")                                                                                                      
+        stream.println("    t2 = az;") 
+        stream.println("    t0 = _mm_mul_ps(t0,b);") 
+        stream.println("    t1 = _mm_mul_ps(t1,b);") 
+        stream.println("    t2 = _mm_mul_ps(t2,b);") 
+        stream.println("")
+        stream.println("    xx = _mm_add_ps(xx,t0);") 
+        stream.println("    yx = _mm_add_ps(yx,t1);") 
+        stream.println("    zx = _mm_add_ps(zx,t2);") 
+        stream.println("")
+        stream.println("    b = _mm_load_ps(bTy);") 
+        stream.println("    t0 = ax;") 
+        stream.println("    t1 = ay;") 
+        stream.println("    t2 = az;") 
+        stream.println("")
+        stream.println("    t0 = _mm_mul_ps(t0,b);") 
+        stream.println("    t1 = _mm_mul_ps(t1,b);") 
+        stream.println("    t2 = _mm_mul_ps(t2,b);") 
+        stream.println("")
+        stream.println("    xy = _mm_add_ps(xy,t0);") 
+        stream.println("    yy = _mm_add_ps(yy,t1);") 
+        stream.println("    zy = _mm_add_ps(zy,t2);") 
+        stream.println("")
+        stream.println("    b = _mm_load_ps(bTz);") 
+        stream.println("")
+        stream.println("    ax = _mm_mul_ps(ax,b);") 
+        stream.println("    ay = _mm_mul_ps(ay,b);") 
+        stream.println("    az = _mm_mul_ps(az,b);") 
+        stream.println("")
+        stream.println("    xz = _mm_add_ps(xz,ax);") 
+        stream.println("    yz = _mm_add_ps(yz,ay);") 
+        stream.println("    zz = _mm_add_ps(zz,az);") 
+        stream.println("")
+//        stream.println("    aTx += 4;") 
+//        stream.println("    aTy += 4;") 
+//        stream.println("    aTz += 4;") 
+//        stream.println("    bTx += 4;") 
+//        stream.println("    bTy += 4;") 
+//        stream.println("    bTz += 4;") 
+        stream.println("}") 
+        stream.println("// Epilogue - reduce 4 wide vectors to one wide") 
+        stream.println("xx = _mm_hadd_ps(xx,xy);") 
+        stream.println("xz = _mm_hadd_ps(xz,yx);") 
+        stream.println("yy = _mm_hadd_ps(yy,yz);") 
+        stream.println("zx = _mm_hadd_ps(zx,zy);") 
+        stream.println("zz = _mm_hadd_ps(zz,zy);") 
+
+        stream.println("xx = _mm_hadd_ps(xx,xz);") 
+        stream.println("yy = _mm_hadd_ps(yy,zx);") 
+        stream.println("zz = _mm_hadd_ps(zz,xz);") 
+
+        stream.println("_mm_store_ps(M_"+quote(sym)+"  , xx);") 
+        stream.println("_mm_store_ps(M_"+quote(sym)+"+4, yy);") 
+        stream.println("_mm_store_ps(M_"+quote(sym)+"+8, zz);") 
+        stream.println("}") 
+        emitValDef(sym, "new DenseMatrix<"+remap(e.mA)+">(M_"+quote(sym)+", 3, 3)")
+     case _ => super.emitNode(sym, rhs)
+   }
 }

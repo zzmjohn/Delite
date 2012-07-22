@@ -70,17 +70,19 @@ trait Clarans extends OptiMLApplication with TheoData with DirectSolver {
     // println("c2: " + c2)
 
     // iterate newton descent        
-    val linit = (gx + gy) / 2.0
+    val linit = (gx + gy) / 2.0    
+    
     val lambda = 
       untilconverged(linit, (cur: Rep[Double]) => abs(.000001*cur), 50, false) { lambda =>
         val l2 = lambda*lambda
         val b = (l2 + c2)*lambda
         val a = b + c1
         lambda - (a * lambda + c0) / (2.0*lambda*l2 + b + a)
-      }
+      }    
+    
 
     // direct solve
-    // val lambda = directSolve(linit, c0, c1, c2) 
+    //val lambda = directSolve(linit, c0, c1, c2) 
 
     // println("lambda: " + lambda)
     val rmsd2 = (gx + gy - 2.0 * lambda) / realLen
@@ -96,8 +98,7 @@ trait Clarans extends OptiMLApplication with TheoData with DirectSolver {
     val sx = square(xCentered).sum
     val gx = sx.x + sx.y + sx.z
     val sy = square(yCentered).sum
-    val gy = sy.x + sy.y + sy.z
-    
+    val gy = sy.x + sy.y + sy.z    
     rmsd_centered(x.length, xCentered, yCentered, gx, gy)
   }
   
@@ -309,6 +310,7 @@ trait Clarans extends OptiMLApplication with TheoData with DirectSolver {
     if (args.length < 1) printUsage()
     val pathToTheoData = args(0).trim()
     
+    /*
     if (args.length > 1) {
       if (args(1) == "+perf") {
         // test rmsd performance
@@ -331,6 +333,7 @@ trait Clarans extends OptiMLApplication with TheoData with DirectSolver {
         out(0::10).pprint
       }
       else if (args(1) == "+perftheo") {
+      */
         println("-- testing RMSD performance with theo values")
         val frameNumAtoms = readVector(pathToTheoData + "_benchmark_frames_theo_numAtoms.dat")
         val frameTheoData = new Record {
@@ -350,7 +353,8 @@ trait Clarans extends OptiMLApplication with TheoData with DirectSolver {
         val b = trajTheoData.XYZData    
         val ga = frameTheoData.G
         val gb = trajTheoData.G          
-        tic()
+        println("numAtoms: " + frameTheoData.numAtoms)
+        tic(a,b,ga,gb)
         val out = (0::b.numRows) { i =>
           rmsd_centered(frameTheoData.numAtoms, a(0), b(i), ga(0), gb(i))
         }
@@ -358,6 +362,7 @@ trait Clarans extends OptiMLApplication with TheoData with DirectSolver {
         println("-- test finished")
         println("out.length: " + out.length)
         out(0::10).pprint                
+      /*
       }
     }
     else {
@@ -410,6 +415,7 @@ trait Clarans extends OptiMLApplication with TheoData with DirectSolver {
     centers.pprint
     
     }
+    */
   }
   
 }

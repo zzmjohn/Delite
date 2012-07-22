@@ -93,7 +93,7 @@ trait OptiLAOpenCLCodeGenPkg extends OpenCLGenDSLOps with OpenCLGenImplicitOps w
 trait OptiLACCodeGenPkg extends CGenDSLOps with CGenImplicitOps with CGenOrderingOps
   with CGenEqual with CGenIfThenElse with CGenVariables with CGenWhile with CGenFunctions
   with CGenStringOps with CGenRangeOps with CGenIOOps with CGenArrayOps with CGenBooleanOps
-  with CGenPrimitiveOps with CGenMiscOps
+  with CGenPrimitiveOps with CGenMiscOps with CGenTupleOps
   with CGenListOps with CGenSeqOps with CGenMathOps with CGenCastingOps with CGenSetOps with CGenObjectOps
   with CGenSynchronizedArrayBufferOps with CGenHashMapOps with CGenIterableOps with CGenArrayBufferOps
   { val IR: OptiLAScalaOpsPkgExp  }

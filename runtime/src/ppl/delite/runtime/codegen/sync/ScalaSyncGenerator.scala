@@ -4,7 +4,8 @@ import ppl.delite.runtime.graph.ops._
 import collection.mutable.{HashSet, ArrayBuffer}
 import ppl.delite.runtime.codegen.{ScalaExecutableGenerator, ExecutableGenerator}
 import ppl.delite.runtime.codegen.hosts.Hosts
-import ppl.delite.runtime.graph.targets.Targets
+import ppl.delite.runtime.graph.targets.Targets._
+import ppl.delite.runtime.scheduler.OpHelper._
 
 trait ScalaToScalaSync extends SyncGenerator with ScalaExecutableGenerator {
 
@@ -22,13 +23,17 @@ trait ScalaToScalaSync extends SyncGenerator with ScalaExecutableGenerator {
     writeAwaiter(s.sender.from)
   }
 
-  override def sendData(s: SendData) {
-    if (Targets.isPrimitiveType(s.from.outputType(s.sym))) {
-      writeSetter(s.from, s.sym)
-      syncList += s
+  override def sendData(s: SendData) { //TODO: separate traits for Scala and Cpp
+    getHostType(scheduledTarget(s.toNode)) match {
+      case Hosts.Scala if (isPrimitiveType(s.from.outputType(s.sym))) =>
+        writeSetter(s.from, s.sym)
+        syncList += s
+      case Hosts.Cpp =>
+        writeSetter(s.from, s.sym)
+        syncList += s
+      case _ =>
+        sys.error(s.from.id + ": Scala send data copy for object types not yet implemented")
     }
-    else
-      sys.error(s.from.id + " send data copy for object types not yet implemented")
   }
 
   override protected def sendView(s: SendView) {

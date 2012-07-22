@@ -592,6 +592,8 @@ trait CGenDenseMatrixOps extends CGenBase {
     case m@DenseMatrixObjectNew(numRows, numCols) => emitValDef(sym, "new %s(%s,%s)".format(remap(sym.tp),quote(numRows),quote(numCols)))
     case DenseMatrixNumRows(x)  => emitValDef(sym, quote(x) + "->numRows")
     case DenseMatrixNumCols(x)  => emitValDef(sym, quote(x) + "->numCols")
+    case DenseMatrixRawApply(x,i) if (sym.tp.erasure.getSimpleName.contains("Tuple")) => 
+      stream.println(remap(sym.tp) + " " + quote(sym) + " = " + quote(x) + "->data[" + quote(i) + "];")
     case DenseMatrixRawApply(x,i) => emitValDef(sym, quote(x) + "->data[" + quote(i) + "]")
     case DenseMatrixRawUpdate(x,i,y) => stream.println(quote(x) + "->data[" + quote(i) + "] = "  + quote(y) + ";")
     case DenseMatrixRawData(x) => emitValDef(sym, quote(x) + "->getData()")

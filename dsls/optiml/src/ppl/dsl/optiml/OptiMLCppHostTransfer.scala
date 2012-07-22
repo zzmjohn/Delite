@@ -28,6 +28,14 @@ trait OptiMLCppHostTransfer extends CppHostTransfer {
             out.append("\treturn obj;\n")
             out.append("}\n")
             (signature+";\n", out.toString)
+          case "IndexVectorRange" =>
+            val out = new StringBuilder
+            val typeArg = Manifest.Int
+            val signature = "jobject sendCPPtoJVM_%s(JNIEnv *env, %s *%s)".format(quote(sym),remap(sym.tp),quote(sym))
+            out.append(signature + " {\n")
+            out.append("assert(false);\n")
+            out.append("}\n")
+            (signature+";\n", out.toString)  
           case _ => super.emitSend(sym, host)
         }
     }
@@ -58,6 +66,14 @@ trait OptiMLCppHostTransfer extends CppHostTransfer {
             out.append("\treturn %s;\n".format(quote(sym)))
             out.append("}\n")
             (signature+";\n", out.toString)
+          case "IndexVectorRange" =>
+            val out = new StringBuilder
+            val typeArg = Manifest.Int
+            val signature = "%s *recvCPPfromJVM_%s(JNIEnv *env, jobject obj)".format(remap(sym.tp),quote(sym))
+            out.append(signature + " {\n")
+            out.append("assert(false);\n")
+            out.append("}\n")
+            (signature+";\n", out.toString)  
           case _ => super.emitRecv(sym, host)
         }
     }
@@ -68,7 +84,7 @@ trait OptiMLCppHostTransfer extends CppHostTransfer {
   override def emitSendView(sym: Sym[Any], host: Hosts.Value): (String,String) = {
     if (host == Hosts.JVM) {
         remap(sym.tp) match {
-          case "IndexVectorDense" =>
+          case "IndexVectorDense" | "IndexVectorRange" =>
             val out = new StringBuilder
             val signature = "jobject sendViewCPPtoJVM_%s(JNIEnv *env, %s *%s)".format(quote(sym),remap(sym.tp),quote(sym))
             out.append(signature + " {\n")
@@ -103,7 +119,21 @@ trait OptiMLCppHostTransfer extends CppHostTransfer {
             out.append("\treturn %s;\n".format(quote(sym)))
             out.append("}\n")
             (signature+";\n", out.toString)
-            (signature+";\n", out.toString)
+          case "IndexVectorRange" =>
+            val out = new StringBuilder
+            val typeArg = Manifest.Int
+            val signature = "%s *recvViewCPPfromJVM_%s(JNIEnv *env, jobject obj)".format(remap(sym.tp),quote(sym))
+            out.append(signature + " {\n")
+            out.append("\tjclass cls = env->GetObjectClass(obj);\n")
+            out.append("\tjmethodID mid_start = env->GetMethodID(cls,\"_start\",\"()I\");\n")
+            out.append("\tjmethodID mid_end = env->GetMethodID(cls,\"_end\",\"()I\");\n")
+            out.append("\tjmethodID mid_stride = env->GetMethodID(cls,\"_stride\",\"()I\");\n")
+            out.append("\tjmethodID mid_isRow = env->GetMethodID(cls,\"_isRow\",\"()Z\");\n")
+            out.append("\t%s *%s = new IndexVectorRange(env->CallIntMethod(obj,mid_start),env->CallIntMethod(obj,mid_end),env->CallIntMethod(obj,mid_stride),env->CallBooleanMethod(obj,mid_isRow));\n".format(remap(sym.tp),quote(sym)))
+            out.append("\tenv->DeleteLocalRef(cls);\n")
+            out.append("\treturn %s;\n".format(quote(sym)))
+            out.append("}\n")
+            (signature+";\n", out.toString) 
           case _ => super.emitRecvView(sym, host)
         }
     }
@@ -114,7 +144,7 @@ trait OptiMLCppHostTransfer extends CppHostTransfer {
   override def emitSendUpdate(sym: Sym[Any], host: Hosts.Value): (String,String) = {
     if (host == Hosts.JVM) {
         remap(sym.tp) match {
-          case "IndexVectorDense" =>
+          case "IndexVectorDense" | "IndexVectorRange" =>
             val out = new StringBuilder
             val typeArg = Manifest.Int
             val signature = "void sendUpdateCPPtoJVM_%s(JNIEnv *env, jobject obj, %s *%s)".format(quote(sym),remap(sym.tp),quote(sym))
@@ -132,7 +162,7 @@ trait OptiMLCppHostTransfer extends CppHostTransfer {
   override def emitRecvUpdate(sym: Sym[Any], host: Hosts.Value): (String,String) = {
     if (host == Hosts.JVM) {
         remap(sym.tp) match {
-          case "IndexVectorDense" =>
+          case "IndexVectorDense" | "IndexVectorRange" =>
             val out = new StringBuilder
             val typeArg = Manifest.Int
             val signature = "void recvUpdateCPPfromJVM_%s(JNIEnv *env, jobject obj, %s *%s)".format(quote(sym),remap(sym.tp),quote(sym))
@@ -140,7 +170,7 @@ trait OptiMLCppHostTransfer extends CppHostTransfer {
             out.append("assert(false);\n")
             out.append("}\n")
             (signature+";\n", out.toString)
-          case _ => super.emitSendUpdate(sym, host)
+          case _ => super.emitRecvUpdate(sym, host)
         }
     }
     else

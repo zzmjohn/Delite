@@ -212,7 +212,7 @@ trait OptiMLCodeGenScala extends OptiLACodeGenScala with OptiMLCodeGenBase with 
   with ScalaGenStreamOps with ScalaGenStreamRowOps
   with ScalaGenGraphOps with ScalaGenEdgeOps with ScalaGenVertexOps with ScalaGenVSetOps
   with ScalaGenTrainingSetOps with ScalaGenVariantsOps with ScalaGenDeliteCollectionOps
-  with ScalaGenImageOps with ScalaGenGrayscaleImageOps
+  with ScalaGenImageOps with ScalaGenGrayscaleImageOps with ScalaGenIndexVectorRangeOps
   with DeliteScalaGenAllOverrides { //with ScalaGenMLInputReaderOps {
   
   val IR: DeliteApplication with OptiMLExp
@@ -395,7 +395,7 @@ trait OptiMLCodeGenOpenCL extends OptiLACodeGenOpenCL with OptiMLCodeGenBase wit
   }
 }
 
-trait OptiMLCodeGenC extends OptiLACodeGenC with OptiMLCodeGenBase with OptiMLCCodeGenPkg with CGenIndexVectorOps with CGenIndexVectorDenseOps with OptiMLCppHostTransfer
+trait OptiMLCodeGenC extends OptiLACodeGenC with OptiMLCodeGenBase with OptiMLCCodeGenPkg with CGenIndexVectorRangeOps with CGenIndexVectorOps with CGenIndexVectorDenseOps with CGenMatrixOps with OptiMLCppHostTransfer
 {
   val IR: DeliteApplication with OptiMLExp
   import IR._
@@ -403,6 +403,7 @@ trait OptiMLCodeGenC extends OptiLACodeGenC with OptiMLCodeGenBase with OptiMLCC
   override def remap[A](m: Manifest[A]) : String = {
     m.toString match {
       case "ppl.dsl.optiml.IndexVectorDense" => "IndexVectorDense"
+      case "ppl.dsl.optiml.IndexVectorRange" => "IndexVectorRange"
       case _ => super.remap(m)
     }
   }
@@ -411,6 +412,7 @@ trait OptiMLCodeGenC extends OptiLACodeGenC with OptiMLCodeGenBase with OptiMLCC
     val out = new StringBuilder
     out.append(super.getDSLHeaders)
     out.append("#include \"IndexVector.h\"\n")
+    out.append("#include \"IndexVectorRange.h\"\n")
     out.toString
   }
 }

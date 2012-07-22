@@ -519,8 +519,10 @@ trait LanguageOpsExp extends LanguageOps with BaseFatExp with EffectExp {
 
     if (iter == max_iter){
       //throw new ConvergenceException("Maximum iterations exceeded")
-      println(unit("Maximum iterations exceeded"))
-      returnL()
+      //println(unit("Maximum iterations exceeded"))
+      println(unit(555))
+      exit()
+      //returnL()
     }
 
     cur

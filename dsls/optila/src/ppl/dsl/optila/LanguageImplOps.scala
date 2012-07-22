@@ -154,7 +154,11 @@ trait LanguageImplOpsStandard extends LanguageImplOps {
     else if (x.numRows == 3 && x.numCols == 3) optila_matrix_determinant33_impl(x)
     else if (x.numRows == 4 && x.numCols == 4) optila_matrix_determinant44_impl(x)
     else {
-      fatal("Matrix determinants for matrices > 4x4 is not implemented yet")
+      //fatal("Matrix determinants for matrices > 4x4 is not implemented yet")
+      //println("Matrix determinants for matrices > 4x4 is not implemented yet")
+      println(777)
+      exit(-1)
+      defaultValue[A]
     }
   }
 }

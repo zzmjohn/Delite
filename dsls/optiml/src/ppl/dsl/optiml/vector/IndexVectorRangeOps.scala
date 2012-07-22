@@ -2,7 +2,7 @@ package ppl.dsl.optiml.vector
 
 import java.io.PrintWriter
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common.{EffectExp, BaseExp, Base, ScalaGenBase}
+import scala.virtualization.lms.common.{EffectExp, BaseExp, Base, ScalaGenBase, CGenBase}
 import scala.virtualization.lms.util.OverloadHack
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.{DeliteCollectionOpsExp}
@@ -57,7 +57,7 @@ trait IndexVectorRangeOps extends Base with OverloadHack { this: OptiML =>
   // def indexvectorrange_flatmap[B:Manifest](x: Rep[IndexVectorRange], f: Rep[A] => Rep[DenseVector[B]]): Rep[DenseVector[B]]
 }
 
-trait IndexVectorRangeOpsExp extends IndexVectorRangeOps with DeliteCollectionOpsExp { this: OptiMLExp =>
+trait IndexVectorRangeOpsExp extends IndexVectorRangeOps with IndexVectorOpsExp with DeliteCollectionOpsExp { this: OptiMLExp =>
     
   def indexvectorrange_length(x: Rep[IndexVectorRange])(implicit ctx: SourceContext) = x match {
     case Def(IndexVectorRangeNew(s,e)) => e - s
@@ -91,4 +91,23 @@ trait IndexVectorRangeOpsExp extends IndexVectorRangeOps with DeliteCollectionOp
   }
   
 }
+
+trait ScalaGenIndexVectorRangeOps extends ScalaGenBase {
+  val IR: IndexVectorRangeOpsExp
+  import IR._
+
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    case IndexVectorRangeNew(x,y) => emitValDef(sym, "new generated.scala.IndexVectorRange(" + quote(x) + ", " + quote(y) + ")")
+    case _ => super.emitNode(sym, rhs)
+  }
+}
   
+trait CGenIndexVectorRangeOps extends CGenBase {
+  val IR: IndexVectorRangeOpsExp
+  import IR._
+
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    case IndexVectorRangeNew(x,y) => emitValDef(sym, "new IndexVectorRange(" + quote(x) + ", " + quote(y) + ", 1, true)")
+    case _ => super.emitNode(sym, rhs)
+  }
+} 

@@ -138,10 +138,10 @@ object Sync {
     }
   }
 
-  def shouldView(sym: String, from: DeliteOP, to: DeliteOP) = typeIsViewable(from.outputType(sym)) && (sharedMemory(from.scheduledResource, to.scheduledResource) || canAcquire(from.scheduledResource, to.scheduledResource))
+  def shouldView(sym: String, from: DeliteOP, to: DeliteOP) = typeIsViewable(from.outputType(sym)) && (sharedMemory(from.scheduledResource, to.scheduledResource) || canAcquire(from.scheduledResource, to.scheduledResource)) && !(OpHelper.scheduledTarget(to) == Targets.Cpp && from.outputType(sym).contains("Tuple"))
 
   def typeIsViewable(outputType: String) = { //make a distinction between copyByValue (primitive) and copyByReference (reference) types
-    !Targets.isPrimitiveType(outputType)
+    !Targets.isPrimitiveType(outputType) 
   }
 
   def canAcquire(from: Int, to: Int) = (OpHelper.scheduledTarget(from), OpHelper.scheduledTarget(to)) match {

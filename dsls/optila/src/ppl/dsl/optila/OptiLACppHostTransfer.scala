@@ -46,6 +46,14 @@ trait OptiLACppHostTransfer extends CppHostTransfer {
             out.append("\treturn obj;\n")
             out.append("}\n")
             (signature+";\n", out.toString)
+          case "DenseMatrix< float* >" if (sym.tp.typeArguments(0).erasure.getSimpleName == "Tuple3") =>
+            val out = new StringBuilder
+            val typeArg = sym.tp.typeArguments.head
+            val signature = "jobject sendCPPtoJVM_%s(JNIEnv *env, %s *%s)".format(quote(sym),remap(sym.tp),quote(sym))
+            out.append(signature + " {\n")
+            out.append("assert(false);")
+            out.append("}\n")
+            (signature+";\n", out.toString)
           case _ => super.emitSend(sym, host)
         }
     }
@@ -95,7 +103,48 @@ trait OptiLACppHostTransfer extends CppHostTransfer {
             out.append("\treturn %s;\n".format(quote(sym)))
             out.append("}\n")
             (signature+";\n", out.toString)
-          case _ => super.emitRecv(sym, host)
+          
+          case "DenseMatrix< float* >" if (sym.tp.typeArguments(0).erasure.getSimpleName == "Tuple3") =>
+            val out = new StringBuilder
+            val typeArg = sym.tp.typeArguments.head
+            val signature = "%s *recvCPPfromJVM_%s(JNIEnv *env, jobject obj)".format(remap(sym.tp),quote(sym))
+            out.append(signature + " {\n")
+            out.append("\tjclass cls = env->GetObjectClass(obj);\n")
+            out.append("\tjmethodID mid_numRows = env->GetMethodID(cls,\"_numRows\",\"()I\");\n")
+            out.append("\tjmethodID mid_numCols = env->GetMethodID(cls,\"_numCols\",\"()I\");\n")
+            out.append("\t%s *%s = new %s(env->CallIntMethod(obj,mid_numRows),env->CallBooleanMethod(obj,mid_numCols));\n".format(remap(sym.tp),quote(sym),remap(sym.tp)))
+            val jniTypeDesc = "Lscala/Tuple3"
+            out.append("\tjmethodID mid_data = env->GetMethodID(cls,\"_data\",\"()%s\");\n".format("Ljava/lang/Object;"))
+            out.append("\t%sArray data = (%sArray)(env->CallObjectMethod(obj,mid_data));\n".format("jobject","jobject"))
+            //out.append("\t%s *dataPtr = (%s *)env->GetPrimitiveArrayCritical(data,0);\n".format(JNIType(typeArg),JNIType(typeArg)))
+            out.append("\tfloat* tuples = new float[3*%s->numRows*%s->numCols];\n".format(quote(sym),quote(sym)))
+            out.append("\tjmethodID mid_unbox = env->GetMethodID(env->FindClass(\"java/lang/Float\"), \"floatValue\", \"()F\");\n")
+            out.append("\tfor(int i=0; i<%s->numRows*%s->numCols; i++) {\n".format(quote(sym),quote(sym)))
+            out.append("\t\tjmethodID mid_tup1 = env->GetMethodID(env->FindClass(\"scala/Tuple3\"), \"_1\", \"()Ljava/lang/Object;\");\n")
+            out.append("\t\tjobject elem1_boxed = (jobject) env->CallObjectMethod(env->GetObjectArrayElement(data,i), mid_tup1);\n")
+            out.append("\t\tfloat elem1 = (float) env->CallFloatMethod(elem1_boxed, mid_unbox);\n")
+            out.append("\t\ttuples[3*i] = elem1;\n")
+            out.append("\t\tjmethodID mid_tup2 = env->GetMethodID(env->FindClass(\"scala/Tuple3\"), \"_2\", \"()Ljava/lang/Object;\");\n")
+            out.append("\t\tjobject elem2_boxed = (jobject) env->CallObjectMethod(env->GetObjectArrayElement(data,i), mid_tup2);\n")
+            out.append("\t\tfloat elem2 = (float) env->CallFloatMethod(elem2_boxed, mid_unbox);\n")
+            out.append("\t\ttuples[3*i+1] = elem2;\n")
+            out.append("\t\tjmethodID mid_tup3 = env->GetMethodID(env->FindClass(\"scala/Tuple3\"), \"_3\", \"()Ljava/lang/Object;\");\n")
+            out.append("\t\tjobject elem3_boxed = (jobject) env->CallObjectMethod(env->GetObjectArrayElement(data,i), mid_tup3);\n")
+            out.append("\t\tfloat elem3 = (float) env->CallFloatMethod(elem3_boxed, mid_unbox);\n")
+            out.append("\t\ttuples[3*i+2] = elem3;\n")
+            out.append("\t\t%s->data[i] = &tuples[3*i];\n".format(quote(sym)))
+            out.append("\t}\n")
+            //out.append("\tenv->ReleasePrimitiveArrayCritical(data, dataPtr, 0)z;\n")
+            out.append("\tenv->DeleteLocalRef(data);\n")
+            out.append("\tenv->DeleteLocalRef(cls);\n")
+            out.append("\treturn %s;\n".format(quote(sym)))
+            out.append("}\n")
+            (signature+";\n", out.toString)
+
+          case _ => 
+            //println("emitRecv no match for " + sym.tp)
+            //println("remap returned: " + remap(sym.tp))
+            super.emitRecv(sym, host)
         }
     }
     else
@@ -111,6 +160,14 @@ trait OptiLACppHostTransfer extends CppHostTransfer {
             val signature = "jobject sendViewCPPtoJVM_%s(JNIEnv *env, %s *%s)".format(quote(sym),remap(sym.tp),quote(sym))
             out.append(signature + " {\n")
             out.append("\tassert(false);\n")
+            out.append("}\n")
+            (signature+";\n", out.toString)
+          case "DenseMatrix< float* >" if (sym.tp.typeArguments(0).erasure.getSimpleName == "Tuple3") =>
+            val out = new StringBuilder
+            val typeArg = sym.tp.typeArguments.head
+            val signature = "jobject sendViewCPPtoJVM_%s(JNIEnv *env, %s *%s)".format(quote(sym),remap(sym.tp),quote(sym))
+            out.append(signature + " {\n")
+            out.append("assert(false);")
             out.append("}\n")
             (signature+";\n", out.toString)
           case _ => super.emitSendView(sym, host)
@@ -158,6 +215,14 @@ trait OptiLACppHostTransfer extends CppHostTransfer {
             out.append("\treturn %s;\n".format(quote(sym)))
             out.append("}\n")
             (signature+";\n", out.toString)
+          case "DenseMatrix< float* >" if (sym.tp.typeArguments(0).erasure.getSimpleName == "Tuple3") =>
+            val out = new StringBuilder
+            val typeArg = sym.tp.typeArguments.head
+            val signature = "%s *recvViewCPPfromJVM_%s(JNIEnv *env, jobject obj)".format(remap(sym.tp),quote(sym))
+            out.append(signature + " {\n")
+            out.append("assert(false);")
+            out.append("}\n")
+            (signature+";\n", out.toString)
           case _ => super.emitRecvView(sym, host)
         }
     }
@@ -198,6 +263,14 @@ trait OptiLACppHostTransfer extends CppHostTransfer {
             out.append("\tenv->DeleteLocalRef(cls);\n")
             out.append("}\n")
             (signature+";\n", out.toString)
+          case "DenseMatrix< float* >" if (sym.tp.typeArguments(0).erasure.getSimpleName == "Tuple3") =>
+            val out = new StringBuilder
+            val typeArg = sym.tp.typeArguments.head
+            val signature = "void sendUpdateCPPtoJVM_%s(JNIEnv *env, jobject obj, %s *%s)".format(quote(sym),remap(sym.tp),quote(sym))
+            out.append(signature + " {\n")
+            out.append("assert(false);")
+            out.append("}\n")
+            (signature+";\n", out.toString)
           case _ => super.emitSendUpdate(sym, host)
         }
     }
@@ -236,6 +309,14 @@ trait OptiLACppHostTransfer extends CppHostTransfer {
             out.append("\tenv->ReleasePrimitiveArrayCritical(data, dataPtr, 0);\n")
             out.append("\tenv->DeleteLocalRef(data);\n")
             out.append("\tenv->DeleteLocalRef(cls);\n")
+            out.append("}\n")
+            (signature+";\n", out.toString)
+          case "DenseMatrix< float* >" if (sym.tp.typeArguments(0).erasure.getSimpleName == "Tuple3") =>
+            val out = new StringBuilder
+            val typeArg = sym.tp.typeArguments.head
+            val signature = "%s *recvViewCPPfromJVM_%s(JNIEnv *env, jobject obj)".format(remap(sym.tp),quote(sym))
+            out.append(signature + " {\n")
+            out.append("assert(false);")
             out.append("}\n")
             (signature+";\n", out.toString)
           case _ => super.emitSendUpdate(sym, host)
