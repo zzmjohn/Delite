@@ -34,7 +34,7 @@ trait DenseMatrixOps extends Variables {
       Matrix.dense[A](numRows, numCols)
     }
     def toBuildableIntf(x: Rep[DenseMatrix[A]]): Interface[MatrixBuildable[A]] = denseMatToBuildableInterface(x)
-    def finalizer(x: Rep[DenseMatrix[A]]) = x.unsafeImmutable
+    def finalizer(x: Rep[DenseMatrix[A]]) = x//.unsafeImmutable
     def toIntf(x: Rep[DenseMatrix[A]]): Interface[Matrix[A]] = denseMatToInterface(x)    
   }  
 
@@ -56,6 +56,14 @@ trait DenseMatrixOps extends Variables {
     def randn(numRows: Rep[Int], numCols: Rep[Int])(implicit ctx: SourceContext) = densematrix_obj_randn(numRows, numCols)
     def randnf(numRows: Rep[Int], numCols: Rep[Int])(implicit ctx: SourceContext) = densematrix_obj_randnf(numRows, numCols)
     def mrandnf(numRows: Rep[Int], numCols: Rep[Int])(implicit ctx: SourceContext) = densematrix_obj_mrandnf(numRows, numCols)
+  }
+  
+  trait Axis
+  object rowAxis extends Axis
+  object colAxis extends Axis
+  object DenseMatrixView {
+    def apply[A:Manifest,B:Manifest](x: Interface[Vector[A]], numRows: Rep[Int], numCols: Rep[Int], axis: Axis, f: Rep[A] => Rep[DenseVector[B]]) =
+        densematrixview_obj_apply(x,numRows,numCols,axis,f)
   }
 
   class DenseMatBuildableOpsCls[A:Manifest](val elem: Rep[DenseMatrix[A]]) extends MatBuildableOpsCls[A] {
@@ -119,6 +127,8 @@ trait DenseMatrixOps extends Variables {
   }
   
   // object defs
+  def densematrixview_obj_apply[A:Manifest,B:Manifest](x: Interface[Vector[A]], numRows: Rep[Int], numCols: Rep[Int], axis: Axis, f: Rep[A] => Rep[DenseVector[B]]): Rep[DenseMatrix[B]]
+  
   //def symmatrix_obj_new[A:Manifest](n: Rep[Int]): Rep[SymmetricMatrix[A]]
   def densematrix_obj_new[A:Manifest](numRows: Rep[Int], numCols: Rep[Int])(implicit ctx: SourceContext): Rep[DenseMatrix[A]]
   def densematrix_obj_fromseq[A:Manifest](xs: Seq[Interface[Vector[A]]])(implicit ctx: SourceContext): Rep[DenseMatrix[A]]
@@ -172,6 +182,27 @@ trait DenseMatrixCompilerOps extends DenseMatrixOps {
 
 trait DenseMatrixOpsExp extends DenseMatrixCompilerOps with DeliteCollectionOpsExp with VariablesExp {
   this: DenseMatrixImplOps with OptiLAExp  =>
+
+  case class DenseMatrixViewNew[A:Manifest,B:Manifest](x: Interface[Vector[A]], numRows: Rep[Int], numCols: Rep[Int], axis: Axis, n: Sym[Int], m: Sym[Int], view: Block[B]) extends Def[DenseMatrix[B]] {             
+
+    val mA = manifest[A]
+    val mB = manifest[B]
+  }
+
+  override def syms(e: Any): List[Sym[Any]] = e match {
+    case e@DenseMatrixViewNew(x, nr, nc, axis, n, m, view) => syms(view) ::: syms(nr) ::: syms(nc)
+    case _ => super.syms(e)
+  }
+
+  override def boundSyms(e: Any): List[Sym[Any]] = e match {
+    case e@DenseMatrixViewNew(x, nr, nc, axis, n, m, view) => scala.List(n,m) ::: effectSyms(view)
+    case _ => super.boundSyms(e)
+  }
+
+  override def symsFreq(e: Any): List[(Sym[Any], Double)] = e match {
+    case e@DenseMatrixViewNew(x, nr, nc, axis, n, m, view) => freqNormal(view) ::: freqNormal(nr) ::: freqNormal(nc)
+    case _ => super.symsFreq(e)
+  }
 
   //////////////////////////////////////////////////
   // implemented via method on real data structure
@@ -306,6 +337,16 @@ trait DenseMatrixOpsExp extends DenseMatrixCompilerOps with DeliteCollectionOpsE
   ////////////////////
   // object interface
 
+  def densematrixview_obj_apply[A:Manifest,B:Manifest](x: Interface[Vector[A]], numRows: Rep[Int], numCols: Rep[Int], axis: Axis, f: Rep[A] => Rep[DenseVector[B]]) = {
+    val (n,m) = (fresh[Int],fresh[Int])
+    //val decompose = view(m)  
+    //val view = reifyEffects(f(x(n))(m))    
+
+    // avoids the row slicing by special casing (we know all we need is the starting value for this particular case. TODO: unsafe in general)
+    val view = reifyEffects(f(x(n))(unit(0)))    
+    reflectPure(DenseMatrixViewNew(x,numRows,numCols,axis,n,m,view))
+  }
+
   //def symdensematrix_obj_new[A:Manifest](n: Exp[Int]) = reflectMutable(SymmetricDenseMatrixObjectNew[A](n))
   def densematrix_obj_new[A:Manifest](numRows: Exp[Int], numCols: Exp[Int])(implicit ctx: SourceContext) = reflectMutable(DenseMatrixObjectNew[A](numRows, numCols)) //XXX
   def densematrix_obj_fromseq[A:Manifest](xs: Seq[Interface[Vector[A]]])(implicit ctx: SourceContext) = reflectPure(DenseMatrixObjectFromSeq(xs)) //XXX
@@ -399,6 +440,7 @@ trait DenseMatrixOpsExp extends DenseMatrixCompilerOps with DeliteCollectionOpsE
   // mirroring
 
   override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit ctx: SourceContext): Exp[A] = (e match {
+    case e@DenseMatrixViewNew(l,lr,lc,laxis,ln,lm,lv) => reflectPure(DenseMatrixViewNew(f(l),f(lr),f(lc),laxis,f(ln).asInstanceOf[Sym[Int]],f(lm).asInstanceOf[Sym[Int]],f(lv))(e.mA,e.mB))(mtype(manifest[A]),implicitly[SourceContext])
     case e@DenseMatrixObjectNew(r,c) => reflectPure(DenseMatrixObjectNew(f(r),f(c))(e.mA))(mtype(manifest[A]),implicitly[SourceContext])
     case e@DenseMatrixRawData(x) => reflectPure(DenseMatrixRawData(f(x))(e.mA))(mtype(manifest[A]),implicitly[SourceContext])
     case e@DenseMatrixNumRows(x) => reflectPure(DenseMatrixNumRows(f(x))(e.mA))(mtype(manifest[A]),implicitly[SourceContext])
@@ -427,6 +469,7 @@ trait DenseMatrixOpsExp extends DenseMatrixCompilerOps with DeliteCollectionOpsE
     //case e@DenseMatrixTimesVector(x,y) => reflectPure(new {override val original = Some(f,e) } with DenseMatrixTimesVector(f(x),f(y))(e.m,e.a))(mtype(manifest[A]),implicitly[SourceContext])
     
     // reflected
+    case Reflect(e@DenseMatrixViewNew(l,lr,lc,laxis,ln,lm,lv), u, es) => reflectMirrored(Reflect(DenseMatrixViewNew(f(l),f(lr),f(lc),laxis,f(ln).asInstanceOf[Sym[Int]],f(lm).asInstanceOf[Sym[Int]],f(lv))(e.mA,e.mB), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case Reflect(e@DenseMatrixObjectNew(x,y), u, es) => reflectMirrored(Reflect(DenseMatrixObjectNew(f(x),f(y))(e.mA), mapOver(f,u), f(es)))(mtype(manifest[A]))    
     case Reflect(e@DenseMatrixRawData(x), u, es) => reflectMirrored(Reflect(DenseMatrixRawData(f(x))(e.mA), mapOver(f,u), f(es)))(mtype(manifest[A]))    
     case Reflect(e@DenseMatrixNumRows(x), u, es) => reflectMirrored(Reflect(DenseMatrixNumRows(f(x))(e.mA), mapOver(f,u), f(es)))(mtype(manifest[A]))

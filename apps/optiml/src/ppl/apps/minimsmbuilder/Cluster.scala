@@ -38,9 +38,18 @@ trait Clarans extends OptiMLApplication with TheoData with DirectSolver {
   def rmsd_centered(realLen: Rep[Int], xCentered: Interface[Vector[XYZ]], yCentered: Interface[Vector[XYZ]], gx: Rep[Float], gy: Rep[Float]) = {
     // compute the inner product matrix 
     // println("+++STAGING MARKER: entering perf critical")
-    val mX = (0::3, 0::realLen) { (i,j) => if (i == 0) xCentered(j).x else if (i == 1) xCentered(j).y else xCentered(j).z } // inline transpose
-    val mY = (0::realLen, 0::3) { (i,j) => if (j == 0) yCentered(i).x else if (j == 1) yCentered(i).y else yCentered(i).z }
+    //val mX = (0::3, 0::realLen) { (i,j) => if (i == 0) xCentered(j).x else if (i == 1) xCentered(j).y else xCentered(j).z } // inline transpose
+    //val mY = (0::realLen, 0::3) { (i,j) => if (j == 0) yCentered(i).x else if (j == 1) yCentered(i).y else yCentered(i).z }
+
+    val mX = DenseMatrixView[XYZ,Float](xCentered, 3, realLen, colAxis, col => DenseVector[Float](col.x, col.y, col.z))
+    val mY = DenseMatrixView[XYZ,Float](yCentered, realLen, 3, rowAxis, row => DenseVector[Float](row.x, row.y, row.z))
     val M = mX * mY
+    //println("xCentered: ")
+    //xCentered.pprint   
+    //println("yCentered: ")
+    //yCentered.pprint  
+    //println("M: ")
+    //M.pprint
     
     // form the 4x4 symmetric Key matrix K
     val k00 = M(0,0) + M(1,1) + M(2,2)
@@ -59,19 +68,50 @@ trait Clarans extends OptiMLApplication with TheoData with DirectSolver {
                         DenseVector(k03, k13, k23, k33))
     
     // coefficients of the characteristic polynomial
-    val c2 = -2f*square(M).sum
-    val c1 = -8f*det(M)
+    //val c2 = -2f*square(M).sum
+    //println("c2: " + c2)
+    //val c2 = -2f*(square(M).sum)
+    //println("c2a: " + c2a)
+
+  
+    var i = 0
+    var j = 0
+    var c2 = 0f
+    while (i < M.numRows) {
+      j = 0
+      while (j < M.numCols) {
+        c2 += M(i,j)*M(i,j)
+        j += 1
+      }
+      i += 1
+    }
+    c2 = c2 * -2f
+    
+
+    //println("c2: " + c2)
+
+    
+    val detM = M(0,0) * (M(1,1) * M(2,2) - M(1,2) * M(2,1)) +
+               M(1,0) * (M(2,1) * M(0,2) - M(2,2) * M(0,1)) +
+               M(2,0) * (M(0,1) * M(1,2) - M(0,2) * M(1,1))
+
+    val c1 = -8f*detM
+    
+    //val c1 = -8f*det(M)
 
     // 4x4 determinant of the K matrix
     val c0 = det(K)
     
-    // println("c0: " + c0)
-    // println("c1: " + c1)
-    // println("c2: " + c2)
+    //println("c0: " + c0)
+    //println("c1: " + c1)
+    //println("c2: " + c2)
 
     // iterate newton descent        
     val linit = (gx + gy) / 2.0    
     
+    //println("linit: " + linit)
+
+    /*
     val lambda = 
       untilconverged(linit, (cur: Rep[Double]) => abs(.000001*cur), 50, false) { lambda =>
         val l2 = lambda*lambda
@@ -79,12 +119,12 @@ trait Clarans extends OptiMLApplication with TheoData with DirectSolver {
         val a = b + c1
         lambda - (a * lambda + c0) / (2.0*lambda*l2 + b + a)
       }    
-    
+    */
 
     // direct solve
-    //val lambda = directSolve(linit, c0, c1, c2) 
+    val lambda = directSolve(linit, c0, c1, c2) 
+    //println("lambda: " + lambda)
 
-    // println("lambda: " + lambda)
     val rmsd2 = (gx + gy - 2.0 * lambda) / realLen
     // println("+++STAGING MARKER: leaving perf critical")
     if (rmsd2 > 0) sqrt(rmsd2).floatValue else 0f
