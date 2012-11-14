@@ -114,7 +114,7 @@ trait GrayscaleImageOpsExp extends GrayscaleImageOps with VariablesExp {
   case class GrayscaleImageObjectFromMat(in: Exp[DenseMatrix[Double]])
     extends DeliteOpMap[Double,Double,GrayscaleImage] {
       
-    override def alloc = GrayscaleImage(in.numRpws, in.numCols)
+    override def alloc = GrayscaleImage(in.numRows, in.numCols)
     val size = copyTransformedOrElse(_.size)(in.size)
     def func = i => i // parallel copy 
   }
