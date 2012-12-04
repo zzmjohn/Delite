@@ -1,12 +1,12 @@
 package ppl.dsl.optila.capabilities
 
+import java.io.PrintWriter
+import scala.reflect.SourceContext
 import scala.virtualization.lms.util.OverloadHack
 import scala.virtualization.lms.common._
-import java.io.PrintWriter
 import scala.virtualization.lms.internal.{CLikeCodegen}
 import ppl.dsl.optila.{DenseVector,Vector,DenseMatrix,Matrix}
-import ppl.dsl.optila.{OptiLAExp, OptiLA}
-import scala.reflect.SourceContext
+import ppl.dsl.optila.{OptiLAExp, OptiLA,OptiLAUtilities}
 
 /*
  * Arith definitions for OptiLA supported types.
@@ -36,7 +36,7 @@ trait ArithInternal[Rep[X],T] {
   */
 }
 
-trait ArithOps extends Variables with OverloadHack {
+trait ArithOps extends Variables with OverloadHack with OptiLAUtilities {
   this: OptiLA =>
   
   type Arith[X] = ArithInternal[Rep,X]
@@ -347,6 +347,31 @@ trait ArithOps extends Variables with OverloadHack {
    def infix_/[A:Manifest:Arith,B:Manifest](a: Rep[Tuple4[A,A,A,A]], b: B)(implicit conv: B => Rep[A], o: Overloaded23): Rep[Tuple4[A,A,A,A]] = ((a._1/b,a._2/b,a._3/b,a._4/b))   
 
   /**
+   * Complex
+   */  
+  type Complex = Record{val real: Double; val imag: Double}
+  object Complex {
+    def apply(r: Rep[Double], i: Rep[Double]) = new Record {
+      val real = r
+      val imag = i
+    }
+  }   
+  implicit val complexArith : Arith[Complex] = new Arith[Complex] {
+    def +=(a: Rep[Complex], b: Rep[Complex])(implicit ctx: SourceContext) = err("+= is not defined on complex")
+    def +(a: Rep[Complex], b: Rep[Complex])(implicit ctx: SourceContext) = Complex(a.real+b.real, a.imag+b.imag)
+    def -(a: Rep[Complex], b: Rep[Complex])(implicit ctx: SourceContext) = Complex(a.real-b.real, a.imag-b.imag)
+    def *(a: Rep[Complex], b: Rep[Complex])(implicit ctx: SourceContext) = Complex(a.real*b.real-a.imag*b.imag, a.real*b.imag+a.imag*b.real)
+    def /(a: Rep[Complex], b: Rep[Complex])(implicit ctx: SourceContext) = Complex((a.real*b.real+a.imag*b.imag)/(square(b.real)+square(b.imag)), (a.imag*b.real-a.real*b.imag)/(square(b.real)+square(b.imag)))
+    def abs(a: Rep[Complex])(implicit ctx: SourceContext) = Complex(sqrt(square(a.real)+square(a.imag)), unit(0.0))
+    def exp(a: Rep[Complex])(implicit ctx: SourceContext) = Complex(arith_exp(a.real)*cos(a.imag), arith_exp(a.real)*sin(a.imag))
+    def empty(implicit ctx: SourceContext) = Complex(unit(0.0),unit(0.0))
+    def zero(a: Rep[Complex])(implicit ctx: SourceContext) = empty
+  }
+  def infix_conj(a: Rep[Complex]) = Complex(a.real, -1*a.imag)
+  def infix_ToString(a: Rep[Complex]) = a.real + unit(" + ") + a.imag + unit("i")
+  def infix_Eq(a: Rep[Complex], b: Rep[Complex]) = equals(a.real, b.real) && equals(a.imag, b.imag)
+  
+  /**
    * Primitives
    *
    * unfortunately, to use ArithOps, we have to redefine all of the operations we want to
@@ -404,7 +429,7 @@ trait ArithOps extends Variables with OverloadHack {
     def zero(a: Rep[Long])(implicit ctx: SourceContext) = empty
     //def unary_-(a: Rep[Long]) = -a
   }
-  
+    
   
   def arith_plus[T:Manifest:Numeric](lhs: Rep[T], rhs: Rep[T])(implicit ctx: SourceContext): Rep[T]
   def arith_minus[T:Manifest:Numeric](lhs: Rep[T], rhs: Rep[T])(implicit ctx: SourceContext): Rep[T]

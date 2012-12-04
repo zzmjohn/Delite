@@ -177,6 +177,7 @@ trait LanguageOps extends Base { this: OptiLA =>
   def exp(x: Rep[Double])(implicit ctx: SourceContext): Rep[Double]
   def log(x: Rep[Double])(implicit ctx: SourceContext): Rep[Double] = optila_scalar_log(x)
   def log10(x: Rep[Double])(implicit ctx: SourceContext): Rep[Double]
+  def square(x: Rep[Double])(implicit ctx: SourceContext): Rep[Double] = x*x
   def sin(x: Rep[Double])(implicit ctx: SourceContext): Rep[Double]
   def sinh(x: Rep[Double])(implicit ctx: SourceContext): Rep[Double]
   def asin(x: Rep[Double])(implicit ctx: SourceContext): Rep[Double]
