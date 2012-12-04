@@ -245,15 +245,15 @@ class Graph(val isDirected: Boolean)  {
   def inDegree(n: Node) = {
     if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
     if(isDirected) {
-      nodeInEdges(n.id).length
+      nodeInEdges(n.id)._size //TODO use giterable_raw_size(g)
     } else {
-      nodeOutEdges(n.id).length
+      nodeOutEdges(n.id)._size //TODO use giterable_raw_size(g)
     }
   }
   
   def outDegree(n: Node) = {
     //if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
-    nodeOutEdges(n.id).length
+    nodeOutEdges(n.id)._size //TODO use giterable_raw_size(g)
   }
   
   def upNeighbors(n: Node, visited: Array[Int]): GIterable[Node] = {
@@ -266,13 +266,13 @@ class Graph(val isDirected: Boolean)  {
     val inNbrs = inNeighbors(n)
     val upNbrs = collection.mutable.HashSet[Node]()
     var i = 0
-    while (i < inNbrs.length) {
-      if ((visited(inNbrs(i).id) < visited(n.id)) && (visited(inNbrs(i).id) != 0)) {
-        upNbrs.add(inNbrs(i))
+    while (i < inNbrs._size) { //TODO use giterable_raw_size(g) and giterable_raw_apply(g, i)
+      if ((visited(inNbrs._data(inNbrs._offset + i).id) < visited(n.id)) && (visited(inNbrs._data(inNbrs._offset + i).id) != 0)) {
+        upNbrs.add(inNbrs._data(inNbrs._offset + i))
       }
       i += 1
     }
-    
+
     new GIterable[Node](upNbrs.toArray)
   }
    
@@ -286,9 +286,9 @@ class Graph(val isDirected: Boolean)  {
     val outNbrs = outNeighbors(n)
     val downNbrs = collection.mutable.HashSet[Node]()
     var i = 0
-    while (i < outNbrs.length) {
-      if (visited(outNbrs(i).id) > visited(n.id) || visited(outNbrs(i).id) == 0) {
-        downNbrs.add(outNbrs(i))
+    while (i < outNbrs._size) { //TODO use giterable_raw_size(g) and giterable_raw_apply(g, i)
+      if (visited(outNbrs._data(outNbrs._offset + i).id) > visited(n.id) || visited(outNbrs._data(outNbrs._offset + i).id) == 0) {
+        downNbrs.add(outNbrs._data(outNbrs._offset + i))
       }
       i += 1
     }
@@ -306,9 +306,9 @@ class Graph(val isDirected: Boolean)  {
     val inEdgs = inEdges(n)
     val upEdges = new MutableList[Edge]()
     var i = 0
-    while (i < inEdgs.length) {
-      if ((visited(inEdgs(i).from.id) < visited(n.id)) && (visited(inEdgs(i).from.id) != 0)) {
-        upEdges += inEdgs(i)
+    while (i < inEdgs._size) { //TODO use giterable_raw_size(g) and giterable_raw_apply(g, i)
+      if ((visited(inEdgs._data(inEdgs._offset + i).from.id) < visited(n.id)) && (visited(inEdgs._data(inEdgs._offset + i).from.id) != 0)) {
+        upEdges += inEdgs._data(inEdgs._offset + i)
       }
       i += 1
     }
@@ -325,9 +325,9 @@ class Graph(val isDirected: Boolean)  {
     val outEdgs = outEdges(n)
     val downEdges = new MutableList[Edge]()
     var i = 0
-    while (i < outEdgs.length) {
-      if (visited(outEdgs(i).to.id) > visited(n.id) || visited(outEdgs(i).to.id) == 0) {
-        downEdges += outEdgs(i)
+    while (i < outEdgs._size) { //TODO use giterable_raw_size(g) and giterable_raw_apply(g, i)
+      if (visited(outEdgs._data(outEdgs._offset + i).to.id) > visited(n.id) || visited(outEdgs._data(outEdgs._offset + i).to.id) == 0) {
+        downEdges += outEdgs._data(outEdgs._offset + i)
       }
       i += 1
     }
