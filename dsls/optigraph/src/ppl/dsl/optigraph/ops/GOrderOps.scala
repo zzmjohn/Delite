@@ -38,9 +38,9 @@ trait GOrderOps extends Variables {
     def Items: Rep[GIterable[T]] = gorder_items(o)
     /** Returns true if the collection contains the element */
     def Has(e: Rep[T]): Rep[Boolean] = gorder_contains(o, e)
-    /** Returns the size of the collection */
+    /** Returns the number of elements in the collection */
     def Size: Rep[Int] = gorder_size(o)
-    /** Returns the first element in the order */
+    /** Returns the first element of the order */
     def Front: Rep[T] = gorder_front(o)
     /** Returns the last element in the order */
     def Back: Rep[T] = gorder_back(o)
@@ -48,6 +48,7 @@ trait GOrderOps extends Variables {
     def PushFront(e: Rep[T]): Rep[Unit] = gorder_pushfront(o, e)
     /** Adds a new element to the back of the order */
     def PushBack(e: Rep[T]): Rep[Unit] = gorder_pushback(o, e)
+    def Push(e: Rep[T]): Rep[Unit] = gorder_pushback(o, e)
     /** Prepends all the elements of o2 (in order) to the order */
     def PushFront(o2: Rep[GOrder[T]]): Rep[Unit] = gorder_pushfrontord(o, o2)
     /** Appends all the elements of o2 (in order) to the order */

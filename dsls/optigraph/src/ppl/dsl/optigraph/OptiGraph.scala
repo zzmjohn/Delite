@@ -70,7 +70,8 @@ trait OptiGraphCompiler extends OptiGraph
   // -- kernel implementations
   with LanguageImplOpsStandard
   with GIterableImplOpsStandard
-  with GOrderImplOpsStandard {
+  with GOrderImplOpsStandard
+  with DeferrableImplOpsStandard {
 
   this: OptiGraphApplication with OptiGraphExp =>
 }

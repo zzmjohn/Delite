@@ -90,7 +90,7 @@ trait GOrderImplOpsStandard extends GOrderImplOps {
       val sz = gorder_size(o)
       val r = DeliteArray[A](sz + 1)
       val d = gorder_raw_data(o)
-      darray_unsafe_copy(d, 0, r, 1, sz) //TODO check format of this function
+      darray_unsafe_copy(d, 0, r, 1, sz)
       darray_unsafe_update(r, 0, x)
       gorder_set_raw_data(o, r)
     }
@@ -124,7 +124,7 @@ trait GOrderImplOpsStandard extends GOrderImplOps {
     l
   }
 
-  private def gorder_empty[A:Manifest](o: Rep[GOrder[A]]): Rep[Boolean] = {
+ protected def gorder_empty[A:Manifest](o: Rep[GOrder[A]]): Rep[Boolean] = {
     gorder_size(o) == 0
   }
 }
