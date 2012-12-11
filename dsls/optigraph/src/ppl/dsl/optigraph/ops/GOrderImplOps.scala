@@ -7,10 +7,8 @@ import ppl.dsl.optigraph.{OptiGraphLift, OptiGraphCompiler, OptiGraph}
 import ppl.delite.framework.datastructures.DeliteArray
 
 trait GOrderImplOps { this: OptiGraph =>
-  //def gorder_dataasarray_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[DeliteArray[A]]
   def gorder_size_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[Int]
   def gorder_apply_impl[A:Manifest](o: Rep[GOrder[A]], i: Rep[Int]): Rep[A]
-  //def gorder_update_impl[A:Manifest](o: Rep[GOrder[A]], i: Rep[Int], x: Rep[A]): Rep[Unit]
   def gorder_items_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[GIterable[A]]
   def gorder_contains_impl[A:Manifest](o: Rep[GOrder[A]], x: Rep[A]): Rep[Boolean]
   def gorder_front_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A]
