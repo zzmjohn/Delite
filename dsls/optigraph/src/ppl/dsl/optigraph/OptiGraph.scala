@@ -72,7 +72,8 @@ trait OptiGraphCompiler extends OptiGraph
   with GIterableImplOpsStandard
   with GOrderImplOpsStandard
   with DeferrableImplOpsStandard
-  with GSeqImplOpsStandard {
+  with GSeqImplOpsStandard
+  with GSetImplOpsStandard {
 
   this: OptiGraphApplication with OptiGraphExp =>
 }

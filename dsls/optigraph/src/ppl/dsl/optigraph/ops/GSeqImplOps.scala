@@ -30,7 +30,7 @@ trait GSeqImplOpsStandard extends GSeqImplOps {
 
   def gseq_apply_impl[A:Manifest](o: Rep[GSeq[A]], i: Rep[Int]): Rep[A] = {
     val sz = gseq_size(o)
-    if (sz == 0)
+    if (gseq_empty(o))
       fatal("Tried to access element of empty GSeq")
     else if (!(i >= 0 && i < sz)) {
       fatal("GSeq apply: Index " + i + " out of bounds (size=" + sz + ")")
@@ -40,7 +40,7 @@ trait GSeqImplOpsStandard extends GSeqImplOps {
   }
 
   def gseq_items_impl[A:Manifest](o: Rep[GSeq[A]]): Rep[GIterable[A]] = {
-    if (gseq_size(o) == 0)
+    if (gseq_empty(o))
       return GIterable[A]()
     val d = gseq_raw_data(o)
     val gi = GIterable[A](d)
@@ -48,20 +48,24 @@ trait GSeqImplOpsStandard extends GSeqImplOps {
   }
 
   def gseq_contains_impl[A:Manifest](o: Rep[GSeq[A]], x: Rep[A]): Rep[Boolean] = {
-    if (gseq_size(o) == 0)
-      return false
-    val d = gseq_raw_data(o).map((e) => e == x)
-    d.reduce(boolean_or, false)
+    var i = 0
+    val sz = gseq_size(o)
+    val d = gseq_raw_data(o)
+    while (i < sz) {
+      if (d.apply(i) == x)
+        return true
+    }
+    return false
   }
 
   def gseq_front_impl[A:Manifest](o: Rep[GSeq[A]]): Rep[A] = {
-    if (gseq_size(o) == 0)
+    if (gseq_empty(o))
       fatal("Tried to access front of empty GSeq")
     gseq_apply(o, 0)
   }
 
   def gseq_back_impl[A:Manifest](o: Rep[GSeq[A]]): Rep[A] = {
-    if (gseq_size(o) == 0)
+    if (gseq_empty(o))
       fatal("Tried to access back of empty GSeq")
     gseq_apply(o, gseq_size(o) - 1)
   }
@@ -122,7 +126,7 @@ trait GSeqImplOpsStandard extends GSeqImplOps {
     l
   }
 
- protected def gseq_empty[A:Manifest](o: Rep[GSeq[A]]): Rep[Boolean] = {
+  protected def gseq_empty[A:Manifest](o: Rep[GSeq[A]]): Rep[Boolean] = {
     gseq_size(o) == 0
   }
 }

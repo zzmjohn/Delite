@@ -14,6 +14,8 @@ trait GIterableImplOps { this: OptiGraph =>
 trait GIterableImplOpsStandard extends GIterableImplOps {
   this: OptiGraphCompiler with OptiGraphLift =>
 
+//TODO How to convert a DeliteArray to a Scala List easily?
+// Probably just iterate over all the elements and insert it into a list
 /*
   def giterable_tolist_impl[A:Manifest](g: Rep[GIterable[A]]): Rep[List[A]] = {
     val d = giterable_raw_data(g)
@@ -50,12 +52,12 @@ trait GIterableImplOpsStandard extends GIterableImplOps {
     }
   }
 
-  protected def giterable_realloc[A:Manifest](g: Rep[GIterable[A]], minLen: Rep[Int]): Rep[Unit] = {  
+  protected def giterable_realloc[A:Manifest](g: Rep[GIterable[A]], minLen: Rep[Int]): Rep[Unit] = {
     val data = giterable_raw_data(g)
     var n = Math.max(4, data.length * 2)
     while (n < minLen) n = n*2
     val d = DeliteArray[A](n)
     darray_unsafe_copy(data, 0, d, 0, giterable_raw_size(g))
     giterable_set_raw_data(g, d)
-  } 
+  }
 }

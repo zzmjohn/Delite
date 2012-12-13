@@ -1,5 +1,12 @@
+
 package ppl.dsl.optigraph.datastruct.scala
 
+import collection.mutable.{LinkedHashSet}
+
 class GOrder[@specialized T: ClassManifest] {
-  var _data: Array[T] = new Array[T](0)
+  // Use a LinkedHashSet:
+  // "This class implements mutable sets using a hashtable.
+  // The iterator and all traversal methods of this class visit
+  // elements in the order they were inserted."
+  var _data: LinkedHashSet[T] = new LinkedHashSet[T]()
 }

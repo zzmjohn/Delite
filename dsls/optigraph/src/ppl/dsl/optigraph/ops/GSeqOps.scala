@@ -125,7 +125,7 @@ trait GSeqOpsExp extends GSeqOps with VariablesExp with BaseFatExp {
 
   def gseq_new[T:Manifest]() = reflectMutable(GSeqObjectNew())
   def gseq_raw_data[T:Manifest](o: Exp[GSeq[T]]) = reflectPure(GSeqRawData(o))
-  def gseq_set_raw_data[T:Manifest](o: Exp[GSeq[T]], d: Exp[DeliteArray[T]]) = reflectPure(GSeqSetRawData(o, d))
+  def gseq_set_raw_data[T:Manifest](o: Exp[GSeq[T]], d: Exp[DeliteArray[T]]) = reflectWrite(o)(GSeqSetRawData(o, d))
 
   def gseq_size[T:Manifest](o: Exp[GSeq[T]]) = reflectPure(GSeqSize(o))
   def gseq_apply[T:Manifest](o: Exp[GSeq[T]], idx: Exp[Int]) = reflectPure(GSeqApply(o, idx))
