@@ -20,7 +20,7 @@ class Deferrable[T:Manifest](private val initValue: T) {
   def setValue(value: T) = { currValue = value }
 
   /** Sets the deferred value */
-  def setDefValue(value: T) = { defValue = null.asInstanceOf[T] }
+  def setDefValue(value: T) = { defValue = value }
   /** Returns the deferred value */
   def getDefValue : T = defValue
   /** Set the isDeferred boolean */

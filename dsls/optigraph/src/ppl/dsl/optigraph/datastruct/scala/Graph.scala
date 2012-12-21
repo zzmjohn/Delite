@@ -1,6 +1,6 @@
 package ppl.dsl.optigraph.datastruct.scala
 
-import collection.mutable.{HashMap, Map, MutableList}
+import collection.mutable.{HashMap}
 import scala.util.Random
 import java.io._
 
@@ -9,188 +9,45 @@ import java.io._
  */
 
 class Graph(val isDirected: Boolean)  {
-  /** Flag indicating whether the graph can be mutated or not */
-  var immutable = false
-
-  /** Mutable graph structures */
-  protected var adjMap = HashMap[Node, MutableList[(Edge,Node)]]()
-  protected var adjMapReversed = HashMap[Node, MutableList[(Edge,Node)]]()
-  protected var edgeList = new MutableList[Edge]()
-
   /** Immutable graph structures */
   // graph nodes
-  protected var _nodes : Array[Node] = null
+  var _nodes : Array[Node] = new Array[Node](0)
   // graph edges
-  protected var _edges : Array[Edge] = null
+  var _edges : Array[Edge] = new Array[Edge](0)
   // out edges associated with each node
-  protected var nodeOutEdges : Array[GIterable[Edge]] = null
+  var nodeOutEdges : Array[GIterable[Edge]] = new Array[GIterable[Edge]](0)
   // in edges associated with each node
-  protected var nodeInEdges : Array[GIterable[Edge]] = null
+  var nodeInEdges : Array[GIterable[Edge]] = new Array[GIterable[Edge]](0)
   // out neighbors of each node
-  protected var nodeOutNeighbors : Array[GIterable[Node]] = null
+  var nodeOutNeighbors : Array[GIterable[Node]] = new Array[GIterable[Node]](0)
   // in neighbors of each node
-  protected var nodeInNeighbors : Array[GIterable[Node]] = null
+  var nodeInNeighbors : Array[GIterable[Node]] = new Array[GIterable[Node]](0)
 
-  // opt
-  protected var offsets: Array[Int] = null
-  protected var r_offsets: Array[Int] = null
-  protected var nbrs: Array[Node] = null
-  protected var r_nbrs: Array[Node] = null
+  /*
 
   /** Basic graph lookup operations (mutable/immutable graphs) */
   def nodes = {
-    if(immutable) {
-      new GIterable[Node](_nodes)
-    }
-    else {
-      new GIterable[Node](adjMap.keySet.toArray)
-    }
+    new GIterable[Node](_nodes)
   }
 
   def edges = {
-    if(immutable) {
-      new GIterable[Edge](_edges)
-    }
-    else {
-      new GIterable[Edge](edgeList.toArray)
-    }
+    new GIterable[Edge](_edges)
   }
 
   def numEdges: Int = {
-    if(!immutable) {
-      edgeList.size
-    }
-    else {
-      _edges.length
-    }
+    _edges.length
   }
   def numNodes: Int = {
-    if(!immutable) {
-      adjMap.keySet.size
-    }
-    else {
-      _nodes.length
-    }
+    _nodes.length
   }
-
-  /** Graph construction operations (mutable graphs only) */
-
-  def addNode: Node = {
-    if (immutable) {
-      throw new RuntimeException("Cannot add a new node to an immutable graph")
-    }
-    val n:Node = new Node(this)
-    adjMap(n) = new MutableList[(Edge, Node)]()
-
-    if(isDirected) {
-      adjMapReversed(n) = new MutableList[(Edge, Node)]()
-    }
-    n
-  }
-
-  // note: multiple edges between same nodes are allowed
-  def addEdge(from: Node, to: Node): Edge = {
-    if (immutable) {
-      throw new RuntimeException("Cannot add a new edge to an immutable graph")
-    }
-    val e:Edge = new Edge(this, from, to)
-
-    edgeList += e
-    adjMap(e.from) += Pair(e, e.to)
-    if(isDirected) {
-      adjMapReversed(e.to) += Pair(e, e.from)
-    }
-    e
-  }
-
-  // freezes the current graph, making it immutable
-  def freeze() : Unit = {
-    if (immutable) {
-      throw new RuntimeException("Cannot freeze an immutable graph")
-    }
-    immutable = true
-    _nodes = adjMap.keySet.toArray
-    _edges = edgeList.toArray
-    var id = 0
-    while(id < numNodes) {
-      _nodes(id).id = id
-      id += 1
-    }
-    id = 0
-    while(id < numEdges) {
-      _edges(id).id = id
-      id += 1
-    }
-    val sorted = _nodes map {adjMap(_).sortBy{case (e,n) => n.id}}
-    nodeOutEdges = sorted map {(l: MutableList[(Edge,Node)]) => new GIterable[Edge]((l map {_._1}).toArray)}
-    // TODO: this needs to be fixed (since out/inNeighbors might have duplicates)
-    nodeOutNeighbors = sorted map {(l: MutableList[(Edge,Node)]) => new GIterable[Node]((l map {_._2}).toArray)}
-    if(isDirected) {
-      val sortedReversed = _nodes map {adjMapReversed(_).sortBy{case (e,n) => n.id}}
-      nodeInEdges = sortedReversed map {(l: MutableList[(Edge,Node)]) => new GIterable[Edge]((l map {_._1}).toArray)}
-      nodeInNeighbors = sortedReversed map {(l: MutableList[(Edge,Node)]) => new GIterable[Node]((l map {_._2}).toArray)}
-    }
-    adjMap = null
-    adjMapReversed = null
-    edgeList = null
-  }
-
-  // returns an immutable snapshot of the current graph
-  def snapshot() : Graph = {
-    if (immutable) {
-      throw new RuntimeException("Cannot snapshot an immutable graph")
-    }
-    val immutableSnapshot = new Graph(isDirected)
-    immutableSnapshot.immutable = true
-    // make a structural copy of the graph
-    // preserving the appropriate node relations
-    immutableSnapshot._nodes = new Array[Node](numNodes)
-    immutableSnapshot._edges = new Array[Edge](numEdges)
-    val nodesToCopy = this.adjMap.keySet.toArray
-    val edgesToCopy = this.edgeList.toArray
-    // assign a correspondence with copied nodes and edges
-    val nodeToCopyMap = HashMap[Node, Node]()
-    val edgeToCopyMap = HashMap[Edge, Edge]()
-    var i = 0
-    while(i < numNodes) {
-      immutableSnapshot._nodes(i) = new Node(immutableSnapshot)
-      immutableSnapshot._nodes(i).id = i
-      nodeToCopyMap(nodesToCopy(i)) = immutableSnapshot._nodes(i)
-      i += 1
-    }
-    i = 0
-    while(i < numEdges) {
-      val e = edgesToCopy(i)
-      immutableSnapshot._edges(i) = new Edge(immutableSnapshot, nodeToCopyMap(e.from), nodeToCopyMap(e.to))
-      immutableSnapshot._edges(i).id = i
-      edgeToCopyMap(e) = immutableSnapshot._edges(i)
-      i += 1
-    }
-
-    val sorted = nodesToCopy map {this.adjMap(_).sortBy{case (e,n) => nodeToCopyMap(n).id}}
-    immutableSnapshot.nodeOutEdges = sorted map {(l: MutableList[(Edge,Node)]) => new GIterable[Edge]((l map {(t: (Edge, Node)) => edgeToCopyMap(t._1)}).toArray)}
-    immutableSnapshot.nodeOutNeighbors = sorted map {(l: MutableList[(Edge,Node)]) => new GIterable[Node]((l map {(t: (Edge, Node)) => {nodeToCopyMap(t._2)}}).toArray)}
-
-    if(isDirected) {
-      val sortedReversed = nodesToCopy map {this.adjMapReversed(_).sortBy{case (e,n) => nodeToCopyMap(n).id}}
-      immutableSnapshot.nodeInEdges = sortedReversed map {(l: MutableList[(Edge,Node)]) => new GIterable[Edge]((l map {(t: (Edge, Node)) => edgeToCopyMap(t._1)}).toArray)}
-      immutableSnapshot.nodeInNeighbors = sortedReversed map {(l: MutableList[(Edge,Node)]) => new GIterable[Node]((l map {(t: (Edge, Node)) => nodeToCopyMap(t._2)}).toArray)}
-    }
-
-    immutableSnapshot
-  }
-
-  def isImmutable: Boolean = {this.immutable}
 
   /** Graph analysis operations (immutable graphs only) */
 
   def getNode(nId: Int): Node = {
-    if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
     _nodes(nId)
   }
 
   def getEdge(eId: Int): Edge = {
-    if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
     _edges(eId)
   }
 
@@ -199,9 +56,7 @@ class Graph(val isDirected: Boolean)  {
   // TODO: ensure this is used during traversals/iterations only or update the Edges
   // to reflect a true flip
   def reverse: Graph = {
-    if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
     val rg = new Graph(isDirected)
-    rg.immutable = true
 
     rg._nodes = this._nodes
     rg._edges = this._edges
@@ -215,7 +70,6 @@ class Graph(val isDirected: Boolean)  {
 
   // only available after construction finalization
   def outNeighbors(n: Node) = {
-    if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
     nodeOutNeighbors(n.id)
   }
 
@@ -229,12 +83,10 @@ class Graph(val isDirected: Boolean)  {
   }
 
   def outEdges(n: Node) = {
-    if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
     nodeOutEdges(n.id)
   }
 
   def inEdges(n: Node) = {
-    if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
     if(isDirected) {
       nodeInEdges(n.id)
     } else {
@@ -243,7 +95,6 @@ class Graph(val isDirected: Boolean)  {
   }
 
   def inDegree(n: Node) = {
-    if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
     if(isDirected) {
       nodeInEdges(n.id)._size //TODO use giterable_raw_size(g)
     } else {
@@ -252,13 +103,10 @@ class Graph(val isDirected: Boolean)  {
   }
 
   def outDegree(n: Node) = {
-    //if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
     nodeOutEdges(n.id)._size //TODO use giterable_raw_size(g)
   }
 
   def upNeighbors(n: Node, visited: Array[Int]): GIterable[Node] = {
-    if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
-
     if(visited == null) {
       throw new RuntimeException("Operation available during BFS traversal only")
     }
@@ -277,8 +125,6 @@ class Graph(val isDirected: Boolean)  {
   }
 
   def downNeighbors(n: Node, visited: Array[Int]): GIterable[Node] = {
-    if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
-
     if(visited == null) {
       throw new RuntimeException("Operation available during BFS traversal only")
     }
@@ -297,8 +143,6 @@ class Graph(val isDirected: Boolean)  {
   }
 
   def upEdges(n: Node, visited: Array[Int]): GIterable[Edge] = {
-    if (!immutable) throw new RuntimeException("Operation avaliable for immutable graphs only")
-
     if(visited == null) {
       throw new RuntimeException("Operation available during BFS traversal only")
     }
@@ -507,4 +351,5 @@ object Graph {
     }
     G
   }
+  */
 }

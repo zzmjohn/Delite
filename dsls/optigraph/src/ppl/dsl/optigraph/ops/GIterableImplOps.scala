@@ -27,10 +27,10 @@ trait GIterableImplOpsStandard extends GIterableImplOps {
     val ns = gset_new()
     var i = 0
     while (i < giterable_raw_size(g)) {
-      gset_add(ns, giterable_raw_apply(g, i))
+      gset_add(ns, giterable_raw_apply(g, i).unsafeImmutable)
       i += 1
     }
-    ns
+    ns.unsafeImmutable
   }
 
   def giterable_insert_impl[A:Manifest](g: Rep[GIterable[A]], pos: Rep[Int], x: Rep[A]): Rep[Unit] = {
@@ -58,6 +58,6 @@ trait GIterableImplOpsStandard extends GIterableImplOps {
     while (n < minLen) n = n*2
     val d = DeliteArray[A](n)
     darray_unsafe_copy(data, 0, d, 0, giterable_raw_size(g))
-    giterable_set_raw_data(g, d)
+    giterable_set_raw_data(g, d.unsafeImmutable)
   }
 }

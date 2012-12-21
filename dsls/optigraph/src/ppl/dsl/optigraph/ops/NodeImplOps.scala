@@ -1,129 +1,74 @@
 package ppl.dsl.optigraph.ops
-/*
+
 import scala.virtualization.lms.common.ScalaOpsPkg
 import scala.virtualization.lms.common.{BaseExp, Base, BooleanOps, ExceptionOps}
-import ppl.dsl.optigraph.{GIterable, GOrder}
+import ppl.dsl.optigraph.{Edge, GIterable, Graph, Node}
 import ppl.dsl.optigraph.{OptiGraphLift, OptiGraphCompiler, OptiGraph}
 import ppl.delite.framework.datastructures.DeliteArray
 
-trait GOrderImplOps { this: OptiGraph =>
-  def gorder_size_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[Int]
-  def gorder_apply_impl[A:Manifest](o: Rep[GOrder[A]], i: Rep[Int]): Rep[A]
-  def gorder_items_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[GIterable[A]]
-  def gorder_contains_impl[A:Manifest](o: Rep[GOrder[A]], x: Rep[A]): Rep[Boolean]
-  def gorder_front_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A]
-  def gorder_back_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A]
-  def gorder_pushback_impl[A:Manifest](o: Rep[GOrder[A]], x: Rep[A]): Rep[Unit]
-  def gorder_pushbackorder_impl[A:Manifest](o: Rep[GOrder[A]], xs: Rep[GOrder[A]]): Rep[Unit]
-  def gorder_pushfront_impl[A:Manifest](o: Rep[GOrder[A]], x: Rep[A]): Rep[Unit]
-  def gorder_pushfrontorder_impl[A:Manifest](o: Rep[GOrder[A]], xs: Rep[GOrder[A]]): Rep[Unit]
-  def gorder_popfront_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[Unit]
-  def gorder_popback_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[Unit]
+trait NodeImplOps { this: OptiGraph =>
+  def node_outneighbors_impl(n: Rep[Node]): Rep[GIterable[Node]]
+  def node_inneighbors_impl(n: Rep[Node]): Rep[GIterable[Node]]
+  def node_upneighbors_impl(n: Rep[Node], visited: Rep[DeliteArray[Int]]): Rep[GIterable[Node]]
+  def node_downneighbors_impl(n: Rep[Node], visited: Rep[DeliteArray[Int]]): Rep[GIterable[Node]]
+  def node_outedges_impl(n: Rep[Node]): Rep[GIterable[Edge]]
+  def node_inedges_impl(n: Rep[Node]): Rep[GIterable[Edge]]
+  def node_upedges_impl(n: Rep[Node], visited: Rep[DeliteArray[Int]]): Rep[GIterable[Edge]]
+  def node_downedges_impl(n: Rep[Node], visited: Rep[DeliteArray[Int]]): Rep[GIterable[Edge]]
+  def node_numoutneighbors_impl(n: Rep[Node]): Rep[Int]
+  def node_numinneighbors_impl(n: Rep[Node]): Rep[Int]
+  def node_outdegree_impl(n: Rep[Node]): Rep[Int]
+  def node_indegree_impl(n: Rep[Node]): Rep[Int]
 }
 
-trait GOrderImplOpsStandard extends GOrderImplOps {
+trait NodeImplOpsStandard extends NodeImplOps {
   this: OptiGraphCompiler with OptiGraphLift =>
 
-  def gorder_size_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[Int] = {
-    gorder_raw_data(o).length
+  def node_outneighbors_impl(n: Rep[Node]): Rep[GIterable[Node]] = {
+    graph_outneighbors(node_graph(n), n)
   }
 
-  def gorder_apply_impl[A:Manifest](o: Rep[GOrder[A]], i: Rep[Int]): Rep[A] = {
-    val sz = gorder_size(o)
-    if (gorder_empty(o))
-      fatal("Tried to access element of empty GOrder")
-    else if (!(i >= 0 && i < sz)) {
-      fatal("GOrder apply: Index " + i + " out of bounds (size=" + sz + ")")
-    }
-    val d = gorder_raw_data(o)
-    d(i)
+  def node_inneighbors_impl(n: Rep[Node]): Rep[GIterable[Node]] = {
+    graph_inneighbors(node_graph(n), n)
   }
 
-  def gorder_items_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[GIterable[A]] = {
-    if (gorder_empty(o))
-      return GIterable[A]()
-    val d = gorder_raw_data(o)
-    val gi = GIterable[A](d)
-    gi
+  def node_upneighbors_impl(n: Rep[Node], visited: Rep[DeliteArray[Int]]): Rep[GIterable[Node]] = {
+    graph_upneighbors(node_graph(n), n, visited)
   }
 
-  def gorder_contains_impl[A:Manifest](o: Rep[GOrder[A]], x: Rep[A]): Rep[Boolean] = {
-    if (gorder_empty(o))
-      return false
-    val d = gorder_raw_data(o).map((e) => e == x)
-    d.reduce(boolean_or, false)
+  def node_downneighbors_impl(n: Rep[Node], visited: Rep[DeliteArray[Int]]): Rep[GIterable[Node]] = {
+    graph_downneighbors(node_graph(n), n, visited)
   }
 
-  def gorder_front_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A] = {
-    if (gorder_empty(o))
-      fatal("Tried to access front of empty GOrder")
-    gorder_apply(o, 0)
+  def node_outedges_impl(n: Rep[Node]): Rep[GIterable[Edge]] = {
+    graph_outedges(node_graph(n), n)
   }
 
-  def gorder_back_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A] = {
-    if (gorder_empty(o))
-      fatal("Tried to access back of empty GOrder")
-    gorder_apply(o, gorder_size(o) - 1)
+  def node_inedges_impl(n: Rep[Node]): Rep[GIterable[Edge]] = {
+    graph_inedges(node_graph(n), n)
   }
 
-  def gorder_pushback_impl[A:Manifest](o: Rep[GOrder[A]], x: Rep[A]): Rep[Unit] = {
-    if (!gorder_contains(o, x)) {
-      val sz = gorder_size(o)
-      val r = DeliteArray[A](sz + 1)
-      val d = gorder_raw_data(o)
-      darray_unsafe_copy(d, 0, r, 0, sz)
-      darray_unsafe_update(r, sz, x)
-      gorder_set_raw_data(o, r)
-    }
+  def node_upedges_impl(n: Rep[Node], visited: Rep[DeliteArray[Int]]): Rep[GIterable[Edge]] = {
+    graph_upedges(node_graph(n), n, visited)
   }
 
-  def gorder_pushbackorder_impl[A:Manifest](o: Rep[GOrder[A]], xs: Rep[GOrder[A]]): Rep[Unit] = {
-    for (i <- 0 until gorder_size(xs)) {
-      gorder_pushback(o, gorder_apply(xs, i))
-    }
+  def node_downedges_impl(n: Rep[Node], visited: Rep[DeliteArray[Int]]): Rep[GIterable[Edge]] = {
+    graph_downedges(node_graph(n), n, visited)
   }
 
-  def gorder_pushfront_impl[A:Manifest](o: Rep[GOrder[A]], x: Rep[A]): Rep[Unit] = {
-    if(!gorder_contains(o, x)) {
-      val sz = gorder_size(o)
-      val r = DeliteArray[A](sz + 1)
-      val d = gorder_raw_data(o)
-      darray_unsafe_copy(d, 0, r, 1, sz)
-      darray_unsafe_update(r, 0, x)
-      gorder_set_raw_data(o, r)
-    }
+  def node_numoutneighbors_impl(n: Rep[Node]): Rep[Int] = {
+    giterable_raw_size(node_out_neighbors(n))
   }
 
-  def gorder_pushfrontorder_impl[A:Manifest](o: Rep[GOrder[A]], xs: Rep[GOrder[A]]): Rep[Unit] = {
-    var i = gorder_size(xs) - 1
-    while (i >= 0) {
-      gorder_pushfront(o, gorder_apply(xs, i))
-      i -= 1
-    }
+  def node_numinneighbors_impl(n: Rep[Node]): Rep[Int] = {
+    giterable_raw_size(node_in_neighbors(n))
   }
 
-  def gorder_popfront_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A] = {
-    val f = gorder_front(o)
-    val sz = gorder_size(o)
-    val r = DeliteArray[A](sz - 1)
-    val d = gorder_raw_data(o)
-    darray_unsafe_copy(d, 1, r, 0, sz - 1)
-    gorder_set_raw_data(o, r)
-    f
+  def node_outdegree_impl(n: Rep[Node]): Rep[Int] = {
+    graph_outdegree(node_graph(n), n)
   }
 
-  def gorder_popback_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A] = {
-    val l = gorder_back(o)
-    val sz = gorder_size(o)
-    val r = DeliteArray[A](sz - 1)
-    val d = gorder_raw_data(o)
-    darray_unsafe_copy(d, 0, r, 0, sz - 1)
-    gorder_set_raw_data(o, r)
-    l
-  }
-
-  protected def gorder_empty[A:Manifest](o: Rep[GOrder[A]]): Rep[Boolean] = {
-    gorder_size(o) == 0
+  def node_indegree_impl(n: Rep[Node]): Rep[Int] = {
+    graph_indegree(node_graph(n), n)
   }
 }
-*/

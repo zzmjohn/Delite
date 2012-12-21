@@ -50,9 +50,9 @@ trait GOrderOps extends Variables {
     def PushBack(e: Rep[T]): Rep[Unit] = gorder_pushback(o, e)
     def Push(e: Rep[T]): Rep[Unit] = gorder_pushback(o, e)
     /** Prepends all the elements of o2 (in order) to the order */
-    def PushFront(o2: Rep[GOrder[T]]): Rep[Unit] = gorder_pushfrontord(o, o2)
+    def PushFrontOrd(o2: Rep[GOrder[T]]): Rep[Unit] = gorder_pushfrontord(o, o2)
     /** Appends all the elements of o2 (in order) to the order */
-    def PushBack(o2: Rep[GOrder[T]]): Rep[Unit] = gorder_pushbackord(o, o2)
+    def PushBackOrd(o2: Rep[GOrder[T]]): Rep[Unit] = gorder_pushbackord(o, o2)
     /** Removes and returns the first element in the order */
     def PopFront(): Rep[T] = gorder_popfront(o)
     def Pop(): Rep[T] = gorder_popfront(o)
@@ -117,7 +117,7 @@ trait GOrderOpsExp extends GOrderOps with VariablesExp with BaseFatExp {
     extends DeliteOpSingleWithManifest[T, T](reifyEffectsHere(gorder_popback_impl(o)))
 
   def gorder_new[T:Manifest]() = reflectMutable(GOrderObjectNew())
-  def gorder_raw_data[T:Manifest](o: Exp[GOrder[T]]) = reflectPure(GOrderRawData(o))
+  def gorder_raw_data[T:Manifest](o: Exp[GOrder[T]]) = reflectMutable(GOrderRawData(o))
   def gorder_set_raw_data[T:Manifest](o: Exp[GOrder[T]], d: Exp[Set[T]]) = reflectWrite(o)(GOrderSetRawData(o, d))
 
   def gorder_size[T:Manifest](o: Exp[GOrder[T]]) = reflectPure(GOrderSize(o))

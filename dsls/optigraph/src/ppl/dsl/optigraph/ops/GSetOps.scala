@@ -45,13 +45,11 @@ trait GSetOps extends Variables {
     /** Adds a new element to the set */
     def Add(e: Rep[A]) = gset_add(s, e)
     /** Adds all the elements from s2 to the set */
-    //def AddSet(s2: Rep[GSet[A]]) = gset_addset(s, s2)
-    def Add(s2: Rep[GSet[A]]) = gset_addset(s, s2)
+    def AddSet(s2: Rep[GSet[A]]) = gset_addset(s, s2)
     /** Removes the element from the set */
     def Remove(e: Rep[A]) = gset_remove(s, e)
     /** Removes all the elements in s2 from the set */
-    //def RemoveSet(s2: Rep[GSet[A]]) = gset_removeset(s, s2)
-    def Remove(s2: Rep[GSet[A]]) = gset_removeset(s, s2)
+    def RemoveSet(s2: Rep[GSet[A]]) = gset_removeset(s, s2)
     /** Removes all the elements from the set */
     def Clear = gset_clear(s)
 
@@ -116,7 +114,7 @@ trait GSetOpsExp extends GSetOps with VariablesExp with BaseFatExp {
     extends DeliteOpSingleWithManifest[A, GSet[A]](reifyEffectsHere(gset_clone_impl(s)))
 
   def gset_new[A:Manifest]() = reflectMutable(GSetObjectNew()(manifest[GSet[A]]))
-  def gset_raw_data[A:Manifest](s: Exp[GSet[A]]) = reflectPure(GSetRawData(s))
+  def gset_raw_data[A:Manifest](s: Exp[GSet[A]]) = reflectMutable(GSetRawData(s))
   def gset_set_raw_data[A:Manifest](s: Exp[GSet[A]], d: Exp[Set[A]]) = reflectWrite(s)(GSetSetRawData(s, d))
 
   def gset_items[A:Manifest](s: Exp[GSet[A]]) = reflectPure(GSetItems(s))

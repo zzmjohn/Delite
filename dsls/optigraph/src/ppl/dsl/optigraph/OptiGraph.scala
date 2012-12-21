@@ -73,7 +73,10 @@ trait OptiGraphCompiler extends OptiGraph
   with GOrderImplOpsStandard
   with DeferrableImplOpsStandard
   with GSeqImplOpsStandard
-  with GSetImplOpsStandard {
+  with GSetImplOpsStandard
+  with MutableGraphImplOpsStandard
+  with GraphImplOpsStandard
+  with NodeImplOpsStandard {
 
   this: OptiGraphApplication with OptiGraphExp =>
 }
@@ -81,6 +84,8 @@ trait OptiGraphCompiler extends OptiGraph
 trait OptiGraph extends OptiGraphScalaOpsPkg with DeliteCollectionOps with DeliteArrayOps
   with LanguageOps
   with GraphOps with NodeOps with EdgeOps
+  with MutableNodeOps with MutableEdgeOps
+  with MutableGraphOps
   with NodePropertyOps with EdgePropertyOps
   with GIterableOps with GSetOps with GOrderOps with GSeqOps
   with ReduceableOps with DeferrableOps {
@@ -97,6 +102,7 @@ trait OptiGraphExp extends OptiGraphCompiler with OptiGraphScalaOpsPkgExp with D
   with GraphOpsExp with NodeOpsExp with EdgeOpsExp
   with NodePropertyOpsExp with EdgePropertyOpsExp
   with ExceptionOps
+  with MutableEdgeOpsExp with MutableNodeOpsExp with MutableGraphOpsExp
   with GIterableOpsExp with GSetOpsExp with GOrderOpsExp with GSeqOpsExp
   with ReduceableOpsExp with DeferrableOpsExp
   with ForeachReduceTransformExp
@@ -170,6 +176,7 @@ trait OptiGraphCodeGenScala extends OptiGraphCodeGenBase with OptiGraphScalaCode
   with ScalaGenDeliteCollectionOps with ScalaGenDeliteArrayOps with ScalaGenLanguageOps with ScalaGenNumericOps with ScalaGenOrderingOps
   with ScalaGenReduceableOps with ScalaGenDeferrableOps
   with ScalaGenGraphOps with ScalaGenNodeOps with ScalaGenEdgeOps
+  with ScalaGenMutableGraphOps with ScalaGenMutableNodeOps with ScalaGenMutableEdgeOps
   with ScalaGenExceptionOps
   with ScalaGenNodePropertyOps with ScalaGenEdgePropertyOps
   with ScalaGenGIterableOps with ScalaGenGSetOps with ScalaGenGOrderOps with ScalaGenGSeqOps
@@ -206,7 +213,7 @@ trait OptiGraphCodeGenScala extends OptiGraphCodeGenBase with OptiGraphScalaCode
   }
 
   override def genSpec3(f: File, dsOut: String) {
-    for (s <- List("Node","Edge")) {
+    for (s <- List("Node","Edge","MutableEdge","MutableNode")) {
       val outFile = dsOut + s + f.getName
       val out = new BufferedWriter(new FileWriter(outFile))
       for (line <- scala.io.Source.fromFile(f).getLines) {
@@ -267,7 +274,7 @@ trait OptiGraphCodeGenScala extends OptiGraphCodeGenBase with OptiGraphScalaCode
       }
     }
 
-    for(tpe1 <- List("Node","Edge")) {
+    for(tpe1 <- List("Node","Edge","MutableNode","MutableEdge")) {
       for (s <- specialize3) {
         res = res.replaceAll(s+"\\["+tpe1+"\\]", tpe1+s)
       }
@@ -275,8 +282,12 @@ trait OptiGraphCodeGenScala extends OptiGraphCodeGenBase with OptiGraphScalaCode
     for (s <- specialize3) {
       res = res.replaceAll(s+"\\[generated.scala.Node\\]", "Node"+s)
       res = res.replaceAll(s+"\\[generated.scala.Edge\\]", "Edge"+s)
+      res = res.replaceAll(s+"\\[generated.scala.MutableEdge\\]", "MutableEdge"+s)
+      res = res.replaceAll(s+"\\[generated.scala.MutableNode\\]", "MutableNode"+s)
       res = res.replaceAll(s+"\\[ppl.dsl.optigraph.Node\\]", "Node"+s)
       res = res.replaceAll(s+"\\[ppl.dsl.optigraph.Edge\\]", "Edge"+s)
+      res = res.replaceAll(s+"\\[ppl.dsl.optigraph.MutableEdge\\]", "MutableEdge"+s)
+      res = res.replaceAll(s+"\\[ppl.dsl.optigraph.MutableNode\\]", "MutableNode"+s)
     }
 
     dsmap(res)

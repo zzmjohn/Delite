@@ -20,8 +20,7 @@ trait DeferrableImplOpsStandard extends DeferrableImplOps {
 
   def deferrable_assign_impl[A:Manifest](d: Rep[Deferrable[A]]): Rep[Unit] = {
     if (def_getdeferred(d)) {
-      val deferred = def_getdefvalue(d)
-      def_setvalue(d, deferred)
+      def_setvalue(d, def_getdefvalue(d))
       def_setdeferred(d, false)
     }
   }

@@ -13,19 +13,19 @@ import java.io.PrintWriter
 trait GSeqOps extends Variables {
   this: OptiGraph =>
 
-  /** NodeOrder constructors */
+  /** NodeSeq constructors */
   object NodeSeq {
     def apply() = gseq_new[Node]()
   }
-  object NS {
+  object NQ {
     def apply() = NodeSeq.apply()
   }
 
-  /** EdgeOrder constructors */
+  /** EdgeSeq constructors */
   object EdgeSeq {
     def apply() = gseq_new[Edge]()
   }
-  object ES {
+  object EQ {
     def apply() = EdgeSeq.apply()
   }
 
@@ -50,9 +50,9 @@ trait GSeqOps extends Variables {
     def PushBack(e: Rep[T]): Rep[Unit] = gseq_pushback(o, e)
     def Push(e: Rep[T]): Rep[Unit] = gseq_pushback(o, e)
     /** Prepends all the elements of o2 (in order) to the order */
-    def PushFront(o2: Rep[GSeq[T]]): Rep[Unit] = gseq_pushfrontord(o, o2)
+    def PushFrontSeq(o2: Rep[GSeq[T]]): Rep[Unit] = gseq_pushfrontord(o, o2)
     /** Appends all the elements of o2 (in order) to the order */
-    def PushBack(o2: Rep[GSeq[T]]): Rep[Unit] = gseq_pushbackord(o, o2)
+    def PushBackSeq(o2: Rep[GSeq[T]]): Rep[Unit] = gseq_pushbackord(o, o2)
     /** Removes and returns the first element in the order */
     def PopFront(): Rep[T] = gseq_popfront(o)
     def Pop(): Rep[T] = gseq_popfront(o)

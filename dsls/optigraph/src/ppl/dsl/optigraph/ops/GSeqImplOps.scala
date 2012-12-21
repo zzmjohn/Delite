@@ -17,8 +17,8 @@ trait GSeqImplOps { this: OptiGraph =>
   def gseq_pushbackorder_impl[A:Manifest](o: Rep[GSeq[A]], xs: Rep[GSeq[A]]): Rep[Unit]
   def gseq_pushfront_impl[A:Manifest](o: Rep[GSeq[A]], x: Rep[A]): Rep[Unit]
   def gseq_pushfrontorder_impl[A:Manifest](o: Rep[GSeq[A]], xs: Rep[GSeq[A]]): Rep[Unit]
-  def gseq_popfront_impl[A:Manifest](o: Rep[GSeq[A]]): Rep[Unit]
-  def gseq_popback_impl[A:Manifest](o: Rep[GSeq[A]]): Rep[Unit]
+  def gseq_popfront_impl[A:Manifest](o: Rep[GSeq[A]]): Rep[A]
+  def gseq_popback_impl[A:Manifest](o: Rep[GSeq[A]]): Rep[A]
 }
 
 trait GSeqImplOpsStandard extends GSeqImplOps {

@@ -29,7 +29,7 @@ trait GIterableOps extends Variables {
   implicit def repGIterableToGIterableOps[T:Manifest](iter: Rep[GIterable[T]]) = new GIterableOpsCls(iter)
 
   object GIterable {
-    def apply[A:Manifest]()(implicit ctx: SourceContext) = new_empty_iterable(DeliteArray[A](unit(0)), unit(0), unit(0))
+    def apply[A:Manifest]()(implicit ctx: SourceContext) = new_empty_iterable(DeliteArray[A](unit(0)).unsafeImmutable, unit(0), unit(0))
     def apply[A:Manifest](data: Rep[DeliteArray[A]])(implicit ctx: SourceContext) = new_empty_iterable(data, unit(0), darray_length(data))
   }
 
@@ -355,8 +355,8 @@ trait GIterableOpsExp extends GIterableOps with VariablesExp with BaseFatExp wit
   // sequential iteration
   def iter_for[T:Manifest](iter: Exp[GIterable[T]], filter: Option[Exp[T] => Exp[Boolean]], block: Exp[T] => Exp[Unit]) = {
     var i = var_new(unit(0))
-    while(i < dc_size(iter)) {
-      val elem = dc_apply(iter, i)
+    while(i < giterable_raw_size(iter)) { //dc_size(iter)) {
+      val elem = giterable_raw_apply(iter, i) //dc_apply(iter, i)
       filter match {
         case None => block(elem)
         case Some(pred) => if(pred(elem)) { block(elem) }

@@ -18,6 +18,15 @@ trait Graph {
 trait Node
 trait Edge
 
+trait MutableGraph {
+  // directed
+  type DMutableGraph = MutableGraph
+  // undirected
+  type UMutableGraph = MutableGraph
+}
+
+trait MutableNode
+trait MutableEdge
 /* Properties (for immutable graphs only) */
 
 /**
