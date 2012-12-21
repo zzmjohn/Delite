@@ -151,7 +151,7 @@ trait OptiGraphTests extends OptiGraphApplication {
     }
   }
 
-//TODO foreach
+//TODO foreach is not working right now
 /*
   def test_reduceable() {
     val g  = Graph()
@@ -462,7 +462,7 @@ trait OptiGraphTests extends OptiGraphApplication {
     }
   }
 
-// TODO adapt these to new syntax
+// TODO BFS and DFS traversals are not working right now
 /*
   def test_traversals() {
     val g  = Graph()
@@ -543,20 +543,33 @@ trait OptiGraphTests extends OptiGraphApplication {
   }
 */
 
-// TODO adapt these to new syntax
-/*
+  // TODO these tests fail because the Snapshot is not
+  // saving the outNeighbors, inNeighbors, outEdges, inEdges, ..., etc.
+  // correctly
   def test_nodeOpsEdgeOps() {
-    val g  = Graph()
-    val n1 = g.AddNode
-    val n2 = g.AddNode
-    val n3 = g.AddNode
-    val n4 = g.AddNode
-    val e1 = g.AddEdge(n1, n2)
-    val e2 = g.AddEdge(n1, n3)
-    val e3 = g.AddEdge(n2, n1)
-    val e4 = g.AddEdge(n4, n1)
-    val e5 = g.AddEdge(n3, n4)
-    g.Freeze
+    val mg = DMutableGraph()
+
+    val mn1 = mg.AddNode
+    val mn2 = mg.AddNode
+    val mn3 = mg.AddNode
+    val mn4 = mg.AddNode
+    val me1 = mg.AddEdge(mn1, mn2)
+    val me2 = mg.AddEdge(mn1, mn3)
+    val me3 = mg.AddEdge(mn2, mn1)
+    val me4 = mg.AddEdge(mn4, mn1)
+    val me5 = mg.AddEdge(mn3, mn4)
+    val g = mg.Snapshot
+
+    // Grab the immutable nodes and edges from the snapshot
+    val n1 = g.Node(0)
+    val n2 = g.Node(1)
+    val n3 = g.Node(2)
+    val n4 = g.Node(3)
+    val e1 = g.Edge(0)
+    val e2 = g.Edge(1)
+    val e3 = g.Edge(2)
+    val e4 = g.Edge(3)
+    val e5 = g.Edge(4)
 
     println("Test Node Out-Nbrs")
     val outNbrs = n1.OutNbrs.toSet
@@ -646,7 +659,6 @@ trait OptiGraphTests extends OptiGraphApplication {
     }
 
   }
-*/
 
   def test_filters() {
     val G = rand_graph()
@@ -672,6 +684,7 @@ trait OptiGraphTests extends OptiGraphApplication {
     For(G.Nodes, (n: Rep[Node]) => (prop(n) == 2)) { n =>
       println("[FAIL] n.Id = " + n.Id)
     }
+    //TODO foreach is not working right now
 /*
     //-------//
 
@@ -716,7 +729,7 @@ trait OptiGraphTests extends OptiGraphApplication {
 */
   }
 
-//TODO adapt these to new syntax
+//TODO iterations aren't working right now
 /*
   def test_iterations() {
 
@@ -791,16 +804,22 @@ trait OptiGraphTests extends OptiGraphApplication {
   }
 */
 
-// TODO adapt these to new syntax
-/*
   def test_nodeEdgeProps() {
-    val g  = Graph()
-    val n1 = g.AddNode
-    val n2 = g.AddNode
-    val e1 = g.AddEdge(n1, n2)
-    val e2 = g.AddEdge(n2, n1)
-    val e3 = g.AddEdge(n1, n1)
-    g.Freeze
+    val mg = DMutableGraph()
+
+    val mn1 = mg.AddNode
+    val mn2 = mg.AddNode
+    val me1 = mg.AddEdge(mn1, mn2)
+    val me2 = mg.AddEdge(mn2, mn1)
+    val me3 = mg.AddEdge(mn1, mn1)
+    val g  = mg.Snapshot
+
+    // Grab the immutable nodes and edges
+    val n1 = g.Node(0)
+    val n2 = g.Node(1)
+    val e1 = g.Edge(0)
+    val e2 = g.Edge(1)
+    val e3 = g.Edge(2)
 
     println("Test NodeProperty")
     val np = NodeProperty[Int](g, 1)
@@ -949,7 +968,6 @@ trait OptiGraphTests extends OptiGraphApplication {
     }
 
   }
-*/
 
   // Convenience method for generating a Graph.
   // Not actually random.
@@ -1056,22 +1074,21 @@ trait OptiGraphTests extends OptiGraphApplication {
 
   def main() {
     /* tests */
-    //test_graphOps()
-    //test_deferrable()
-    //test_reductions()
+    test_graphOps()
+    test_deferrable()
+    test_reductions()
     test_filters()
-
-    //TODO work on these
-    /*
     test_nodeOpsEdgeOps()
     test_nodeEdgeProps()
-    test_reduceable()
+    basic()
 
+    //TODO these aren't working right now
+    /*
+    test_reduceable()
     test_iterations()
     test_traversals()
     */
 
-    //basic()
   }
 }
 
