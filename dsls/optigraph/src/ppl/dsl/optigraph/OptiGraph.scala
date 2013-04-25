@@ -71,12 +71,16 @@ trait OptiGraphCompiler extends OptiGraph
   with LanguageImplOpsStandard
   with GIterableImplOpsStandard
   with GOrderImplOpsStandard
+  //with GOrderOptImplOpsStandard   // use optimized GOrder implementation  
   with DeferrableImplOpsStandard
   with GSeqImplOpsStandard
+  //with GSeqOptImplOpsStandard   // use optimized GSeq implementation
   with GSetImplOpsStandard
   with MutableGraphImplOpsStandard
   with GraphImplOpsStandard
-  with NodeImplOpsStandard {
+  with NodeImplOpsStandard
+  with NodePropertyImplOpsStandard
+  with EdgePropertyImplOpsStandard {
 
   this: OptiGraphApplication with OptiGraphExp =>
 }
@@ -87,7 +91,8 @@ trait OptiGraph extends OptiGraphScalaOpsPkg with DeliteCollectionOps with Delit
   with MutableNodeOps with MutableEdgeOps
   with MutableGraphOps
   with NodePropertyOps with EdgePropertyOps
-  with GIterableOps with GSetOps with GOrderOps with GSeqOps
+  with GIterableOps with GSetOps 
+  with GOrderOps with GSeqOps 
   with ReduceableOps with DeferrableOps {
 
   this: OptiGraphApplication =>
@@ -103,7 +108,9 @@ trait OptiGraphExp extends OptiGraphCompiler with OptiGraphScalaOpsPkgExp with D
   with NodePropertyOpsExp with EdgePropertyOpsExp
   with ExceptionOps
   with MutableEdgeOpsExp with MutableNodeOpsExp with MutableGraphOpsExp
-  with GIterableOpsExp with GSetOpsExp with GOrderOpsExp with GSeqOpsExp
+  with GIterableOpsExp with GSetOpsExp 
+  with GOrderOpsExp with GSeqOpsExp
+  //with GSeqOptOpsExp with GOrderOptOpsExp   // use optimized GOrder&GSeq implementations
   with ReduceableOpsExp with DeferrableOpsExp
   with ForeachReduceTransformExp
   with DeliteAllOverridesExp {
@@ -179,11 +186,12 @@ trait OptiGraphCodeGenScala extends OptiGraphCodeGenBase with OptiGraphScalaCode
   with ScalaGenMutableGraphOps with ScalaGenMutableNodeOps with ScalaGenMutableEdgeOps
   with ScalaGenExceptionOps
   with ScalaGenNodePropertyOps with ScalaGenEdgePropertyOps
-  with ScalaGenGIterableOps with ScalaGenGSetOps with ScalaGenGOrderOps with ScalaGenGSeqOps
+  with ScalaGenGIterableOps with ScalaGenGSetOps 
+  with ScalaGenGOrderOps with ScalaGenGSeqOps 
+  //with ScalaGenGOrderOptOps with ScalaGenGSeqOptOps   // use optimized GOrder&GSeq implementations
   with DeliteScalaGenAllOverrides {
 
   val IR: DeliteApplication with OptiGraphExp
-
   override val specialize = Set[String]("Property", "Reduceable", "Deferrable")
   override val specialize2 = Set[String]()
   override val specialize3 = Set[String]("GIterable", "GOrder", "GSet", "GSeq")
@@ -294,7 +302,9 @@ trait OptiGraphCodeGenScala extends OptiGraphCodeGenBase with OptiGraphScalaCode
   }
 
   override def dsmap(line: String) : String = {
-    var res = line.replaceAll("ppl.dsl.optigraph.datastruct", "generated")
+    //val datastructPackage = "ppl.dsl.optigraph.datastruct"
+    val datastructPackage = "ppl.dsl.optigraph.datastruct_opt"
+    var res = line.replaceAll(datastructPackage, "generated")
     res = res.replaceAll("ppl.delite.framework.datastruct", "generated")
     res = res.replaceAll("ppl.dsl.optigraph", "generated.scala")
     res

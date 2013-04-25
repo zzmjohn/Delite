@@ -19,93 +19,256 @@ trait GOrderImplOps { this: OptiGraph =>
   def gorder_pushfrontorder_impl[A:Manifest](o: Rep[GOrder[A]], xs: Rep[GOrder[A]]): Rep[Unit]
   def gorder_popfront_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A]
   def gorder_popback_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A]
+  def gorder_apply_impl[A:Manifest](o: Rep[GOrder[A]], i: Rep[Int]): Rep[A]
 }
 
 trait GOrderImplOpsStandard extends GOrderImplOps {
   this: OptiGraphCompiler with OptiGraphLift =>
 
   def gorder_size_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[Int] = {
-    gorder_raw_data(o.unsafeImmutable).size
+    gorder_raw_dataset(o.unsafeImmutable).size
   }
 
   def gorder_items_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[GIterable[A]] = {
     if (gorder_empty(o))
-      return GIterable[A]()
-    val d = gorder_raw_data(o.unsafeImmutable)
-    val gi = GIterable[A](d.toArray.asInstanceOf[Rep[DeliteArray[A]]])
-    gi
+    {
+      GIterable[A]()
+    }
+    else
+    {
+      val sz = gorder_size(o)
+      val d = gorder_raw_data(o)
+      val r = DeliteArray[A](sz)
+      var i = 0
+      while(i < sz)
+      {
+        val x = gorder_apply(o, i)
+        darray_unsafe_update(r, i, x)
+        i += 1
+      }
+      val gi = GIterable[A](r)
+      gi
+    }
   }
 
   def gorder_contains_impl[A:Manifest](o: Rep[GOrder[A]], x: Rep[A]): Rep[Boolean] = {
-    gorder_raw_data(o.unsafeImmutable).contains(x)
+    gorder_raw_dataset(o.unsafeImmutable).contains(x)
+  }
+
+// get the i'th element where i = 0,1,..,num of elements in order - 1; offset (i.e. + start_idx) done automatically
+  def gorder_apply_impl[A:Manifest](o: Rep[GOrder[A]], i: Rep[Int]): Rep[A] = {
+    val sz = gorder_size(o)
+    if (gorder_empty(o))
+      fatal("Tried to access element of empty GOrder")
+    else if (!(i >= 0 && i < sz)) {
+      fatal("GOrder apply: Index " + i + " out of bounds (size=" + sz + ")")
+    }
+    val d = gorder_raw_data(o)
+    val arr_sz = d.length
+    val start_idx = gorder_start_idx(o)
+    val idx = (start_idx + i) % arr_sz
+    d.apply(idx)
   }
 
   def gorder_front_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A] = {
     if (gorder_empty(o))
       fatal("Tried to access front of empty GOrder")
-    // ugly ugly ugly
-    val d = gorder_raw_data(o.unsafeImmutable).toArray.asInstanceOf[Rep[DeliteArray[A]]]
-    d.apply(0)
+    gorder_apply(o, 0)
   }
 
   def gorder_back_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A] = {
     if (gorder_empty(o))
       fatal("Tried to access back of empty GOrder")
-    // ugly ugly ugly
-    val d = gorder_raw_data(o.unsafeImmutable).toArray.asInstanceOf[Rep[DeliteArray[A]]]
-    d.apply(gorder_size(o) - 1)
+    gorder_apply(o, gorder_size(o)-1)
   }
 
   def gorder_pushback_impl[A:Manifest](o: Rep[GOrder[A]], x: Rep[A]): Rep[Unit] = {
-    gorder_raw_data(o.unsafeImmutable).add(x.unsafeImmutable)
+    if(!gorder_contains(o, x)){
+      val sz = gorder_size(o)
+      val d = gorder_raw_data(o)
+      val arr_sz = d.length
+      // double the space if the array is too full
+      if(sz+1 > arr_sz)
+      {
+        val r = DeliteArray[A](2*arr_sz + 1)
+        if(sz > 0)
+        {
+          val start_idx = gorder_start_idx(o)
+          val end_idx = gorder_end_idx(o)
+          if(start_idx <= end_idx)
+          {
+             darray_unsafe_copy(d, start_idx, r, 0, sz)
+          }
+          else
+          {
+            darray_unsafe_copy(d, start_idx, r, 0, arr_sz-start_idx)
+            darray_unsafe_copy(d, 0, r, arr_sz-start_idx, end_idx+1)
+          }
+        }
+        darray_unsafe_update(r, sz, x)
+        gorder_set_raw_data(o, r)
+        gorder_set_start_idx(o, 0)
+        gorder_set_end_idx(o, sz)
+      }
+      // update "in place"
+      else
+      {
+        var end_idx = gorder_end_idx(o)
+        end_idx = (end_idx + 1) % arr_sz
+        darray_unsafe_update(d, end_idx, x)
+        gorder_set_raw_data(o, d)
+        gorder_set_end_idx(o, end_idx)
+      }
+      gorder_raw_dataset(o.unsafeImmutable).add(x.unsafeImmutable)
+    }
   }
 
   def gorder_pushbackorder_impl[A:Manifest](o: Rep[GOrder[A]], xs: Rep[GOrder[A]]): Rep[Unit] = {
-    if (!gorder_empty(o)) {
-      // ugly ugly ugly
-      // Convert the GOrder we want to push to the back of o to an Array
-      val d = gorder_raw_data(o.unsafeImmutable).toArray.asInstanceOf[Rep[DeliteArray[A]]]
-      var i = 0
-      val sz = gorder_size(o)
-      // Then iterate over that array from beginning to end, adding each
-      // element to o
-      // TODO are we guaranteed that the array maintains the order information
-      // from the underlying LinkedHashSet?
-      while(i < sz) {
-        gorder_pushback(o, d.apply(i))
-        i += 1
-      }
+    val xs_size = gorder_size(xs)
+    var i = 0
+    while(i < xs_size)
+    {
+      gorder_pushback(o, gorder_apply(xs, i))
+      i += 1
     }
   }
 
   def gorder_pushfront_impl[A:Manifest](o: Rep[GOrder[A]], x: Rep[A]): Rep[Unit] = {
-    fatal("PushFront is not supported yet because LMS does not support LinkedHashSets")
+    if(!gorder_contains(o, x))
+    {
+      val sz = gorder_size(o)
+      val d = gorder_raw_data(o)
+      val arr_sz = d.length
+      // double the space if the array is too full
+      if(sz+1 > arr_sz)
+      {
+        val r = DeliteArray[A](2*arr_sz + 1)
+        if(sz > 0)
+        {
+          val start_idx = gorder_start_idx(o)
+          val end_idx = gorder_end_idx(o)
+          if(start_idx <= end_idx)
+          {
+            darray_unsafe_copy(d, start_idx, r, 1, sz)
+          }
+          else
+          {
+            darray_unsafe_copy(d, start_idx, r, 1, arr_sz-start_idx)
+            darray_unsafe_copy(d, 0, r, arr_sz-start_idx+1, end_idx+1)
+          }
+        }
+        darray_unsafe_update(r, 0, x)
+        gorder_set_raw_data(o, r)
+        gorder_set_start_idx(o, 0)
+        gorder_set_end_idx(o, sz)
+      }
+      // update "in place"
+      else
+      {
+        var start_idx = gorder_start_idx(o) - 1
+        if(start_idx < 0)
+        {
+          start_idx = start_idx + arr_sz
+        }
+        darray_unsafe_update(d, start_idx, x)
+        gorder_set_raw_data(o, d)
+        gorder_set_start_idx(o, start_idx)
+      }
+      gorder_raw_dataset(o.unsafeImmutable).add(x.unsafeImmutable)
+    }
   }
 
   def gorder_pushfrontorder_impl[A:Manifest](o: Rep[GOrder[A]], xs: Rep[GOrder[A]]): Rep[Unit] = {
-    fatal("PushFrontOrder is not supported yet because LMS does not support LinkedHashSets")
+    val xs_size = gorder_size(xs)
+    var i = xs_size-1
+    while(i >= 0)
+    {
+      gorder_pushfront(o, gorder_apply(xs, i))
+      i -= 1
+    }
   }
 
   def gorder_popfront_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A] = {
-    // ugly ugly ugly
-    // Convert the Set to an Array
-    val d = gorder_raw_data(o.unsafeImmutable).toArray.asInstanceOf[Rep[DeliteArray[A]]]
-    // Grab the first element of the Array
-    val elem = d.apply(0)
-    // Remove that element from the Set
-    gorder_raw_data(o.unsafeImmutable).remove(elem)
-    elem
+    if(gorder_empty(o))
+      fatal("Trying to pop from an empty GOrder")
+    val x = gorder_front(o)
+    val sz = gorder_size(o)
+    val d = gorder_raw_data(o)
+    val arr_sz = d.length
+    // half the space if the array is too empty
+    if(sz-1 <= arr_sz/2)
+    {
+      val r = DeliteArray[A](arr_sz/2)
+      if(sz > 0)
+      {
+        val start_idx = gorder_start_idx(o)
+        val end_idx = gorder_end_idx(o)
+        if(start_idx <= end_idx)
+        {
+          darray_unsafe_copy(d, start_idx+1, r, 0, sz-1)
+        }
+        else
+        {
+          darray_unsafe_copy(d, start_idx+1, r, 0, arr_sz-start_idx-1)
+          darray_unsafe_copy(d, 0, r, arr_sz-start_idx-1, end_idx+1)
+        }
+      }
+      gorder_set_raw_data(o, r)
+      gorder_set_start_idx(o, 0)
+      gorder_set_end_idx(o, sz-2)
+    }
+    // update "in place"
+    else
+    {
+      var start_idx = gorder_start_idx(o)
+      start_idx = (start_idx + 1) % arr_sz
+      gorder_set_start_idx(o, start_idx)
+    }
+    gorder_raw_dataset(o.unsafeImmutable).remove(x.unsafeImmutable)
+    x
   }
 
   def gorder_popback_impl[A:Manifest](o: Rep[GOrder[A]]): Rep[A] = {
-    // ugly ugly ugly
-    // Convert the Set to an Array
-    val d = gorder_raw_data(o.unsafeImmutable).toArray.asInstanceOf[Rep[DeliteArray[A]]]
-    // Grab the last element of the Array
-    val elem = d.apply(gorder_size(o) - 1)
-    // Remove that element from the Set
-    gorder_raw_data(o.unsafeImmutable).remove(elem)
-    elem
+    if(gorder_empty(o))
+      fatal("Trying to pop from an empty GOrder")
+    val x = gorder_back(o)
+    val sz = gorder_size(o)
+    val d = gorder_raw_data(o)
+    val arr_sz = d.length
+    // half the space if the array is too empty
+    if(sz-1 <= arr_sz/2)
+    {
+      val r = DeliteArray[A](arr_sz/2)
+      if(sz > 0)
+      {
+        var start_idx = gorder_start_idx(o)
+        var end_idx = gorder_end_idx(o)
+        if(start_idx <= end_idx)
+        {
+          darray_unsafe_copy(d, start_idx, r, 0, sz-1)
+        }
+        else
+        {
+          darray_unsafe_copy(d, start_idx, r, 0, arr_sz-start_idx)
+          darray_unsafe_copy(d, 0, r, arr_sz-start_idx, end_idx)
+        }
+      }
+      gorder_set_raw_data(o, r)
+      gorder_set_start_idx(o, 0)
+      gorder_set_end_idx(o, sz-2)
+    }
+    // update "in place"
+    else
+    {
+      var end_idx = gorder_end_idx(o) - 1
+      if(end_idx < 0)
+      {
+        end_idx = end_idx + arr_sz
+      }
+      gorder_set_end_idx(o, end_idx)
+    }
+    gorder_raw_dataset(o.unsafeImmutable).remove(x.unsafeImmutable)  
+    x
   }
 
   protected def gorder_empty[A:Manifest](o: Rep[GOrder[A]]): Rep[Boolean] = {

@@ -29,6 +29,10 @@ trait GSeqOps extends Variables {
     def apply() = EdgeSeq.apply()
   }
 
+  object IntSeq{
+    def apply() = gseq_new[Int]()
+  }
+
   implicit def repGSeqToGSeqOps[T:Manifest](o: Rep[GSeq[T]]) = new GSeqOpsCls(o)
   implicit def varToGSeqOps[T:Manifest](o: Var[GSeq[T]]) = new GSeqOpsCls(readVar(o))
 
@@ -60,12 +64,19 @@ trait GSeqOps extends Variables {
     def PopBack(): Rep[T] = gseq_popback(o)
     /** Lookup the element at position idx in the order
      *  RuntimeException if idx is out of bounds */
-    def apply(idx: Rep[Int]): Rep[T] = gseq_apply(o, idx)
+    def Apply(idx: Rep[Int]): Rep[T] = gseq_apply(o, idx)
   }
 
   def gseq_new[T:Manifest](): Rep[GSeq[T]]
+
+// These should be made private...
   def gseq_raw_data[T:Manifest](o: Rep[GSeq[T]]): Rep[DeliteArray[T]]
   def gseq_set_raw_data[T:Manifest](o: Rep[GSeq[T]], d: Rep[DeliteArray[T]]): Rep[Unit]
+  def gseq_start_idx[T:Manifest](o: Rep[GSeq[T]]): Rep[Int]
+  def gseq_set_start_idx[T:Manifest](o: Rep[GSeq[T]], idx: Rep[Int]): Rep[Unit]
+  def gseq_end_idx[T:Manifest](o: Rep[GSeq[T]]): Rep[Int]
+  def gseq_set_end_idx[T:Manifest](o: Rep[GSeq[T]], idx: Rep[Int]): Rep[Unit]
+
   def gseq_size[T:Manifest](o: Rep[GSeq[T]]): Rep[Int]
   def gseq_apply[T:Manifest](o: Rep[GSeq[T]], idx: Rep[Int]): Rep[T]
   def gseq_items[T:Manifest](o: Rep[GSeq[T]]): Rep[GIterable[T]]
@@ -83,9 +94,16 @@ trait GSeqOps extends Variables {
 trait GSeqOpsExp extends GSeqOps with VariablesExp with BaseFatExp {
   this: OptiGraphExp =>
 
-  case class GSeqObjectNew[T:Manifest]() extends DefWithManifest[T, GSeq[T]]
+  // Yonathan: what is the difference between these two kinds of initializations ?
+  //case class GSeqObjectNew[T:Manifest]() extends DefWithManifest[T, GSeq[T]]
+  case class GSeqObjectNew[T]()(val mGS: Manifest[GSeq[T]]) extends Def[GSeq[T]]
+
   case class GSeqRawData[T:Manifest](o: Exp[GSeq[T]]) extends DefWithManifest[T, DeliteArray[T]]
   case class GSeqSetRawData[T:Manifest](o: Exp[GSeq[T]], d: Exp[DeliteArray[T]]) extends DefWithManifest[T, Unit]
+  case class GSeqStartIdx[T:Manifest](o: Exp[GSeq[T]]) extends DefWithManifest[T, Int]
+  case class GSeqSetStartIdx[T:Manifest](o: Exp[GSeq[T]], idx: Exp[Int]) extends DefWithManifest[T, Unit]
+  case class GSeqEndIdx[T:Manifest](o: Exp[GSeq[T]]) extends DefWithManifest[T, Int]
+  case class GSeqSetEndIdx[T:Manifest](o: Exp[GSeq[T]], idx: Exp[Int]) extends DefWithManifest[T, Unit]
 
   case class GSeqSize[T:Manifest](o: Exp[GSeq[T]])
     extends DeliteOpSingleWithManifest[T, Int](reifyEffectsHere(gseq_size_impl(o)))
@@ -109,13 +127,13 @@ trait GSeqOpsExp extends GSeqOps with VariablesExp with BaseFatExp {
     extends DeliteOpSingleWithManifest[T, Unit](reifyEffectsHere(gseq_pushback_impl(o, e)))
 
   case class GSeqPushBackOrd[T:Manifest](o: Exp[GSeq[T]], o2: Exp[GSeq[T]])
-    extends DeliteOpSingleWithManifest[T, Unit](reifyEffectsHere(gseq_pushbackorder_impl(o, o2)))
+    extends DeliteOpSingleWithManifest[T, Unit](reifyEffectsHere(gseq_pushbackseq_impl(o, o2)))
 
   case class GSeqPushFront[T:Manifest](o: Exp[GSeq[T]], e: Exp[T])
     extends DeliteOpSingleWithManifest[T, Unit](reifyEffectsHere(gseq_pushfront_impl(o, e)))
 
   case class GSeqPushFrontOrd[T:Manifest](o: Exp[GSeq[T]], o2: Exp[GSeq[T]])
-    extends DeliteOpSingleWithManifest[T, Unit](reifyEffectsHere(gseq_pushfrontorder_impl(o, o2)))
+    extends DeliteOpSingleWithManifest[T, Unit](reifyEffectsHere(gseq_pushfrontseq_impl(o, o2)))
 
   case class GSeqPopFront[T:Manifest](o: Exp[GSeq[T]])
     extends DeliteOpSingleWithManifest[T, T](reifyEffectsHere(gseq_popfront_impl(o)))
@@ -123,10 +141,14 @@ trait GSeqOpsExp extends GSeqOps with VariablesExp with BaseFatExp {
   case class GSeqPopBack[T:Manifest](o: Exp[GSeq[T]])
     extends DeliteOpSingleWithManifest[T, T](reifyEffectsHere(gseq_popback_impl(o)))
 
-  def gseq_new[T:Manifest]() = reflectMutable(GSeqObjectNew())
+  def gseq_new[T:Manifest]() = reflectMutable(GSeqObjectNew()(manifest[GSeq[T]]))
   def gseq_raw_data[T:Manifest](o: Exp[GSeq[T]]) = reflectPure(GSeqRawData(o))
   def gseq_set_raw_data[T:Manifest](o: Exp[GSeq[T]], d: Exp[DeliteArray[T]]) = reflectWrite(o)(GSeqSetRawData(o, d))
-
+  def gseq_start_idx[T:Manifest](o: Exp[GSeq[T]]) = reflectPure(GSeqStartIdx(o))
+  def gseq_set_start_idx[T:Manifest](o: Exp[GSeq[T]], idx: Exp[Int]) = reflectWrite(o)(GSeqSetStartIdx(o, idx))
+  def gseq_end_idx[T:Manifest](o: Exp[GSeq[T]]) = reflectPure(GSeqEndIdx(o))
+  def gseq_set_end_idx[T:Manifest](o: Exp[GSeq[T]], idx: Exp[Int]) = reflectWrite(o)(GSeqSetEndIdx(o, idx))
+  
   def gseq_size[T:Manifest](o: Exp[GSeq[T]]) = reflectPure(GSeqSize(o))
   def gseq_apply[T:Manifest](o: Exp[GSeq[T]], idx: Exp[Int]) = reflectPure(GSeqApply(o, idx))
   def gseq_items[T:Manifest](o: Exp[GSeq[T]]) = reflectPure(GSeqItems(o))
@@ -150,7 +172,8 @@ trait GSeqOpsExp extends GSeqOps with VariablesExp with BaseFatExp {
     case GSeqFront(o) => gseq_front(f(o))
     case GSeqBack(o) => gseq_back(f(o))
     case GSeqApply(o,n) => gseq_apply(f(o),f(n))
-    case Reflect(e@GSeqObjectNew(), u, es) => reflectMirrored(Reflect(GSeqObjectNew()(e.mR), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    //case Reflect(e@GSeqObjectNew(), u, es) => reflectMirrored(Reflect(GSeqObjectNew()(e.mR), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    case Reflect(e@GSeqObjectNew(), u, es) => reflectMirrored(Reflect(GSeqObjectNew()(e.mGS), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case Reflect(e@GSeqItems(o), u, es) => reflectMirrored(Reflect(GSeqItems(f(o)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case Reflect(e@GSeqContains(o,x), u, es) => reflectMirrored(Reflect(GSeqContains(f(o),f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case Reflect(e@GSeqSize(o), u, es) => reflectMirrored(Reflect(GSeqSize(f(o)), mapOver(f,u), f(es)))(mtype(manifest[A]))
@@ -178,9 +201,14 @@ trait ScalaGenGSeqOps extends BaseGenGSeqOps with ScalaGenFat {
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = {
     rhs match {
-      case o@GSeqObjectNew() => emitValDef(sym, "new " + remap(o.mR) + "")
+      //case o@GSeqObjectNew() => emitValDef(sym, "new " + remap(o.mR) + "")
+      case o@GSeqObjectNew() => emitValDef(sym, "new " + remap(o.mGS) + "")
       case GSeqRawData(x) => emitValDef(sym, quote(x) + "._data")
       case GSeqSetRawData(x, d) => emitValDef(sym, quote(x) + "._data = " + quote(d))
+      case GSeqStartIdx(x) => emitValDef(sym, quote(x) + "._start_idx")
+      case GSeqSetStartIdx(x, idx) => emitValDef(sym, quote(x) + "._start_idx = " + quote(idx))
+      case GSeqEndIdx(x) => emitValDef(sym, quote(x) + "._end_idx")
+      case GSeqSetEndIdx(x, idx) => emitValDef(sym, quote(x) + "._end_idx = " + quote(idx))
       case _ => super.emitNode(sym, rhs)
     }
   }

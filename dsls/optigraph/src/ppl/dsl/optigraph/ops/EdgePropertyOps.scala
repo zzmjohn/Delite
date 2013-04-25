@@ -3,10 +3,11 @@ package ppl.dsl.optigraph.ops
 import reflect.{Manifest,SourceContext}
 import ppl.delite.framework.ops._
 import scala.virtualization.lms.common.{VariablesExp, Variables}
-import ppl.delite.framework.ops.{DeliteOpsExp, DeliteCollectionOpsExp}
+import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.dsl.optigraph._
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal.{GenerationFailedException, GenericFatCodegen}
+import reflect.{Manifest, SourceContext}
 import java.io.PrintWriter
 
 trait EdgePropertyOps extends Variables {
@@ -51,31 +52,56 @@ trait EdgePropertyOps extends Variables {
   def edgeprop_defer[A:Manifest](ep: Rep[EdgeProperty[A]], e: Rep[Edge], x: Rep[A]): Rep[Unit]
   def edgeprop_assign[A:Manifest](ep: Rep[EdgeProperty[A]], e: Rep[Edge]): Rep[Unit]
   def edgeprop_assignAll[A:Manifest](ep: Rep[EdgeProperty[A]]): Rep[Unit]
+  def edgeprop_size[A:Manifest](np: Rep[EdgeProperty[A]]):Rep[Int]
+
+  def edgeprop_get_def[A:Manifest](ep: Rep[EdgeProperty[A]], idx: Rep[Int]):Rep[A]
+  def edgeprop_set_def[A:Manifest](ep: Rep[EdgeProperty[A]], idx: Rep[Int], x: Rep[A]):Rep[Unit]
+  def edgeprop_has_def[A:Manifest](ep: Rep[EdgeProperty[A]], idx: Rep[Int]):Rep[Boolean]
+  def edgeprop_set_is_def[A:Manifest](ep: Rep[EdgeProperty[A]], idx: Rep[Int]):Rep[Unit]
+  def edgeprop_clear_def[A:Manifest](ep: Rep[EdgeProperty[A]], idx: Rep[Int]):Rep[Unit]
+  def edgeprop_raw_apply[A:Manifest](ep: Rep[EdgeProperty[A]], idx: Rep[Int]): Rep[A]
+  def edgeprop_raw_update[A:Manifest](ep: Rep[EdgeProperty[A]], idx: Rep[Int], x: Rep[A]): Rep[Unit]
 }
 
 trait EdgePropertyOpsExp extends EdgePropertyOps with VariablesExp with BaseFatExp {
   this: OptiGraphExp =>
     
   case class EdgePropObjectNew[A](g: Exp[Graph], size: Exp[Int]) (val mP: Manifest[EdgeProperty[A]]) extends Def[EdgeProperty[A]]
+  
+  case class EdgePropApply[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int]) extends Def[A]
+  case class EdgePropUpdate[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int], x: Exp[A]) extends Def[Unit]
+
   case class EdgePropSetAll[A:Manifest](in: Exp[EdgeProperty[A]], x: Exp[A]) extends DeliteOpIndexedLoop {
-    val size = copyTransformedOrElse(_.size)(dc_size(in))
-    def func = i => dc_update(in, i, x)
+        val size = edgeprop_size(in)
+        def func = i => edgeprop_raw_update(in, i, x)
   }
-  case class EdgePropDefer[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int], x: Exp[A]) extends Def[Unit]
+
+  case class EdgePropDefer[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int], x: Exp[A])
+    extends DeliteOpSingleWithManifest[A, Unit](reifyEffectsHere(edgeprop_defer_impl(ep, idx, x)))
+
   case class EdgePropGetDef[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int]) extends Def[A]
+  case class EdgePropSetDef[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int], x: Exp[A]) extends Def[Unit]
+
   case class EdgePropHasDef[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int]) extends Def[Boolean]
+  case class EdgePropSetIsDef[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int]) extends Def[Unit]
   case class EdgePropClearDef[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int]) extends Def[Unit]
+
+  case class EdgePropAssign[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int])
+     extends DeliteOpSingleWithManifest[A, Unit](reifyEffectsHere(edgeprop_assign_impl(ep, idx)))
+
   case class EdgePropAssignAll[A:Manifest](in: Exp[EdgeProperty[A]]) extends DeliteOpIndexedLoop {
-    val size = copyTransformedOrElse(_.size)(dc_size(in))
+    val size = edgeprop_size(in)
     def func = i => {
       if(edgeprop_has_def(in, i)) {
-    	dc_update(in, i, edgeprop_get_def(in, i))
-    	edgeprop_clear_def(in, i)
+    	   edgeprop_raw_update(in, i, edgeprop_get_def(in, i))
+    	   edgeprop_clear_def(in, i)
       } else {
         unit()
       }
     }
   }
+
+  case class EdgePropSize[A:Manifest](ep:Exp[EdgeProperty[A]]) extends Def[Int]
   
   // default constructor
   def edgeprop_new[A:Manifest](g: Exp[Graph]) = {
@@ -89,30 +115,33 @@ trait EdgePropertyOpsExp extends EdgePropertyOps with VariablesExp with BaseFatE
     newEP.setAll(init)
     newEP
   } 
+
   def edgeprop_setAll[A:Manifest](ep: Exp[EdgeProperty[A]], x: Exp[A]) = reflectWrite(ep)(EdgePropSetAll(ep, x))
   
   def edgeprop_apply[A:Manifest](ep: Exp[EdgeProperty[A]], e: Exp[Edge]) = { 
-    // TODO: check edge in graph (ep.g contains e)
-    dc_apply(ep, e.Id) 
+      edgeprop_raw_apply(ep, e.Id)
   }  
   
   def edgeprop_update[A:Manifest](ep: Exp[EdgeProperty[A]], e: Exp[Edge], x: Exp[A]) = {
-    // TODO: check edge in graph (ep.g contains e)
-    dc_update(ep, e.Id, x)
+      edgeprop_raw_update(ep, e.Id, x)
   }
   
   def edgeprop_defer[A:Manifest](ep: Exp[EdgeProperty[A]], e: Exp[Edge], x: Exp[A]) = reflectWrite(ep)(EdgePropDefer(ep, e.Id, x))
+ 
   def edgeprop_get_def[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int]) = reflectPure(EdgePropGetDef(ep, idx))
+  def edgeprop_set_def[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int], x: Exp[A]) = reflectWrite(ep)(EdgePropSetDef(ep, idx, x))
+
   def edgeprop_has_def[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int]) = reflectPure(EdgePropHasDef(ep, idx))
+  def edgeprop_set_is_def[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int]) = reflectWrite(ep)(EdgePropSetIsDef(ep, idx))
   def edgeprop_clear_def[A:Manifest](ep: Exp[EdgeProperty[A]], idx: Exp[Int]) = reflectWrite(ep)(EdgePropClearDef(ep, idx))
+
   def edgeprop_assignAll[A:Manifest](ep: Exp[EdgeProperty[A]]) = reflectWrite(ep)(EdgePropAssignAll(ep))
-  def edgeprop_assign[A:Manifest](ep: Exp[EdgeProperty[A]], e: Exp[Edge]) = {
-    val i = e.Id
-    if(edgeprop_has_def(ep, i)) {
-      dc_update(ep, i, edgeprop_get_def(ep, i))
-      edgeprop_clear_def(ep, i)
-    } 
-  }
+  def edgeprop_assign[A:Manifest](ep: Exp[EdgeProperty[A]], e: Exp[Edge]) = reflectWrite(ep)(EdgePropAssign(ep, e.Id))
+
+  def edgeprop_raw_apply[A:Manifest](ep: Rep[EdgeProperty[A]], idx: Rep[Int]): Rep[A] = reflectPure(EdgePropApply(ep, idx))
+  def edgeprop_raw_update[A:Manifest](ep: Rep[EdgeProperty[A]], idx: Rep[Int], x: Rep[A]): Rep[Unit] = reflectWrite(ep)(EdgePropUpdate(ep, idx, x))
+
+  def edgeprop_size[A:Manifest](ep: Rep[EdgeProperty[A]]):Rep[Int] = reflectPure(EdgePropSize(ep))
   
   //////////////
   // mirroring
@@ -145,10 +174,14 @@ trait ScalaGenEdgePropertyOps extends BaseGenEdgePropertyOps with ScalaGenFat {
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = {
     rhs match {
       case ep@EdgePropObjectNew(g, size) => emitValDef(sym, "new " + remap(ep.mP) +"(" + quote(g) + "," + quote(size) + ")")
-      case EdgePropDefer(ep, idx, x) => emitValDef(sym, quote(ep) + ".defer(" + quote(idx) + ", " + quote(x) + ")")
-      case EdgePropGetDef(ep, idx) => emitValDef(sym, quote(ep) + ".getDeferredValue(" + quote(idx) + ")")
-      case EdgePropHasDef(ep, idx) => emitValDef(sym, quote(ep) + ".hasDeferredValue(" + quote(idx) + ")")
-      case EdgePropClearDef(ep, idx) => emitValDef(sym, quote(ep) + ".clearDeferredValue(" + quote(idx) + ")")
+      case EdgePropApply(ep,idx) => emitValDef(sym, quote(ep) + ".data(" + quote(idx) + ")")
+      case EdgePropUpdate(ep, idx, x) => emitValDef(sym, quote(ep) + ".data(" + quote(idx) + ") = " + quote(x))
+      case EdgePropGetDef(ep, idx) => emitValDef(sym, quote(ep) + ".deferred_data(" + quote(idx) + ")")
+      case EdgePropSetDef(ep, idx, x) => emitValDef(sym, quote(ep) + ".deferred_data(" + quote(idx) + ") = " + quote(x))
+      case EdgePropHasDef(ep, idx) => emitValDef(sym, quote(ep) + ".deferred_data_bitmap(" + quote(idx) + ")")
+      case EdgePropSetIsDef(ep,idx) => emitValDef(sym, quote(ep) + ".deferred_data_bitmap(" + quote(idx) + ") = true")
+      case EdgePropClearDef(ep, idx) => emitValDef(sym, quote(ep) + ".deferred_data_bitmap(" + quote(idx) + ") = false")
+      case EdgePropSize(ep) => emitValDef(sym, quote(ep) + ".size")
       case _ => super.emitNode(sym, rhs)
     }
   }

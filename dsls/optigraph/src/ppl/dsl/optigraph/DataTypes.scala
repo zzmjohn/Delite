@@ -29,18 +29,19 @@ trait MutableNode
 trait MutableEdge
 /* Properties (for immutable graphs only) */
 
+ // Yonathan - NodeProperty and EdgePropertyno longer extends DeliteCollection
 /**
  * Used to associate data with the nodes in the graph
  * Note: properties can be associated only with immutable graph instances
  */
-trait NodeProperty[T] extends DeliteCollection[T] {
+trait NodeProperty[T] {
   type NP[T] = NodeProperty[T]
 }
 /**
  * An EdgeProperty object is used to associate data with graph edges
  * Note: properties can be associated only with immutable graph instances
  */
-trait EdgeProperty[T] extends DeliteCollection[T] {
+trait EdgeProperty[T] {
   type EP[T] = EdgeProperty[T]
 }
 
@@ -52,6 +53,7 @@ trait GSet[T] {
   type NS = GSet[Node]
   type EdgeSet = GSet[Edge]
   type ES = GSet[Edge]
+  type IntSet = GSet[Int]  // primarly for testing purposes
 }
 /** Ordered collection of unique elements */
 trait GOrder[T] {
@@ -59,6 +61,7 @@ trait GOrder[T] {
   type NO = GOrder[Node]
   type EdgeOrder = GOrder[Edge]
   type EO = GOrder[Edge]
+  type IntOrder = GOrder[Int]  // primarly for testing purposes
 }
 /** Ordered collection of elements (with duplicates possible) */
 trait GSeq[T] {
@@ -66,6 +69,7 @@ trait GSeq[T] {
   type NS = GSeq[Node]
   type EdgeSeq = GSeq[Edge]
   type ES = GSeq[Edge]
+  type IntSeq = GSeq[Int] // primarly for testing purposes
 }
 
 /* Other */

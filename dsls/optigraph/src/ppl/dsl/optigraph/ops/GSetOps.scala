@@ -31,6 +31,14 @@ trait GSetOps extends Variables {
     def apply() = EdgeSet.apply()
   }
 
+/* mostly for testing purposes ..*/
+  object IntSet{
+    def apply() = gset_new[Int]()
+  }
+  object IS {
+    def apply() = IntSet.apply()
+  }
+
   implicit def varToGSetOps[A:Manifest](s: Var[GSet[A]]) = new GSetOpsCls(readVar(s))
   implicit def repGSetToGSetOps[A:Manifest](s: Rep[GSet[A]]) = new GSetOpsCls(s)
 
@@ -57,11 +65,14 @@ trait GSetOps extends Variables {
     /** Returns a copy of this set */
     def cloneL() = gset_clone(s)
 
-    // TODO add the following ops:
-    // * Union(GSet): GSet
-    // * Intersect(GSet): GSet
-    // * Complement(GSet): GSet
-    // * IsSubsetOf(GSet): Boolean
+    /* returns the union of s2 and current set */
+    def Union(s2: Rep[GSet[A]]) = gset_union(s, s2)
+    /* returns the intersection of s2 and current set */
+    def Intersect(s2: Rep[GSet[A]]) = gset_intersect(s, s2)
+    /* returns a set of all the elements in current set that are not in s2 */
+    def Complement(s2: Rep[GSet[A]]) = gset_complement(s, s2)
+    /* returns true iff the current set is a subset of s2 */
+    def IsSubsetOf(s2: Rep[GSet[A]]) = gset_is_subset_of(s, s2)
   }
 
   def gset_new[A:Manifest](): Rep[GSet[A]]
@@ -77,12 +88,18 @@ trait GSetOps extends Variables {
   def gset_removeset[A:Manifest](s: Rep[GSet[A]], s2: Rep[GSet[A]]): Rep[Unit]
   def gset_clear[A:Manifest](s: Rep[GSet[A]]): Rep[Unit]
   def gset_clone[A:Manifest](s: Rep[GSet[A]]): Rep[GSet[A]]
+
+  def gset_union[A:Manifest](s: Rep[GSet[A]], s2: Rep[GSet[A]]): Rep[GSet[A]]
+  def gset_intersect[A:Manifest](s: Rep[GSet[A]], s2: Rep[GSet[A]]): Rep[GSet[A]]
+  def gset_complement[A:Manifest](s: Rep[GSet[A]], s2: Rep[GSet[A]]): Rep[GSet[A]]
+  def gset_is_subset_of[A:Manifest](s: Rep[GSet[A]], s2: Rep[GSet[A]]): Rep[Boolean]
 }
 
 trait GSetOpsExp extends GSetOps with VariablesExp with BaseFatExp {
   this: OptiGraphExp =>
 
   case class GSetObjectNew[A]() (val mGS: Manifest[GSet[A]]) extends Def[GSet[A]]
+  
   case class GSetRawData[A:Manifest](s: Exp[GSet[A]]) extends DefWithManifest[A, Set[A]]
   case class GSetSetRawData[A:Manifest](s: Exp[GSet[A]], d: Exp[Set[A]]) extends DefWithManifest[A, Unit]
 
@@ -113,6 +130,19 @@ trait GSetOpsExp extends GSetOps with VariablesExp with BaseFatExp {
   case class GSetClone[A:Manifest](s: Exp[GSet[A]])
     extends DeliteOpSingleWithManifest[A, GSet[A]](reifyEffectsHere(gset_clone_impl(s)))
 
+  case class GSetUnion[A:Manifest](s: Exp[GSet[A]], s2: Exp[GSet[A]])
+    extends DeliteOpSingleWithManifest[A, GSet[A]](reifyEffectsHere(gset_union_impl(s, s2)))
+
+  case class GSetIntersect[A:Manifest](s: Exp[GSet[A]], s2: Exp[GSet[A]])
+    extends DeliteOpSingleWithManifest[A, GSet[A]](reifyEffectsHere(gset_intersect_impl(s, s2)))
+
+  case class GSetComplement[A:Manifest](s: Exp[GSet[A]], s2: Exp[GSet[A]])
+    extends DeliteOpSingleWithManifest[A, GSet[A]](reifyEffectsHere(gset_complement_impl(s, s2)))
+
+  case class GSetIsSubsetOf[A:Manifest](s: Exp[GSet[A]], s2: Exp[GSet[A]])
+    extends DeliteOpSingleWithManifest[A, Boolean](reifyEffectsHere(gset_is_subset_of_impl(s, s2)))
+
+
   def gset_new[A:Manifest]() = reflectMutable(GSetObjectNew()(manifest[GSet[A]]))
   def gset_raw_data[A:Manifest](s: Exp[GSet[A]]) = reflectMutable(GSetRawData(s))
   def gset_set_raw_data[A:Manifest](s: Exp[GSet[A]], d: Exp[Set[A]]) = reflectWrite(s)(GSetSetRawData(s, d))
@@ -126,6 +156,11 @@ trait GSetOpsExp extends GSetOps with VariablesExp with BaseFatExp {
   def gset_removeset[A:Manifest](s: Exp[GSet[A]], s2: Exp[GSet[A]]) = reflectWrite(s)(GSetRemoveSet(s, s2))
   def gset_clear[A:Manifest](s: Exp[GSet[A]]) = reflectWrite(s)(GSetClear(s))
   def gset_clone[A:Manifest](s: Exp[GSet[A]]) = reflectPure(GSetClone(s))
+
+  def gset_union[A:Manifest](s: Exp[GSet[A]], s2: Exp[GSet[A]]) = reflectMutable(GSetUnion(s, s2))
+  def gset_intersect[A:Manifest](s: Exp[GSet[A]], s2: Exp[GSet[A]]) = reflectMutable(GSetIntersect(s, s2))
+  def gset_complement[A:Manifest](s: Exp[GSet[A]], s2: Exp[GSet[A]]) = reflectMutable(GSetComplement(s, s2))
+  def gset_is_subset_of[A:Manifest](s: Exp[GSet[A]], s2: Exp[GSet[A]]) = reflectPure(GSetIsSubsetOf(s, s2))
 
   //////////////
   // mirroring
