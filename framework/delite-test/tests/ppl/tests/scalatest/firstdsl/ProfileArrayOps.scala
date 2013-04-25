@@ -1,8 +1,8 @@
 package ppl.tests.scalatest.firstdsl
 
 import reflect.{Manifest, SourceContext}
-import scala.lms.ops.{NumericOpsExp, FractionalOpsExp, Base}
-import scala.lms.ops.ScalaGenBase
+import scala.lms.ops.{NumericOpsExp, FractionalOpsExp}
+import scala.lms._
 import ppl.delite.framework.ops.{DeliteCollectionOpsExp,DeliteOpsExp}
 import ppl.delite.framework.ops.DeliteCollection
 

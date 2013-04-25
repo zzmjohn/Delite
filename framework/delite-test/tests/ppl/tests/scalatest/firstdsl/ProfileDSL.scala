@@ -1,5 +1,6 @@
 package ppl.tests.scalatest.firstdsl
 
+import scala.lms._
 import scala.lms.ops._
 import scala.lms.internal._
 import ppl.delite.framework._

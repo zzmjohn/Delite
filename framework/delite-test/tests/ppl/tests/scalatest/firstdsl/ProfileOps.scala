@@ -1,6 +1,6 @@
 package ppl.tests.scalatest.firstdsl
 
-import scala.lms.ops.{ScalaGenEffect, Base, EffectExp}
+import scala.lms._
 
 // this is the abstract interface of our profiling methods
 trait ProfileOps extends Base {
