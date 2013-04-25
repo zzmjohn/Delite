@@ -1,7 +1,6 @@
 package ppl.dsl.optiml.vector
 
-import scala.lms.ScalaOpsPkg
-import scala.lms.{BaseExp, Base}
+import scala.lms._
 import ppl.dsl.optiml._
 
 trait VectorImplOps { this: OptiML =>

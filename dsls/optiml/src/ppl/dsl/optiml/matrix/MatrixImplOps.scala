@@ -1,7 +1,6 @@
 package ppl.dsl.optiml.matrix
 
-import scala.lms.ScalaOpsPkg
-import scala.lms.{BaseExp, Base}
+import scala.lms._
 import ppl.dsl.optiml._
 
 trait MatrixImplOps { this: OptiML =>

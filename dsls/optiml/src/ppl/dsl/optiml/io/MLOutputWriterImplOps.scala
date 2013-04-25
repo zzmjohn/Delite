@@ -1,7 +1,6 @@
 package ppl.dsl.optiml.io
 
-import scala.lms.ops.Base
-import scala.lms.ScalaOpsPkg
+import scala.lms._
 import ppl.dsl.optiml._
 
 trait MLOutputWriterImplOps { this: OptiML =>

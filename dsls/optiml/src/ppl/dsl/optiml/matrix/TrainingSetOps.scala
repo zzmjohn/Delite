@@ -2,8 +2,10 @@ package ppl.dsl.optiml.matrix
 
 import java.io.PrintWriter
 import scala.lms.util.OverloadHack
-import scala.lms.ops.{Variables, Base, BaseExp, CGenBase, CudaGenBase, OpenCLGenBase, ScalaGenBase}
+import scala.lms._
+import scala.lms.ops.{Variables}
 import scala.lms.internal.{GenerationFailedException}
+import scala.lms.targets.clike.codegen._
 import scala.reflect.SourceContext
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.DeliteOpsExp

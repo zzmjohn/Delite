@@ -6,8 +6,10 @@ import ppl.delite.framework.ops.{DeliteOpsExp, DeliteCollectionOpsExp}
 import ppl.delite.framework.ops.DeliteCollection
 import ppl.delite.framework.datastructures.DeliteArray
 import scala.reflect.Manifest
-import scala.lms.ops._
+import scala.lms._
+import scala.lms.ops.{Variables,VariablesExp}
 import scala.lms.internal.{GenerationFailedException, GenericFatCodegen}
+import scala.lms.targets.clike.codegen._
 import ppl.dsl.optiml._
 import scala.reflect.SourceContext
 

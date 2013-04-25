@@ -3,8 +3,10 @@ package ppl.dsl.optiml.graph
 import java.io.PrintWriter
 import scala.reflect.Manifest
 import scala.collection.mutable.Set
+import scala.lms._
 import scala.lms.ops._
 import scala.lms.internal._
+import scala.lms.targets.clike.codegen._
 import ppl.delite.framework.DeliteApplication
 import ppl.dsl.optiml._
 

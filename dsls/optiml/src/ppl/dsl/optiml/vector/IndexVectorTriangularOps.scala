@@ -2,7 +2,7 @@ package ppl.dsl.optiml.vector
 
 import java.io.PrintWriter
 import scala.reflect.SourceContext
-import scala.lms.ops.{EffectExp, BaseExp, Base, ScalaGenBase}
+import scala.lms._
 import scala.lms.util.OverloadHack
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.{DeliteCollectionOpsExp}

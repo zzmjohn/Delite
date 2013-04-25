@@ -2,6 +2,7 @@ package ppl.dsl.optiml.transform
 
 import java.io._
 import scala.lms.ops._
+import scala.lms.transform._
 import scala.lms.internal.{AbstractSubstTransformer,Transforming}
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.{DeliteOpsExp, DeliteCollection, BaseDeliteOpsTraversalFat}

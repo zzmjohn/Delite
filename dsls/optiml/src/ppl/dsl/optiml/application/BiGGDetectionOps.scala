@@ -2,9 +2,9 @@ package ppl.dsl.optiml.application
 
 import ppl.dsl.optiml._
 import java.io.PrintWriter
-import scala.lms.ops.ScalaGenBase
+import scala.lms._
 import scala.lms.util.OverloadHack
-import scala.lms.ops.{EffectExp, Variables}
+import scala.lms.ops.{Variables}
 
 
 trait BiGGDetectionOps extends Variables with OverloadHack {

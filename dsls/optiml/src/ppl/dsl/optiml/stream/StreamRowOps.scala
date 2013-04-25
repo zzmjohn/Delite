@@ -3,7 +3,7 @@ package ppl.dsl.optiml.stream
 import java.io.PrintWriter
 import ppl.delite.framework.DeliteApplication
 import scala.lms.util.OverloadHack
-import scala.lms.ops.{BaseExp, Base, ScalaGenBase}
+import scala.lms._
 import scala.reflect.SourceContext
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.dsl.optila.vector.{DenseVectorViewOpsExp}

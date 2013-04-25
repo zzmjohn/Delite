@@ -5,7 +5,9 @@ import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.{DeliteCollectionOpsExp}
 import ppl.delite.framework.ops.DeliteCollection
 import ppl.delite.framework.datastructures.{DeliteStructsExp, DeliteArray}
+import scala.lms._
 import scala.lms.ops._
+import scala.lms.targets.clike.codegen._
 import scala.lms.util.OverloadHack
 import scala.reflect.SourceContext
 import java.io.PrintWriter

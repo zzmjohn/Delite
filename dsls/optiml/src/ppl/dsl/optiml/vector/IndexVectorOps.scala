@@ -3,7 +3,8 @@ package ppl.dsl.optiml.vector
 import ppl.dsl.optiml.{OptiMLExp, OptiML}
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.datastructures.DeliteArray
-import scala.lms.ops.{EffectExp, BaseExp, Base, ScalaGenBase, CGenBase}
+import scala.lms._
+import scala.lms.targets.clike.codegen._
 import scala.lms.util.OverloadHack
 import scala.reflect.SourceContext
 import java.io.PrintWriter

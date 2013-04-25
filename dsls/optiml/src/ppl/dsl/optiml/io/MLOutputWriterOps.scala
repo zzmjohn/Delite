@@ -2,7 +2,7 @@ package ppl.dsl.optiml.io
 
 import java.io.{PrintWriter}
 import scala.reflect.SourceContext
-import scala.lms.ops.{Base, BaseFatExp}
+import scala.lms._
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.dsl.optiml._

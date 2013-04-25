@@ -1,7 +1,7 @@
 package ppl.dsl.optiml.io
 
 import java.io._
-import scala.lms.ops.Base
+import scala.lms._
 import ppl.dsl.optiml._
 import ppl.dsl.optiml.application.BinarizedGradientTemplate
 

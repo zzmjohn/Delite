@@ -2,7 +2,9 @@ package ppl.dsl.optiml
 
 import java.io._
 import scala.reflect.SourceContext
+import scala.lms._
 import scala.lms.ops._
+import scala.lms.targets.clike.codegen._
 import scala.lms.internal.{Expressions, GenericFatCodegen, GenericCodegen}
 import ppl.delite.framework.{Config, DeliteApplication, DeliteInteractive, DeliteInteractiveRunner, DeliteRestageOps, DeliteRestageOpsExp, DeliteRestageRunner}
 import ppl.delite.framework.codegen.Target

@@ -2,7 +2,9 @@ package ppl.dsl.optiml.graph
 
 import scala.lms.ops.{VariablesExp, Variables}
 import ppl.dsl.optiml._
+import scala.lms._
 import scala.lms.ops._
+import scala.lms.targets.clike.codegen._
 import scala.lms.internal.{GenerationFailedException, GenericNestedCodegen}
 import java.io.PrintWriter
 
