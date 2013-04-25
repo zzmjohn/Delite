@@ -1,0 +1,3 @@
+#!/bin/bash
+
+~kjbrown/bin/sbt "; project optigraph; compile; project optigraph-apps; compile; project runtime; compile"
