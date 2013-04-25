@@ -2,7 +2,9 @@ package ppl.dsl.optila
 
 import java.io._
 import scala.reflect.SourceContext
+import scala.lms._
 import scala.lms.ops._
+import scala.lms.targets.clike.codegen._
 import scala.lms.internal.{GenericFatCodegen, GenericCodegen}
 import ppl.delite.framework.{Config, ExpressionsOpt, SchedulingOpt, DeliteApplication, DeliteInteractive, DeliteInteractiveRunner}
 import ppl.delite.framework.datastructures._
@@ -74,7 +76,7 @@ trait OptiLAScalaCodeGenPkg extends ScalaGenBase
   with ScalaGenSynchronizedArrayBufferOps with ScalaGenHashMapOps with ScalaGenIterableOps with ScalaGenArrayBufferOps with ScalaGenExceptionOps
   { val IR: OptiLAScalaOpsPkgExp  }
 
-trait OptiLACudaCodeGenPkg extends CudaGenDSLOps with CudaGenImplicitOps with CudaGenOrderingOps
+trait OptiLACudaCodeGenPkg extends CudaGenBase with CudaGenImplicitOps with CudaGenOrderingOps
   with CudaGenEqual with CudaGenIfThenElse with CudaGenVariables with CudaGenWhile with CudaGenTupleOps with CudaGenFunctions
   with CudaGenStringOps with CudaGenRangeOps with CudaGenIOOps with CudaGenArrayOps with CudaGenBooleanOps
   with CudaGenPrimitiveOps with CudaGenMiscOps
@@ -82,7 +84,7 @@ trait OptiLACudaCodeGenPkg extends CudaGenDSLOps with CudaGenImplicitOps with Cu
   with CudaGenSynchronizedArrayBufferOps with CudaGenHashMapOps with CudaGenIterableOps with CudaGenArrayBufferOps with CudaGenExceptionOps
   { val IR: OptiLAScalaOpsPkgExp  }
 
-trait OptiLAOpenCLCodeGenPkg extends OpenCLGenDSLOps with OpenCLGenImplicitOps with OpenCLGenOrderingOps
+trait OptiLAOpenCLCodeGenPkg extends OpenCLGenBase with OpenCLGenImplicitOps with OpenCLGenOrderingOps
   with OpenCLGenEqual with OpenCLGenIfThenElse with OpenCLGenVariables with OpenCLGenWhile with OpenCLGenFunctions
   with OpenCLGenStringOps with OpenCLGenRangeOps with OpenCLGenIOOps with OpenCLGenArrayOps with OpenCLGenBooleanOps
   with OpenCLGenPrimitiveOps with OpenCLGenMiscOps //with OpenCLGenTupleOps
@@ -90,7 +92,7 @@ trait OptiLAOpenCLCodeGenPkg extends OpenCLGenDSLOps with OpenCLGenImplicitOps w
   with OpenCLGenSynchronizedArrayBufferOps with OpenCLGenHashMapOps with OpenCLGenIterableOps with OpenCLGenArrayBufferOps
   { val IR: OptiLAScalaOpsPkgExp  }
 
-trait OptiLACCodeGenPkg extends CGenDSLOps with CGenImplicitOps with CGenOrderingOps
+trait OptiLACCodeGenPkg extends CGenBase with CGenImplicitOps with CGenOrderingOps
   with CGenEqual with CGenIfThenElse with CGenVariables with CGenWhile with CGenFunctions
   with CGenStringOps with CGenRangeOps with CGenIOOps with CGenArrayOps with CGenBooleanOps
   with CGenPrimitiveOps with CGenMiscOps

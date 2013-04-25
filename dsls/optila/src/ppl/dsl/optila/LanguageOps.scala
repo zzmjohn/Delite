@@ -5,6 +5,7 @@ import java.io.PrintWriter
 import reflect.Manifest
 import scala.lms.internal.GenericFatCodegen
 import scala.lms.ops._
+import scala.lms._
 import scala.reflect.SourceContext
 
 /* Machinery provided by OptiLA itself (language features and control structures).

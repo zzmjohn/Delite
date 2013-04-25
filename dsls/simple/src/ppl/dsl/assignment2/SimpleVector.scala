@@ -43,14 +43,14 @@ trait SimpleVectorScalaCodeGenPkg extends ScalaGenBase
   with ScalaGenDeliteArrayOps with ScalaGenStruct
   { val IR: SimpleVectorScalaOpsPkgExp }
 
-trait SimpleVectorCudaCodeGenPkg extends CudaGenDSLOps
+trait SimpleVectorCudaCodeGenPkg extends CudaGenBase
   with CudaGenEqual with CudaGenIfThenElse with CudaGenVariables with CudaGenWhile with CudaGenFunctions
   with CudaGenImplicitOps with CudaGenNumericOps with CudaGenOrderingOps with CudaGenStringOps
   with CudaGenBooleanOps with CudaGenPrimitiveOps with CudaGenMiscOps
   with CudaGenMathOps with CudaGenCastingOps with CudaGenArrayOps with CudaGenRangeOps
   { val IR: SimpleVectorScalaOpsPkgExp }
 
-trait SimpleVectorCCodeGenPkg extends CGenDSLOps
+trait SimpleVectorCCodeGenPkg extends CGenBase
   with CGenEqual with CGenIfThenElse with CGenVariables with CGenWhile with CGenFunctions
   with CGenImplicitOps with CGenNumericOps with CGenOrderingOps with CGenStringOps
   with CGenBooleanOps with CGenPrimitiveOps with CGenMiscOps

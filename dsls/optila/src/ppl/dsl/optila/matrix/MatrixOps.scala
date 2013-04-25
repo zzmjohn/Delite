@@ -2,9 +2,10 @@ package ppl.dsl.optila.matrix
 
 import java.io.{PrintWriter}
 
-import scala.lms.ops.DSLOpsExp
+
+import scala.lms._
 import scala.lms.ops.{VariablesExp, Variables}
-import scala.lms.ops.{CudaGenBase, ScalaGenBase, OpenCLGenBase, CGenBase}
+import scala.lms.targets.clike.codegen._
 import scala.lms.internal.{GenerationFailedException}
 import scala.reflect.SourceContext
 

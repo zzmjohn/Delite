@@ -1,9 +1,11 @@
 package ppl.dsl.optila.capabilities
 
 import scala.lms.util.OverloadHack
+import scala.lms._
 import scala.lms.ops._
-import java.io.PrintWriter
+import scala.lms.targets.clike.codegen._
 import scala.lms.internal.{CLikeCodegen}
+import java.io.PrintWriter
 import ppl.dsl.optila.{OptiLAExp, OptiLA}
 import scala.reflect.SourceContext
 

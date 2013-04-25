@@ -1,6 +1,6 @@
 package ppl.dsl.optila.vector
 
-import scala.lms.ops.{EffectExp, BaseExp, Base, ScalaGenBase}
+import scala.lms._
 import scala.lms.util.OverloadHack
 import scala.reflect.SourceContext
 import java.io.PrintWriter

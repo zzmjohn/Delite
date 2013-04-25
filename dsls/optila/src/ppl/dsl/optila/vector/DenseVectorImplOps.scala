@@ -1,7 +1,6 @@
 package ppl.dsl.optila.vector
 
-import scala.lms.ScalaOpsPkg
-import scala.lms.{BaseExp, Base}
+import scala.lms._
 import ppl.dsl.optila.{OptiLALift, OptiLACompiler, OptiLA}
 
 trait DenseVectorImplOps { this: OptiLA =>

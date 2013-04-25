@@ -1,7 +1,8 @@
 package ppl.dsl.optila.io
 
 import java.io.{PrintWriter}
-import scala.lms.ops.{TupleOpsExp, Base, BaseFatExp}
+import scala.lms._
+import scala.lms.ops.{TupleOpsExp}
 import scala.reflect.SourceContext
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.datastructures.DeliteArrayBuffer

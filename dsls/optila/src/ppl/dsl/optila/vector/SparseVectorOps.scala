@@ -3,7 +3,9 @@ package ppl.dsl.optila.vector
 import java.io.{PrintWriter}
 import scala.reflect.{Manifest,SourceContext}
 
-import scala.lms.ops._
+import scala.lms._
+import scala.lms.ops.{VariablesExp, Variables}
+import scala.lms.targets.clike.codegen._
 import scala.lms.internal.{GenerationFailedException, GenericFatCodegen}
 
 import ppl.delite.framework.DeliteApplication

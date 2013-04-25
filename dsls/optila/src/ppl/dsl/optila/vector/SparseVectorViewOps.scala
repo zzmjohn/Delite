@@ -2,8 +2,9 @@ package ppl.dsl.optila.vector
 
 import java.io.PrintWriter
 import scala.reflect.{Manifest, SourceContext}
-import scala.lms.ops.{EffectExp, BaseExp, Base, ScalaGenBase, ScalaGenFat, CudaGenBase, CudaGenFat}
+import scala.lms._
 import scala.lms.util.OverloadHack
+import scala.lms.targets.clike.codegen._
 import scala.lms.internal.{GenericFatCodegen,GenerationFailedException}
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.DeliteCollection

@@ -1,8 +1,8 @@
 package ppl.dsl.optila.io
 
+import scala.lms._
 import java.io.{PrintWriter}
 import scala.reflect.SourceContext
-import scala.lms.ops.{Base, BaseFatExp}
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.delite.framework.{Interfaces,InterfacesExp}

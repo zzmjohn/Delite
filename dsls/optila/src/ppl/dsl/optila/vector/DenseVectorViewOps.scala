@@ -3,14 +3,16 @@ package ppl.dsl.optila.vector
 import java.io.PrintWriter
 import scala.reflect.{Manifest, SourceContext}
 import scala.lms.util.OverloadHack
-import scala.lms.internal.{GenericFatCodegen,GenerationFailedException}
+import scala.lms._
+import scala.lms.ops.{VariablesExp, Variables}
+import scala.lms.targets.clike.codegen._
+import scala.lms.internal.{GenerationFailedException, GenericFatCodegen}
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.DeliteCollection
 import ppl.delite.framework.datastructures.{DeliteArray, DeliteStructsExp}
 import ppl.delite.framework.ops.{DeliteOpsExp, DeliteCollectionOpsExp}
 import ppl.delite.framework.Util._
 import ppl.dsl.optila._
-import virtualization.lms.common._
 
 trait DenseVectorViewOps extends Base with OverloadHack { this: OptiLA =>
 

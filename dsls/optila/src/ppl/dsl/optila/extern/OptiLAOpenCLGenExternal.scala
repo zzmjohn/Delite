@@ -1,6 +1,7 @@
 package ppl.dsl.optila.extern
 
-import scala.lms.internal._
+import scala.lms._
+import scala.lms.targets.clike.codegen._
 import collection.mutable.{ListBuffer}
 import collection.mutable.HashMap
 import java.io.{FileWriter, BufferedWriter, File, PrintWriter}

@@ -58,7 +58,7 @@ trait DeLisztScalaCodeGenPkg extends ScalaGenBase
   with ScalaGenArrayBufferOps
   { val IR: DeLisztScalaOpsPkgExp  }
 
-trait DeLisztCudaCodeGenPkg extends CudaGenDSLOps
+trait DeLisztCudaCodeGenPkg extends CudaGenBase
   with CudaGenEqual with CudaGenIfThenElse with CudaGenVariables with CudaGenWhile with CudaGenFunctions
   with CudaGenImplicitOps with CudaGenOrderingOps with CudaGenStringOps with CudaGenRangeOps with CudaGenIOOps
   with CudaGenArrayOps with CudaGenBooleanOps with CudaGenPrimitiveOps with CudaGenMiscOps /* with CudaGenTupleOps */

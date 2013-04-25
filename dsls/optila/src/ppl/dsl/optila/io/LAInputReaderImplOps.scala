@@ -1,7 +1,7 @@
 package ppl.dsl.optila.io
 
 import java.io._
-import scala.lms.ops.Base
+import scala.lms._
 import ppl.dsl.optila._
 
 trait LAInputReaderImplOps { this: OptiLA =>

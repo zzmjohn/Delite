@@ -1,6 +1,6 @@
 package ppl.dsl.optila
 
-import virtualization.lms.internal.{Hosts, Expressions, CppHostTransfer, CLikeCodegen}
+import scala.lms.internal.{Hosts, Expressions, CppHostTransfer, CLikeCodegen}
 
 trait OptiLACppHostTransfer extends CppHostTransfer {
   this: CLikeCodegen =>
