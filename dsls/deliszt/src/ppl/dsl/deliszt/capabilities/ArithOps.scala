@@ -2,9 +2,9 @@ package ppl.dsl.deliszt.capabilities
 
 import java.io.PrintWriter
 import reflect.{Manifest, SourceContext}
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{CLikeCodegen}
-import scala.virtualization.lms.util.OverloadHack
+import scala.lms.ops._
+import scala.lms.internal.{CLikeCodegen}
+import scala.lms.util.OverloadHack
 
 import ppl.dsl.deliszt._
 import ppl.dsl.deliszt.MetaInteger._

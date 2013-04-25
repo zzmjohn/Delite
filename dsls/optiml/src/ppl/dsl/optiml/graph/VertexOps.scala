@@ -3,8 +3,8 @@ package ppl.dsl.optiml.graph
 import java.io.{PrintWriter}
 import scala.reflect.Manifest
 import scala.collection.mutable.ArrayBuffer
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenerationFailedException, GenericNestedCodegen}
+import scala.lms.ops._
+import scala.lms.internal.{GenerationFailedException, GenericNestedCodegen}
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.dsl.optiml._

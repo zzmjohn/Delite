@@ -1,6 +1,6 @@
 package ppl.dsl.deliszt.vec
 
-import scala.virtualization.lms.common.Base
+import scala.lms.ops.Base
 import ppl.dsl.deliszt.DeLiszt
 
 trait VectorViewImplOps { this: Base =>

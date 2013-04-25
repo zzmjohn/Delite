@@ -1,7 +1,7 @@
 package ppl.dsl.optiml.graph
 
-import scala.virtualization.lms.common.ScalaOpsPkg
-import scala.virtualization.lms.common.{BaseExp, Base}
+import scala.lms.ScalaOpsPkg
+import scala.lms.{BaseExp, Base}
 import ppl.dsl.optiml._
 
 trait EdgeImplOps { this: OptiML =>

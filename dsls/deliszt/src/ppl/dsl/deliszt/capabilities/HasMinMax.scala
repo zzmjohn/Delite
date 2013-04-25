@@ -1,6 +1,6 @@
 package ppl.dsl.deliszt.capabilities
 
-import scala.virtualization.lms.common.{Variables, Base}
+import scala.lms.ops.{Variables, Base}
 import ppl.dsl.deliszt.{DeLisztExp, DeLiszt}
 
 trait HasMinMaxInternal[Rep[X], T] {

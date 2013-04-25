@@ -2,8 +2,10 @@ package ppl.delite.framework.codegen.delite.overrides
 
 import java.io.PrintWriter
 import ppl.delite.framework.ops.DeliteOpsExp
-import scala.virtualization.lms.internal.{CLikeCodegen}
-import scala.virtualization.lms.common._
+import scala.lms.internal.{CLikeCodegen}
+import scala.lms.targets.clike.codegen._
+import scala.lms.ops._
+import scala.lms._
 
 trait DeliteScalaGenVariables extends ScalaGenEffect {
   val IR: VariablesExp with DeliteOpsExp

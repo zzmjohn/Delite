@@ -3,8 +3,8 @@ package ppl.dsl.optigraph.ops
 import java.io.{PrintWriter}
 
 import reflect.{Manifest,SourceContext}
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenerationFailedException, GenericNestedCodegen}
+import scala.lms.ops._
+import scala.lms.internal.{GenerationFailedException, GenericNestedCodegen}
 import ppl.dsl.optigraph._
 import ppl.delite.framework.datastructures.DeliteArray
 

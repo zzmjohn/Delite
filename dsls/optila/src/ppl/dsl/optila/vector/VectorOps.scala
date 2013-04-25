@@ -2,8 +2,8 @@ package ppl.dsl.optila.vector
 
 import java.io.{PrintWriter}
 import reflect.{Manifest, SourceContext}
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenerationFailedException, GenericFatCodegen}
+import scala.lms.ops._
+import scala.lms.internal.{GenerationFailedException, GenericFatCodegen}
 
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.{DeliteOpsExp, DeliteCollectionOpsExp}

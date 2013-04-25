@@ -1,8 +1,8 @@
 package ppl.dsl.CVX
 
 import java.io._
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenericFatCodegen, GenericCodegen}
+import scala.lms.ops._
+import scala.lms.internal.{GenericFatCodegen, GenericCodegen}
 import ppl.delite.framework.{Config, DeliteApplication}
 import ppl.delite.framework.codegen.Target
 import ppl.delite.framework.codegen.scala.TargetScala
@@ -58,7 +58,7 @@ trait CVXScalaOpsPkg extends Base
   // only included because of args. TODO: investigate passing args as a vector
   with ArrayOps
   
-trait CVXScalaOpsPkgExp extends CVXScalaOpsPkg with DSLOpsExp
+trait CVXScalaOpsPkgExp extends CVXScalaOpsPkg
   with EqualExp with IfThenElseExp with VariablesExp with WhileExp with FunctionsExp
   with ImplicitOpsExp with OrderingOpsExp with StringOpsExp with RangeOpsExp with IOOpsExp
   with ArrayOpsExp with BooleanOpsExp with PrimitiveOpsExp with MiscOpsExp with TupleOpsExp
@@ -66,7 +66,7 @@ trait CVXScalaOpsPkgExp extends CVXScalaOpsPkg with DSLOpsExp
   with SynchronizedArrayBufferOpsExp with HashMapOpsExp with IterableOpsExp
 
   
-trait CVXScalaCodeGenPkg extends ScalaGenDSLOps
+trait CVXScalaCodeGenPkg extends ScalaGenBase
   with ScalaGenEqual with ScalaGenIfThenElse with ScalaGenVariables with ScalaGenWhile with ScalaGenFunctions
   with ScalaGenImplicitOps with ScalaGenOrderingOps with ScalaGenStringOps with ScalaGenRangeOps with ScalaGenIOOps
   with ScalaGenArrayOps with ScalaGenBooleanOps with ScalaGenPrimitiveOps with ScalaGenMiscOps with ScalaGenTupleOps

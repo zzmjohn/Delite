@@ -2,12 +2,12 @@ package ppl.dsl.optigraph.ops
 
 import reflect.{Manifest, SourceContext}
 import ppl.delite.framework.ops._
-import scala.virtualization.lms.common.{VariablesExp, Variables}
+import scala.lms.ops.{VariablesExp, Variables}
 import ppl.delite.framework.ops.{DeliteOpsExp, DeliteCollectionOpsExp}
 import ppl.delite.framework.datastructures.DeliteArray
 import ppl.dsl.optigraph._
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenerationFailedException, GenericFatCodegen}
+import scala.lms.ops._
+import scala.lms.internal.{GenerationFailedException, GenericFatCodegen}
 import java.io.PrintWriter
 
 trait NodePropertyOps extends Variables {

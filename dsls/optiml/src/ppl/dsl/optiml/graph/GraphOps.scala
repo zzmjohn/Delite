@@ -3,8 +3,8 @@ package ppl.dsl.optiml.graph
 import java.io.{PrintWriter}
 
 import reflect.Manifest
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenerationFailedException, GenericNestedCodegen}
+import scala.lms.ops._
+import scala.lms.internal.{GenerationFailedException, GenericNestedCodegen}
 //import scala.collection.mutable.HashMap
 import java.util.HashMap
 import ppl.dsl.optiml._

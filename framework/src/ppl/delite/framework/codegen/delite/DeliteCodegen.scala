@@ -3,8 +3,6 @@ package ppl.delite.framework.codegen.delite
 import java.io.{FileWriter, BufferedWriter, File, PrintWriter}
 import collection.mutable.{ListBuffer,HashMap}
 import scala.reflect.SourceContext
-import scala.virtualization.lms.internal._
-import scala.virtualization.lms.common._
 
 import generators.{DeliteGenTaskGraph}
 import overrides.{DeliteScalaGenVariables, DeliteCudaGenVariables, DeliteAllOverridesExp}
@@ -12,8 +10,10 @@ import ppl.delite.framework.{Config, DeliteApplication}
 import ppl.delite.framework.transform.ForwardPassTransformer
 import ppl.delite.framework.ops.DeliteOpsExp
 
-import scala.virtualization.lms.internal._
-import scala.virtualization.lms.common._
+import scala.lms.internal._
+import scala.lms.ops._
+import scala.lms.transform.{WorklistTransformer}
+import scala.lms._
 
 import ppl.delite.framework.{Config, DeliteApplication}
 import ppl.delite.framework.ops.DeliteOpsExp

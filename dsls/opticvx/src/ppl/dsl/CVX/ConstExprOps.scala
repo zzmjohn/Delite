@@ -1,7 +1,7 @@
 package ppl.dsl.CVX
 
-import scala.virtualization.lms.common.{ScalaGenBase, Base, BaseExp, EffectExp}
-import scala.virtualization.lms.util.{OverloadHack}
+import scala.lms.{ScalaGenBase, Base, BaseExp, EffectExp}
+import scala.lms.util.{OverloadHack}
 
 // to just print out type info
 import java.io.PrintWriter

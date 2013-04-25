@@ -2,8 +2,9 @@ package ppl.dsl.deliszt.analysis
 
 import java.io.PrintWriter
 import reflect.{Manifest, SourceContext}
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.GenericFatCodegen
+import scala.lms._
+import scala.lms.ops._
+import scala.lms.internal.GenericFatCodegen
 
 import ppl.delite.framework.{Config, DeliteApplication}
 

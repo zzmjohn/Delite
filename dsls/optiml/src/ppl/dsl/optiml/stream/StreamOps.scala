@@ -2,7 +2,7 @@ package ppl.dsl.optiml.stream
 
 import java.io.{PrintWriter}
 import ppl.delite.framework.DeliteApplication
-import scala.virtualization.lms.common.{VariablesExp, Variables, DSLOpsExp, CGenBase, CudaGenBase, ScalaGenBase}
+import scala.lms.ops.{VariablesExp, Variables, DSLOpsExp, CGenBase, CudaGenBase, ScalaGenBase}
 import scala.reflect.SourceContext
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.delite.framework.Config

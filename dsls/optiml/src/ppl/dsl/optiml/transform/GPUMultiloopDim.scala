@@ -1,8 +1,8 @@
 package ppl.dsl.optiml.transform
 
 import java.io._
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{AbstractSubstTransformer,Transforming}
+import scala.lms.ops._
+import scala.lms.internal.{AbstractSubstTransformer,Transforming}
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.{DeliteOpsExp, DeliteCollection, BaseDeliteOpsTraversalFat}
 import ppl.delite.framework.Config

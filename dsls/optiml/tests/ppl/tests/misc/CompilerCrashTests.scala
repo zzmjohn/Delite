@@ -1,7 +1,7 @@
 package ppl.tests.misc
 
 import collection.mutable.ListBuffer
-import scala.virtualization.lms.common.ScalaOpsPkg
+import scala.lms.ScalaOpsPkg
 
 /* Testing small cases to try to identify causes of scalac crashes.
  *

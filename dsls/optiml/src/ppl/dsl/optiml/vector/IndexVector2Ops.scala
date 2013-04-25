@@ -1,7 +1,7 @@
 package ppl.dsl.optiml.vector
 
 import java.io.PrintWriter
-import scala.virtualization.lms.common.{EffectExp, BaseExp, Base, ScalaGenBase}
+import scala.lms.ops.{EffectExp, BaseExp, Base, ScalaGenBase}
 import scala.reflect.SourceContext
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.transform.LoweringTransform

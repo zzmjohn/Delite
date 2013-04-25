@@ -1,7 +1,7 @@
 package ppl.dsl.optiql.ops
 
 import java.io.PrintWriter
-import scala.virtualization.lms.common.{ScalaGenBase, ScalaGenEffect, BaseExp, Base}
+import scala.lms.ops.{ScalaGenBase, ScalaGenEffect, BaseExp, Base}
 import reflect.SourceContext
 import ppl.dsl.optiql.{OptiQLCompiler, OptiQLLift, OptiQLExp, OptiQL}
 

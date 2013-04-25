@@ -6,8 +6,8 @@ import java.io.{PrintWriter}
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.DeliteOpsExp
 import reflect.Manifest
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenerationFailedException, GenericNestedCodegen}
+import scala.lms.ops._
+import scala.lms.internal.{GenerationFailedException, GenericNestedCodegen}
 
 trait EdgeOps extends Variables {
   this: OptiML =>

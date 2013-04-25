@@ -4,10 +4,10 @@ import java.io.PrintWriter
 
 import reflect.{Manifest,SourceContext}
 
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.common.{VariablesExp, Variables}
-import scala.virtualization.lms.internal.{GenerationFailedException, GenericFatCodegen}
-import scala.virtualization.lms.util._
+import scala.lms.ops._
+import scala.lms.ops.{VariablesExp, Variables}
+import scala.lms.internal.{GenerationFailedException, GenericFatCodegen}
+import scala.lms.util._
 
 import ppl.delite.framework.ops._
 import ppl.delite.framework.datastructures.DeliteArray

@@ -1,6 +1,7 @@
 package ppl.delite.framework.ops
 
-import scala.virtualization.lms.common._
+import scala.lms._
+import scala.lms.ops._
 import scala.reflect.{SourceContext, RefinedManifest}
 import ppl.delite.framework.datastructures._
 import ppl.delite.framework.Config

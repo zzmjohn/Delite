@@ -1,6 +1,6 @@
 package ppl.dsl.optiql.ops
 
-import scala.virtualization.lms.common.{ScalaGenFat, BaseFatExp, Base}
+import scala.lms.ops.{ScalaGenFat, BaseFatExp, Base}
 import ppl.dsl.optiql.{OptiQL, OptiQLExp}
 import ppl.delite.framework.ops.{DeliteCollection, DeliteCollectionOpsExp}
 import ppl.delite.framework.datastructures.{DeliteArray, DeliteArrayBuffer, DeliteStructsExp}

@@ -2,8 +2,8 @@ package ppl.dsl.optiml.vector
 
 import java.io.PrintWriter
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common.{EffectExp, BaseExp, Base, ScalaGenBase}
-import scala.virtualization.lms.util.OverloadHack
+import scala.lms.ops.{EffectExp, BaseExp, Base, ScalaGenBase}
+import scala.lms.util.OverloadHack
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.{DeliteCollectionOpsExp}
 import ppl.delite.framework.ops.DeliteCollection

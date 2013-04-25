@@ -2,10 +2,10 @@ package ppl.dsl.optiml.matrix
 
 import java.io.{PrintWriter}
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common.{DSLOpsExp, FunctionBlocksExp}
-import scala.virtualization.lms.common.{VariablesExp, Variables}
-import scala.virtualization.lms.common.{CudaGenEffect, ScalaGenEffect, CudaGenBase, ScalaGenBase, CGenBase, OpenCLGenBase}
-import scala.virtualization.lms.internal.{GenerationFailedException}
+import scala.lms.ops.{DSLOpsExp, FunctionBlocksExp}
+import scala.lms.ops.{VariablesExp, Variables}
+import scala.lms.ops.{CudaGenEffect, ScalaGenEffect, CudaGenBase, ScalaGenBase, CGenBase, OpenCLGenBase}
+import scala.lms.internal.{GenerationFailedException}
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.DeliteCollection
 import ppl.delite.framework.ops.DeliteOpsExp

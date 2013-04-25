@@ -2,8 +2,10 @@ package ppl.delite.framework
 
 import java.io._
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenericFatCodegen, GenericCodegen}
+import scala.lms._
+import scala.lms.ops._
+import scala.lms.transform._
+import scala.lms.internal.{GenericFatCodegen, GenericCodegen}
 import ppl.delite.framework.datastructures._
 import ppl.delite.framework.codegen.Target
 import ppl.delite.framework.codegen.scala.TargetScala
@@ -33,14 +35,14 @@ trait DeliteILScalaOpsPkg extends Base
   with CastingOps with ObjectOps with IOOps with HashMapOps
   with ArrayOps with ExceptionOps with MathOps with NumericOps with FractionalOps
 
-trait DeliteILScalaOpsPkgExp extends DeliteILScalaOpsPkg with DSLOpsExp
+trait DeliteILScalaOpsPkgExp extends DeliteILScalaOpsPkg
   with EqualExp with IfThenElseExp with VariablesExp with WhileExp with TupleOpsExp with TupledFunctionsExp
   with ImplicitOpsExp with OrderingOpsExp with StringOpsExp with RangeOpsExp with IOOpsExp
   with ArrayOpsExp with BooleanOpsExp with PrimitiveOpsExp with MiscOpsExp  with NumericOpsExp with FractionalOpsExp
   with ListOpsExp with SeqOpsExp with MathOpsExp with CastingOpsExp with SetOpsExp with ObjectOpsExp
   with SynchronizedArrayBufferOpsExp with HashMapOpsExp with IterableOpsExp with ArrayBufferOpsExp with ExceptionOpsExp 
 
-trait DeliteILScalaCodeGenPkg extends ScalaGenDSLOps
+trait DeliteILScalaCodeGenPkg extends ScalaGenBase
   with ScalaGenEqual with ScalaGenIfThenElse with ScalaGenVariables with ScalaGenWhile with ScalaGenTupleOps
   with ScalaGenImplicitOps with ScalaGenOrderingOps with ScalaGenStringOps with ScalaGenRangeOps with ScalaGenIOOps
   with ScalaGenArrayOps with ScalaGenBooleanOps with ScalaGenPrimitiveOps with ScalaGenMiscOps  with ScalaGenNumericOps with ScalaGenFractionalOps

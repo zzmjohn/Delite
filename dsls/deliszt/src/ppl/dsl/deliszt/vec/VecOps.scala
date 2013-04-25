@@ -7,8 +7,8 @@ import ppl.dsl.deliszt.MetaInteger._
 
 import ppl.delite.framework.ops.DeliteCollection
 import ppl.delite.framework.ops.DeliteCollectionOpsExp
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.GenericFatCodegen
+import scala.lms.ops._
+import scala.lms.internal.GenericFatCodegen
 import ppl.dsl.deliszt.{DeLisztExp, DeLiszt}
 
 trait VecOps extends Variables {

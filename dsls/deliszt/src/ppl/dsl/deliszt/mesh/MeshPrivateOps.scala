@@ -2,7 +2,7 @@ package ppl.dsl.deliszt.mesh
 
 import java.io.PrintWriter
 
-import scala.virtualization.lms.common._
+import scala.lms.ops._
 import ppl.dsl.deliszt.{DeLisztExp, DeLiszt}
 import ppl.dsl.deliszt._
 

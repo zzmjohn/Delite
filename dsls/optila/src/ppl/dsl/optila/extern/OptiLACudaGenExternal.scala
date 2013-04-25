@@ -1,6 +1,6 @@
 package ppl.dsl.optila.extern
 
-import scala.virtualization.lms.internal._
+import scala.lms.internal._
 import collection.mutable.{ListBuffer}
 import collection.mutable.HashMap
 import java.io.{FileWriter, BufferedWriter, File, PrintWriter}

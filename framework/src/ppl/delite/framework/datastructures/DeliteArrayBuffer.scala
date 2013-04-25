@@ -1,6 +1,8 @@
 package ppl.delite.framework.datastructures
 
-import scala.virtualization.lms.common._
+import scala.lms._
+import scala.lms.ops._
+import scala.lms.targets.clike.codegen._
 import java.io.PrintWriter
 import reflect.{SourceContext, RefinedManifest}
 import ppl.delite.framework.Config

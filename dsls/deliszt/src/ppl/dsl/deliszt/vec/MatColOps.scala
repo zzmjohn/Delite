@@ -1,8 +1,8 @@
 package ppl.dsl.deliszt.vec
 
 import java.io.PrintWriter
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.util.OverloadHack
+import scala.lms.ops._
+import scala.lms.util.OverloadHack
 import ppl.dsl.deliszt.{DeLiszt, DeLisztExp}
 import ppl.dsl.deliszt._
 import ppl.dsl.deliszt.MetaInteger._

@@ -7,7 +7,7 @@ import ppl.delite.framework.codegen.Target
 import ppl.delite.runtime.graph._
 import ppl.delite.runtime.graph.ops._
 import ppl.delite.runtime.graph.targets.Targets
-import scala.virtualization.lms.common._
+import scala.lms.ops._
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedBuffer }
 import java.io.{ File, Console => _, _ }
 import java.io.FileSystem

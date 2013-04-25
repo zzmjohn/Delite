@@ -1,8 +1,8 @@
 package ppl.dsl.deliszt.vec
 
 import java.io.PrintWriter
-import scala.virtualization.lms.util.OverloadHack
-import scala.virtualization.lms.common.{BaseExp, Base, ScalaGenBase}
+import scala.lms.util.OverloadHack
+import scala.lms.{BaseExp, Base, ScalaGenBase}
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.dsl.deliszt.VecView
 

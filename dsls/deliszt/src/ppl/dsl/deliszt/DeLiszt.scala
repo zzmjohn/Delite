@@ -3,8 +3,9 @@ package ppl.dsl.deliszt
 import datastruct.{CudaGenDataStruct,CGenDataStruct}
 import extern.{DeLisztCudaGenExternal, DeLisztScalaGenExternal}
 import java.io._
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenericFatCodegen, GenerationFailedException}
+import scala.lms._
+import scala.lms.ops._
+import scala.lms.internal.{GenericFatCodegen, GenerationFailedException}
 import ppl.delite.framework.{Config, DeliteApplication}
 import ppl.delite.framework.analysis.TraversalAnalysis
 import ppl.delite.framework.codegen.Target
@@ -42,14 +43,14 @@ trait DeLisztScalaOpsPkg extends Base
   // only included because of args. TODO: investigate passing args as a vec
   with ArrayOps
 
-trait DeLisztScalaOpsPkgExp extends DeLisztScalaOpsPkg with DSLOpsExp
+trait DeLisztScalaOpsPkgExp extends DeLisztScalaOpsPkg
   with EqualExp with IfThenElseExp with VariablesExp with WhileExp with FunctionsExp
   with ImplicitOpsExp with OrderingOpsExp with StringOpsExp with RangeOpsExp with IOOpsExp
   with ArrayOpsExp with BooleanOpsExp with PrimitiveOpsExp with MiscOpsExp with TupleOpsExp
   with ListOpsExp with SeqOpsExp with MathOpsExp with CastingOpsExp with SetOpsExp with ObjectOpsExp
   with ArrayBufferOpsExp
 
-trait DeLisztScalaCodeGenPkg extends ScalaGenDSLOps
+trait DeLisztScalaCodeGenPkg extends ScalaGenBase
   with ScalaGenEqual with ScalaGenIfThenElse with ScalaGenVariables with ScalaGenWhile with ScalaGenFunctions
   with ScalaGenImplicitOps with ScalaGenOrderingOps with ScalaGenStringOps with ScalaGenRangeOps with ScalaGenIOOps
   with ScalaGenArrayOps with ScalaGenBooleanOps with ScalaGenPrimitiveOps with ScalaGenMiscOps with ScalaGenTupleOps

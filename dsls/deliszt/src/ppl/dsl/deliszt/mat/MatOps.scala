@@ -4,8 +4,8 @@ import java.io.{PrintWriter}
 import reflect.{Manifest, SourceContext}
 
 import ppl.delite.framework.{DeliteApplication}
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenerationFailedException}
+import scala.lms.ops._
+import scala.lms.internal.{GenerationFailedException}
 
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.delite.framework.Config

@@ -1,7 +1,7 @@
 package ppl.delite.framework.datastructures
 
-import virtualization.lms.internal.{Hosts, Expressions, CppHostTransfer, CLikeCodegen, GenerationFailedException}
-import virtualization.lms.common.BaseGenStruct
+import scala.lms.internal.{Hosts, Expressions, CppHostTransfer, CLikeCodegen, GenerationFailedException}
+import scala.lms.ops.BaseGenStruct
 import ppl.delite.framework.Config
 
 trait DeliteCppHostTransfer extends CppHostTransfer {

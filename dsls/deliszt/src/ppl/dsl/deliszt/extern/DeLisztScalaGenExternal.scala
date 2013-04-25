@@ -1,7 +1,7 @@
 package ppl.dsl.deliszt.extern
 
 import java.io.PrintWriter
-import scala.virtualization.lms.internal._
+import scala.lms.internal._
 import ppl.delite.framework.extern.codegen.scala.ScalaGenExternalBase
 import ppl.dsl.deliszt.DeLisztExp
 

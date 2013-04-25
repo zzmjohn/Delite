@@ -1,7 +1,7 @@
 /*package ppl.dsl.optigraph.io
 
 import java.io.{PrintWriter}
-import scala.virtualization.lms.common.{TupleOpsExp, Base, BaseFatExp}
+import scala.lms.ops.{TupleOpsExp, Base, BaseFatExp}
 import ppl.delite.framework.{DeliteApplication}
 import ppl.dsl.optigraph.{OptiGraphExp, OptiGraph}
 import ppl.delite.framework.ops.DeliteOpsExp

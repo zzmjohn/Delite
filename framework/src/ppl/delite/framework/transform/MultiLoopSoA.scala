@@ -4,7 +4,9 @@ import ppl.delite.framework.ops._
 import ppl.delite.framework.datastructures._
 import ppl.delite.framework.{Config, DeliteApplication}
 import ppl.delite.framework.Util._
-import scala.virtualization.lms.common._
+import scala.lms.transform._
+import scala.lms.ops._
+import scala.lms._
 import scala.reflect.SourceContext
 
 trait MultiloopSoATransformExp extends DeliteTransform with LoweringTransform with DeliteApplication

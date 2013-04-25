@@ -4,8 +4,8 @@ import ppl.delite.framework.ops.{DeliteOpsExp, DeliteCollection}
 import ppl.delite.framework.datastruct.scala._
 import java.io.PrintWriter
 import reflect.{Manifest, SourceContext}
-import scala.virtualization.lms.internal.GenericFatCodegen
-import scala.virtualization.lms.common._
+import scala.lms.internal.GenericFatCodegen
+import scala.lms.ops._
 
 /* Machinery provided by OptiML itself (language features and control structures).
  *

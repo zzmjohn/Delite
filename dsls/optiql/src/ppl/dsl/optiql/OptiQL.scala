@@ -3,9 +3,9 @@ package ppl.dsl.optiql
 import scala.reflect.RefinedManifest
 
 import ops._
-import scala.virtualization.lms.common._
+import scala.lms.ops._
 import ppl.delite.framework.ops._
-import scala.virtualization.lms.internal.GenericFatCodegen
+import scala.lms.internal.GenericFatCodegen
 import ppl.delite.framework.codegen.scala.TargetScala
 import ppl.delite.framework.codegen.cuda.TargetCuda
 import ppl.delite.framework.codegen.opencl.TargetOpenCL

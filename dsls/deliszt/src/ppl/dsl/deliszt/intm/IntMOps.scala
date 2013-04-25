@@ -3,9 +3,9 @@ package ppl.dsl.deliszt.intm
 import java.io.{PrintWriter}
 
 import ppl.delite.framework.{DeliteApplication}
-import scala.virtualization.lms.common.DSLOpsExp
-import scala.virtualization.lms.common.{VariablesExp, Variables}
-import scala.virtualization.lms.common.{CudaGenBase, ScalaGenBase, CGenBase}
+import scala.lms.ops.DSLOpsExp
+import scala.lms.ops.{VariablesExp, Variables}
+import scala.lms.ops.{CudaGenBase, ScalaGenBase, CGenBase}
 import ppl.dsl.deliszt._
 import ppl.dsl.deliszt.MetaInteger._
 

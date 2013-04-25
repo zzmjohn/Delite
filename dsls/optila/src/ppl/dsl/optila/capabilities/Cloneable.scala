@@ -1,6 +1,6 @@
 package ppl.dsl.optila.capabilities
 
-import scala.virtualization.lms.common.{Variables, Base, BaseFatExp}
+import scala.lms.ops.{Variables, Base, BaseFatExp}
 import scala.reflect.SourceContext
 import ppl.delite.framework.datastructures.DeliteArray
 import ppl.dsl.optila.{OptiLAExp, OptiLA}

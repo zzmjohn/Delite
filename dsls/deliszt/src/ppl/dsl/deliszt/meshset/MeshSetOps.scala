@@ -4,8 +4,8 @@ import java.io.PrintWriter
 import ppl.dsl.deliszt._
 
 import reflect.{Manifest, SourceContext}
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.GenericFatCodegen
+import scala.lms.ops._
+import scala.lms.internal.GenericFatCodegen
 import ppl.dsl.deliszt.{DeLisztExp, DeLiszt}
 
 import ppl.dsl.deliszt.datastruct.scala.Mesh

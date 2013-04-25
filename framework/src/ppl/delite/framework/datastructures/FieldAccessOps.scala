@@ -1,7 +1,8 @@
 package ppl.delite.framework.datastructures
 
-import scala.virtualization.lms.common.{ScalaGenFat, BaseFatExp, StructExp}
-import scala.virtualization.lms.internal.{Effects}
+import scala.lms._
+import scala.lms.ops.{StructExp}
+import scala.lms.internal.{Effects}
 import java.io.PrintWriter
 import scala.reflect.SourceContext
 

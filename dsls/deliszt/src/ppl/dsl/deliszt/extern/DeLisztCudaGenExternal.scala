@@ -1,6 +1,6 @@
 package ppl.dsl.deliszt.extern
 
-import scala.virtualization.lms.internal._
+import scala.lms.internal._
 import java.io.PrintWriter
 import ppl.delite.framework.extern.codegen.cuda.CudaGenExternalBase
 import ppl.dsl.deliszt.datastruct.CudaGenDataStruct

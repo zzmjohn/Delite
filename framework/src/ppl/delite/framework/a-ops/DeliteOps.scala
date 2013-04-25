@@ -3,8 +3,11 @@ package ppl.delite.framework.ops
 import java.io.{FileWriter, File, PrintWriter, StringWriter}
 
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenericCodegen, GenericFatCodegen, GenerationFailedException}
+import scala.lms._
+import scala.lms.ops._
+import scala.lms.transform._
+import scala.lms.targets.clike.codegen._
+import scala.lms.internal.{GenericCodegen, GenericFatCodegen, GenerationFailedException}
 import ppl.delite.framework.{Config, Util}
 import ppl.delite.framework.datastructures._
 import ppl.delite.framework.extern.lib._
@@ -2419,9 +2422,9 @@ trait ScalaGenDeliteOps extends ScalaGenLoopsFat with ScalaGenStaticDataDelite w
 
   def emitAssignment(name: String, tpe: String, rhs: String) = emitAssignment(name, rhs)
 
-  def emitAssignment(lhs: String, rhs: String) {
+  /*def emitAssignment(lhs: String, rhs: String) {
     stream.println(lhs + " = " + rhs)
-  }
+  }*/
 
   def emitAbstractFatLoopHeader(className: String, actType: String) {
     stream.println("val " + className + " = new generated.scala.DeliteOpMultiLoop[" + actType + "] {"/*}*/)
@@ -3396,9 +3399,9 @@ trait CGenDeliteOps extends CGenLoopsFat with GenericGenDeliteOps {
     }
   }
 
-  def emitAssignment(lhs: String, rhs: String) {
+  /*def emitAssignment(lhs: String, rhs: String) {
     stream.println(lhs + " = " + rhs + ";")
-  }
+  }*/
 
   def emitAbstractFatLoopHeader(className: String, actType: String) {
     stream.println("#ifndef __" + kernelName + "__")

@@ -1,6 +1,6 @@
 package ppl.dsl.deliszt.capabilities
 
-import scala.virtualization.lms.common.Base
+import scala.lms.ops.Base
 
 /* Type class for basic math, but less restrictive than Numeric.
  *

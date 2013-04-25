@@ -1,11 +1,11 @@
 /*
 package ppl.delite.framework.codegen.delite.overrides
 
-import scala.virtualization.lms.common.RangeOpsExp
-import scala.virtualization.lms.common.{ScalaGenEffect, CudaGenEffect, CGenEffect, OpenCLGenEffect}
+import scala.lms.ops.RangeOpsExp
+import scala.lms.ops.{ScalaGenEffect, CudaGenEffect, CGenEffect, OpenCLGenEffect}
 import ppl.delite.framework.ops.DeliteOpsExp
 import java.io.PrintWriter
-import scala.virtualization.lms.internal.{GenericNestedCodegen}
+import scala.lms.internal.{GenericNestedCodegen}
 
 trait DeliteRangeOpsExp extends RangeOpsExp with DeliteOpsExp {
   this: DeliteOpsExp =>

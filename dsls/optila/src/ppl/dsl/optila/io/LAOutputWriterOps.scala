@@ -2,7 +2,7 @@ package ppl.dsl.optila.io
 
 import java.io.{PrintWriter}
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common.{Base, BaseFatExp}
+import scala.lms.ops.{Base, BaseFatExp}
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.delite.framework.{Interfaces,InterfacesExp}

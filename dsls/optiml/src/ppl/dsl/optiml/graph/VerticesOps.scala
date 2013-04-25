@@ -1,9 +1,9 @@
 package ppl.dsl.optiml.graph
 
-import scala.virtualization.lms.common.{VariablesExp, Variables}
+import scala.lms.ops.{VariablesExp, Variables}
 import ppl.dsl.optiml._
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenerationFailedException, GenericNestedCodegen}
+import scala.lms.ops._
+import scala.lms.internal.{GenerationFailedException, GenericNestedCodegen}
 import java.io.PrintWriter
 
 trait VerticesOps extends Variables {

@@ -2,9 +2,9 @@ package ppl.dsl.optiml.application
 
 import ppl.dsl.optiml._
 import java.io.PrintWriter
-import scala.virtualization.lms.common.ScalaGenBase
-import scala.virtualization.lms.util.OverloadHack
-import scala.virtualization.lms.common.{EffectExp, Variables}
+import scala.lms.ops.ScalaGenBase
+import scala.lms.util.OverloadHack
+import scala.lms.ops.{EffectExp, Variables}
 
 
 trait BinarizedGradientPyramidOps extends Variables with OverloadHack {

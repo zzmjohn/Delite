@@ -1,7 +1,7 @@
 package ppl.dsl.deliszt.datastruct
 
-import _root_.scala.virtualization.lms.internal.{Expressions, CudaCodegen}
-import _root_.scala.virtualization.lms.internal.GenerationFailedException
+import _root_.scala.lms.internal.{Expressions, CudaCodegen}
+import _root_.scala.lms.internal.GenerationFailedException
 
 /* This trait defines methods for copying datastructures between JVM and GPU */
 

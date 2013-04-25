@@ -1,6 +1,6 @@
 package ppl.dsl.deliszt.field
 
-import scala.virtualization.lms.common._
+import scala.lms.ops._
 
 import ppl.dsl.deliszt._
 

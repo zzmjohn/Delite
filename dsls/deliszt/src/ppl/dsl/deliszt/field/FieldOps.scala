@@ -2,9 +2,9 @@ package ppl.dsl.deliszt.field
 
 import java.io.PrintWriter
 import reflect.{Manifest, SourceContext}
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.util.OverloadHack
-import scala.virtualization.lms.internal.{GenericFatCodegen, GenerationFailedException}
+import scala.lms.ops._
+import scala.lms.util.OverloadHack
+import scala.lms.internal.{GenericFatCodegen, GenerationFailedException}
 
 import ppl.delite.framework.ops.DeliteCollection
 

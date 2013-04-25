@@ -2,7 +2,7 @@ package ppl.apps.graph.Benchmark
 
 import ppl.dsl.optigraph._
 import ppl.delite.framework.DeliteApplication
-//import scala.virtualization.lms.common.FractionalOps
+//import scala.lms.ops.FractionalOps
 
 object GraphAppRunner extends OptiGraphApplicationRunner with OptiGraphBenchmark
 

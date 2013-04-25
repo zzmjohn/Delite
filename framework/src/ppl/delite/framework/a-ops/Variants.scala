@@ -1,9 +1,10 @@
 package ppl.delite.framework.ops
 
-import scala.virtualization.lms.common.EffectExp
+import scala.lms.EffectExp
 import java.io.PrintWriter
-import scala.virtualization.lms.common.{CudaGenEffect, OpenCLGenEffect, CGenEffect, ScalaGenEffect}
-import scala.virtualization.lms.internal.{GenericNestedCodegen}
+import scala.lms._
+import scala.lms.targets.clike.codegen.{CudaGenEffect, OpenCLGenEffect, CGenEffect}
+import scala.lms.internal.{GenericNestedCodegen}
 
 trait VariantsOpsExp extends EffectExp {
   this: DeliteOpsExp =>

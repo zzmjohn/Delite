@@ -7,8 +7,8 @@ import util.control.Breaks._
 import scala.collection.immutable.{Set => ISet}
 import scala.collection.mutable.{Set => MSet, Map => MMap, HashMap, ArrayBuilder}
 
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal._
+import scala.lms.ops._
+import scala.lms.internal._
 
 import ppl.delite.framework.{Config, DeliteApplication}
 import ppl.delite.framework.analysis.TraversalAnalysis

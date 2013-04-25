@@ -1,6 +1,6 @@
 package ppl.dsl.optiml.capabilities
 
-import scala.virtualization.lms.common.{Variables, Base}
+import scala.lms.ops.{Variables, Base}
 import ppl.dsl.optiml.{OptiMLExp, OptiML}
 import scala.reflect.SourceContext
 

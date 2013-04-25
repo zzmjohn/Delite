@@ -96,9 +96,9 @@ def liftClass(impls_dir, fname, ops_dir):
 import ppl.dsl.optiml._\n\
 import java.io.PrintWriter\n\
 import ppl.delite.framework.{DSLType}\n\
-import scala.virtualization.lms.common.ScalaGenBase\n\
-import scala.virtualization.lms.util.OverloadHack\n\
-import scala.virtualization.lms.common.{EffectExp, Variables}\n\n"
+import scala.lms.{ScalaGenBase,EffectExp}\n\
+import scala.lms.util.OverloadHack\n\
+import scala.lms.ops.{Variables}\n\n"
     out.append(pckNimp)
 
     file = open(impls_dir + '/' + fname, 'r')

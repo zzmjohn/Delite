@@ -3,8 +3,9 @@ package ppl.dsl.deliszt
 import java.io.PrintWriter
 import reflect.{Manifest, SourceContext}
 
-import scala.virtualization.lms.internal.{GenericFatCodegen, GenerationFailedException}
-import scala.virtualization.lms.common._
+import scala.lms.internal.{GenericFatCodegen, GenerationFailedException}
+import scala.lms.ops._
+import scala.lms._
 
 import ppl.delite.framework.ops.DeliteOpsExp
 

@@ -3,9 +3,9 @@ package ppl.dsl.optigraph
 import ppl.delite.framework.ops.DeliteOpsExp
 import java.io.PrintWriter
 import reflect.{Manifest,SourceContext}
-import scala.virtualization.lms.internal.GenericFatCodegen
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.util._
+import scala.lms.internal.GenericFatCodegen
+import scala.lms.ops._
+import scala.lms.util._
 
 trait LanguageOps extends Base with OverloadHack { this: OptiGraph =>
 

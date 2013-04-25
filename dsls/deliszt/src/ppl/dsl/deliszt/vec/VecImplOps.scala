@@ -1,5 +1,5 @@
 package ppl.dsl.deliszt.vec
-import scala.virtualization.lms.common._
+import scala.lms.ops._
 
 import ppl.dsl.deliszt._
 import ppl.dsl.deliszt.MetaInteger._

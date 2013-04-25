@@ -1,10 +1,12 @@
 package ppl.delite.framework.datastructures
 
 import java.io.PrintWriter
-import scala.virtualization.lms.common._
+import scala.lms.ops._
 import scala.reflect.{SourceContext, RefinedManifest}
-import scala.virtualization.lms.internal.{GenerationFailedException, GenericFatCodegen}
-import scala.virtualization.lms.common._
+import scala.lms.internal.{GenerationFailedException, GenericFatCodegen}
+import scala.lms.targets.clike.codegen._
+import scala.lms.ops._
+import scala.lms._
 import ppl.delite.framework.ops._
 import ppl.delite.framework.Util._
 import ppl.delite.framework.Config

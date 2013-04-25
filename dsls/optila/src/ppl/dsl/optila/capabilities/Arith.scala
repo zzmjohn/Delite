@@ -1,9 +1,9 @@
 package ppl.dsl.optila.capabilities
 
-import scala.virtualization.lms.util.OverloadHack
-import scala.virtualization.lms.common._
+import scala.lms.util.OverloadHack
+import scala.lms.ops._
 import java.io.PrintWriter
-import scala.virtualization.lms.internal.{CLikeCodegen}
+import scala.lms.internal.{CLikeCodegen}
 import ppl.dsl.optila.{OptiLAExp, OptiLA}
 import scala.reflect.SourceContext
 

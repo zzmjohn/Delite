@@ -1,7 +1,7 @@
 package ppl.dsl.optila.matrix
 
-import scala.virtualization.lms.common.ScalaOpsPkg
-import scala.virtualization.lms.common.{BaseExp, Base}
+import scala.lms.ScalaOpsPkg
+import scala.lms.{BaseExp, Base}
 import ppl.delite.framework.datastructures.DeliteArray
 import ppl.dsl.optila._
 

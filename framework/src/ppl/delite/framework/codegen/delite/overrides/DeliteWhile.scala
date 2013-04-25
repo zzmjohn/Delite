@@ -1,9 +1,10 @@
 package ppl.delite.framework.codegen.delite.overrides
 
 import ppl.delite.framework.ops.DeliteOpsExp
-import scala.virtualization.lms.common.{WhileExp}
-import scala.virtualization.lms.common.{ScalaGenEffect, CudaGenEffect, OpenCLGenEffect, CGenEffect}
-import scala.virtualization.lms.internal.{GenericNestedCodegen}
+import scala.lms.ops.{WhileExp}
+import scala.lms.targets.clike.codegen.{CudaGenEffect, OpenCLGenEffect, CGenEffect}
+import scala.lms._
+import scala.lms.internal.{GenericNestedCodegen}
 import scala.reflect.SourceContext
 import java.io.PrintWriter
 import scala.reflect.SourceContext

@@ -3,8 +3,8 @@ package ppl.dsl.optila
 import ppl.delite.framework.ops.{DeliteOpsExp, DeliteCollection}
 import java.io.PrintWriter
 import reflect.Manifest
-import scala.virtualization.lms.internal.GenericFatCodegen
-import scala.virtualization.lms.common._
+import scala.lms.internal.GenericFatCodegen
+import scala.lms.ops._
 import scala.reflect.SourceContext
 
 /* Machinery provided by OptiLA itself (language features and control structures).

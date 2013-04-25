@@ -1,8 +1,8 @@
 package ppl.dsl.optiql.ops
 
 import java.io.PrintWriter
-import scala.virtualization.lms.common.{Base, ScalaGenFat, CLikeGenFat, CudaGenFat, OpenCLGenFat, BaseFatExp, LoopsFatExp, IfThenElseFatExp, TupleOpsExp, ArrayOpsExp, LoopFusionOpt}
-import scala.virtualization.lms.internal.GenericFatCodegen
+import scala.lms.ops.{Base, ScalaGenFat, CLikeGenFat, CudaGenFat, OpenCLGenFat, BaseFatExp, LoopsFatExp, IfThenElseFatExp, TupleOpsExp, ArrayOpsExp, LoopFusionOpt}
+import scala.lms.internal.GenericFatCodegen
 import ppl.dsl.optiql.OptiQLExp
 import ppl.delite.framework.datastructures.DeliteArray
 import scala.reflect.SourceContext

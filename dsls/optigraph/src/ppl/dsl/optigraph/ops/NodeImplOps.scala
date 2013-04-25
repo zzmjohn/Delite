@@ -1,7 +1,7 @@
 package ppl.dsl.optigraph.ops
 
-import scala.virtualization.lms.common.ScalaOpsPkg
-import scala.virtualization.lms.common.{BaseExp, Base, BooleanOps}
+import scala.lms.ScalaOpsPkg
+import scala.lms.ops.{BaseExp, Base, BooleanOps}
 import ppl.dsl.optigraph.{GIterable, Node}
 import ppl.dsl.optigraph.{OptiGraphLift, OptiGraphCompiler, OptiGraph}
 

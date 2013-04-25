@@ -1,7 +1,8 @@
 package ppl.delite.framework.extern.codegen.scala
 
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal._
+import scala.lms._
+import scala.lms.ops._
+import scala.lms.internal._
 import collection.mutable.{ListBuffer}
 import collection.mutable.HashMap
 import java.io.{FileWriter, BufferedWriter, File, PrintWriter}

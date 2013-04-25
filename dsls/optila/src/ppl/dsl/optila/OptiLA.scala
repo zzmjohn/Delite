@@ -2,8 +2,8 @@ package ppl.dsl.optila
 
 import java.io._
 import scala.reflect.SourceContext
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenericFatCodegen, GenericCodegen}
+import scala.lms.ops._
+import scala.lms.internal.{GenericFatCodegen, GenericCodegen}
 import ppl.delite.framework.{Config, ExpressionsOpt, SchedulingOpt, DeliteApplication, DeliteInteractive, DeliteInteractiveRunner}
 import ppl.delite.framework.datastructures._
 import ppl.delite.framework.codegen.Target
@@ -59,14 +59,14 @@ trait OptiLAScalaOpsPkg extends Base
   // only included because of args. TODO: investigate passing args as a vector
   with ArrayOps with ExceptionOps
 
-trait OptiLAScalaOpsPkgExp extends OptiLAScalaOpsPkg with DSLOpsExp
+trait OptiLAScalaOpsPkgExp extends OptiLAScalaOpsPkg
   with EqualExp with IfThenElseExp with VariablesExp with WhileExp with TupleOpsExp with TupledFunctionsExp
   with ImplicitOpsExp with OrderingOpsExp with StringOpsExp with RangeOpsExp with IOOpsExp
   with ArrayOpsExp with BooleanOpsExp with PrimitiveOpsExpOpt with MiscOpsExp 
   with ListOpsExp with SeqOpsExp with MathOpsExp with CastingOpsExp with SetOpsExp with ObjectOpsExp
   with SynchronizedArrayBufferOpsExp with HashMapOpsExp with IterableOpsExp with ArrayBufferOpsExp with ExceptionOpsExp
 
-trait OptiLAScalaCodeGenPkg extends ScalaGenDSLOps
+trait OptiLAScalaCodeGenPkg extends ScalaGenBase
   with ScalaGenEqual with ScalaGenIfThenElse with ScalaGenVariables with ScalaGenWhile with ScalaGenTupleOps
   with ScalaGenImplicitOps with ScalaGenOrderingOps with ScalaGenStringOps with ScalaGenRangeOps with ScalaGenIOOps
   with ScalaGenArrayOps with ScalaGenBooleanOps with ScalaGenPrimitiveOps with ScalaGenMiscOps 

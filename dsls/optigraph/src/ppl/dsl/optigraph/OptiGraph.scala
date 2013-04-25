@@ -1,8 +1,8 @@
 package ppl.dsl.optigraph
 
 import java.io._
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{Expressions,GenericFatCodegen, GenericCodegen}
+import scala.lms.ops._
+import scala.lms.internal.{Expressions,GenericFatCodegen, GenericCodegen}
 import ppl.delite.framework.{Config, DeliteApplication}
 import ppl.delite.framework.datastructures._
 import ppl.delite.framework.codegen.Target
@@ -45,7 +45,7 @@ trait OptiGraphScalaOpsPkg extends Base
   with MathOps with CastingOps with ObjectOps with IOOps with HashMapOps
   with ArrayOps with ExceptionOps
 
-trait OptiGraphScalaOpsPkgExp extends OptiGraphScalaOpsPkg with DSLOpsExp
+trait OptiGraphScalaOpsPkgExp extends OptiGraphScalaOpsPkg
   with EqualExp with IfThenElseExp with VariablesExp with WhileExp with FunctionsExp
   with ImplicitOpsExp with OrderingOpsExp with StringOpsExp with RangeOpsExp with IOOpsExp
   with ArrayOpsExp with BooleanOpsExp with PrimitiveOpsExp with MiscOpsExp with TupleOpsExp with StructExp with StructFatExpOptCommon
@@ -53,7 +53,7 @@ trait OptiGraphScalaOpsPkgExp extends OptiGraphScalaOpsPkg with DSLOpsExp
   with SynchronizedArrayBufferOpsExp with HashMapOpsExp with IterableOpsExp with ExceptionOpsExp
   with NumericOpsExp 
 
-trait OptiGraphScalaCodeGenPkg extends ScalaGenDSLOps
+trait OptiGraphScalaCodeGenPkg extends ScalaGenBase
   with ScalaGenEqual with ScalaGenIfThenElse with ScalaGenVariables with ScalaGenWhile with ScalaGenFunctions
   with ScalaGenImplicitOps with ScalaGenOrderingOps with ScalaGenStringOps with ScalaGenRangeOps with ScalaGenIOOps
   with ScalaGenArrayOps with ScalaGenBooleanOps with ScalaGenPrimitiveOps with ScalaGenMiscOps with ScalaGenTupleOps

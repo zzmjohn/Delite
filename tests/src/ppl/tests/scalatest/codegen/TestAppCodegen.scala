@@ -1,6 +1,6 @@
 package ppl.tests.scalatest.codegen
 
-import scala.virtualization.lms.common._
+import scala.lms.ops._
 import scala.tools.nsc._
 import scala.tools.nsc.util._
 import scala.tools.nsc.reporters._

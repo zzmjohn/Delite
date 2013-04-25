@@ -72,9 +72,9 @@ def emitHeader(fileOut):
 import java.io.PrintWriter\n\
 import ppl.delite.framework.{DSLType}\n\
 import ppl.delite.framework.datastructures._\n\
-import scala.virtualization.lms.common.ScalaGenFat\n\
-import scala.virtualization.lms.util.OverloadHack\n\
-import scala.virtualization.lms.common.{EffectExp, BaseFatExp, Variables}\n\n"
+import scala.lms.{ScalaGenFat, EffectExp, BaseFatExp}\n\
+import scala.lms.util.OverloadHack\n\
+import scala.lms.ops.{Variables}\n\n"
     out.append(l)	
     fileOut.writelines(out)
 	#now emit DSL specific stuff

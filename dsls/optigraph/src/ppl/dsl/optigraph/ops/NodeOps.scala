@@ -6,8 +6,8 @@ import scala.util.DynamicVariable
 import ppl.delite.framework.{DeliteApplication}
 import ppl.delite.framework.ops.DeliteOpsExp
 import reflect.{Manifest, SourceContext}
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenerationFailedException, GenericNestedCodegen}
+import scala.lms.ops._
+import scala.lms.internal.{GenerationFailedException, GenericNestedCodegen}
 import ppl.dsl.optigraph._
 
 trait NodeOps extends Variables with ArrayOps {

@@ -1,7 +1,7 @@
 package ppl.dsl.optila.io
 
-import scala.virtualization.lms.common.Base
-import scala.virtualization.lms.common.ScalaOpsPkg
+import scala.lms.ops.Base
+import scala.lms.ScalaOpsPkg
 import ppl.delite.framework.Interfaces
 import ppl.dsl.optila._
 

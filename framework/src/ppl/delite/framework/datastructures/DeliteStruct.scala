@@ -2,8 +2,8 @@ package ppl.delite.framework.datastructures
 
 import java.io.{File,FileWriter,PrintWriter}
 import scala.reflect.{RefinedManifest, SourceContext}
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{CudaCodegen,OpenCLCodegen,CCodegen,GenerationFailedException}
+import scala.lms.ops._
+import scala.lms.internal.{CudaCodegen,OpenCLCodegen,CCodegen,GenerationFailedException}
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.delite.framework.Config
 import ppl.delite.framework.Util._

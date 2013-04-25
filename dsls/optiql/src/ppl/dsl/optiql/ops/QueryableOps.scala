@@ -3,7 +3,7 @@ package ppl.dsl.optiql.ops
 import java.io.PrintWriter
 import ppl.dsl.optiql.{OptiQL, OptiQLExp}
 import ppl.delite.framework.ops.DeliteCollection
-import scala.virtualization.lms.common.{Base, EffectExp, ScalaGenFat, BaseFatExp}
+import scala.lms.ops.{Base, EffectExp, ScalaGenFat, BaseFatExp}
 import scala.reflect.{RefinedManifest, SourceContext}
 
 trait QueryableOps extends Base { this: OptiQL =>

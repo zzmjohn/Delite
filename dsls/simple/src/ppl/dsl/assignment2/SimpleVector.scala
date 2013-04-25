@@ -1,7 +1,7 @@
 package ppl.dsl.assignment2
 
 import java.io.{BufferedWriter, FileWriter}
-import scala.virtualization.lms.common._
+import scala.lms.ops._
 import ppl.delite.framework.{Config, DeliteApplication}
 import scala.tools.nsc.io._
 import ppl.delite.framework.codegen.Target
@@ -11,7 +11,7 @@ import ppl.delite.framework.codegen.c.TargetC
 import ppl.delite.framework.ops._
 import ppl.delite.framework.datastructures._
 import ppl.delite.framework.codegen.delite.overrides._
-import scala.virtualization.lms.internal.GenericFatCodegen
+import scala.lms.internal.GenericFatCodegen
 
 /**
  * Packages
@@ -27,7 +27,7 @@ trait SimpleVectorScalaOpsPkg extends Base
   with DeliteArrayOps
 
 //Exps version
-trait SimpleVectorScalaOpsPkgExp extends SimpleVectorScalaOpsPkg with DSLOpsExp
+trait SimpleVectorScalaOpsPkgExp extends SimpleVectorScalaOpsPkg
   with EqualExp with IfThenElseExp with VariablesExp with WhileExp with FunctionsExp
   with ImplicitOpsExp with NumericOpsExp with OrderingOpsExp with StringOpsExp
   with BooleanOpsExp with PrimitiveOpsExp with MiscOpsExp with TupleOpsExp
@@ -35,7 +35,7 @@ trait SimpleVectorScalaOpsPkgExp extends SimpleVectorScalaOpsPkg with DSLOpsExp
   with DeliteArrayOpsExpOpt with DeliteArrayImplOps with DeliteOpsExp with StructExp
   
 //Scala codegen version
-trait SimpleVectorScalaCodeGenPkg extends ScalaGenDSLOps
+trait SimpleVectorScalaCodeGenPkg extends ScalaGenBase
   with ScalaGenEqual with ScalaGenIfThenElse with ScalaGenVariables with ScalaGenWhile with ScalaGenFunctions
   with ScalaGenImplicitOps with ScalaGenNumericOps with ScalaGenOrderingOps with ScalaGenStringOps
   with ScalaGenBooleanOps with ScalaGenPrimitiveOps with ScalaGenMiscOps with ScalaGenTupleOps
