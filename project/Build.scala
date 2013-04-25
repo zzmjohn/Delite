@@ -2,7 +2,7 @@ import sbt._
 import Keys._
 
 object DeliteBuild extends Build {
-  val virtualization_lms_core = "EPFL" % "lms_2.10.0" % "0.3-SNAPSHOT"
+  val lms = "ch.epfl" %% "lms" % "0.4-SNAPSHOT"
   
   // -DshowSuppressedErrors=false
   System.setProperty("showSuppressedErrors", "false")
@@ -12,7 +12,7 @@ object DeliteBuild extends Build {
   val scalaTestCompile = "org.scalatest" % "scalatest_2.10" % "2.0.M5b"
   val scalaTest = scalaTestCompile % "test"
 
-  val virtScala = Option(System.getenv("SCALA_VIRTUALIZED_VERSION")).getOrElse("2.10.0")
+  val virtScala = Option(System.getenv("SCALA_VIRTUALIZED_VERSION")).getOrElse("2.10.1")
   val virtBuildSettingsBase = Defaults.defaultSettings ++ Seq(
     //resolvers := Seq(mavenLocal, prereleaseScalaTest, Resolver.sonatypeRepo("snapshots"), Resolver.sonatypeRepo("releases")),
     organization := "stanford-ppl",
@@ -22,7 +22,7 @@ object DeliteBuild extends Build {
     scalaBinaryVersion := "2.10",
     publishArtifact in (Compile, packageDoc) := false,
     // needed for scala.tools, which is apparently not included in sbt's built in version
-    libraryDependencies += virtualization_lms_core,
+    libraryDependencies += lms,
     libraryDependencies += "org.scala-lang.virtualized" % "scala-library" % virtScala,
     libraryDependencies += "org.scala-lang.virtualized" % "scala-compiler" % virtScala,
     libraryDependencies += "org.scala-lang" % "scala-actors" % virtScala, // for ScalaTest
