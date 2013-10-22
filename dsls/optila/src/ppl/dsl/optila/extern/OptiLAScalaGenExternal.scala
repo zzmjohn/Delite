@@ -53,17 +53,17 @@ trait OptiLAScalaGenExternal extends ScalaGenExternalBase {
         {
         	jboolean copy;
 
-        	j%1$s *mat1_ptr = (j%1$s*)((*env)->GetPrimitiveArrayCritical(env, (jarray)mat1, &copy));
-        	j%1$s *vec2_ptr = (j%1$s*)((*env)->GetPrimitiveArrayCritical(env, (jarray)vec2, &copy));
-        	j%1$s *vec3_ptr = (j%1$s*)((*env)->GetPrimitiveArrayCritical(env, (jarray)vec3, &copy));
+        	j%1$s *mat1_ptr = (j%1$s*)(env->GetPrimitiveArrayCritical((jarray)mat1, &copy));
+        	j%1$s *vec2_ptr = (j%1$s*)(env->GetPrimitiveArrayCritical((jarray)vec2, &copy));
+        	j%1$s *vec3_ptr = (j%1$s*)(env->GetPrimitiveArrayCritical((jarray)vec3, &copy));
 
         	vec2_ptr += vec_offset;
 
         	%2$s(CblasRowMajor, CblasNoTrans, mat_row, mat_col, 1.0, mat1_ptr, mat_col, vec2_ptr, vec_stride, 0.0, vec3_ptr, 1);
 
-        	(*env)->ReleasePrimitiveArrayCritical(env, mat1, mat1_ptr, 0);
-        	(*env)->ReleasePrimitiveArrayCritical(env, vec2, vec2_ptr, 0);
-        	(*env)->ReleasePrimitiveArrayCritical(env, vec3, vec3_ptr, 0);
+        	env->ReleasePrimitiveArrayCritical(mat1, mat1_ptr, 0);
+        	env->ReleasePrimitiveArrayCritical(vec2, vec2_ptr, 0);
+        	env->ReleasePrimitiveArrayCritical(vec3, vec3_ptr, 0);
         }""".format(tp.toLowerCase, func))
 
 
@@ -82,15 +82,15 @@ trait OptiLAScalaGenExternal extends ScalaGenExternalBase {
         """
         {
         	jboolean copy;
-        	j%1$s *mat1_ptr = (*env)->GetPrimitiveArrayCritical(env, (jarray)mat1, &copy);
-        	j%1$s *mat2_ptr = (*env)->GetPrimitiveArrayCritical(env, (jarray)mat2, &copy);
-        	j%1$s *mat3_ptr = (*env)->GetPrimitiveArrayCritical(env, (jarray)mat3, &copy);
+        	j%1$s *mat1_ptr = (j%1$s*)(env->GetPrimitiveArrayCritical((jarray)mat1, &copy));
+        	j%1$s *mat2_ptr = (j%1$s*)(env->GetPrimitiveArrayCritical((jarray)mat2, &copy));
+        	j%1$s *mat3_ptr = (j%1$s*)(env->GetPrimitiveArrayCritical((jarray)mat3, &copy));
 
         	%2$s(CblasRowMajor, CblasNoTrans, CblasNoTrans, mat1_r, mat2_c, mat1_c, 1.0, mat1_ptr, mat1_c, mat2_ptr, mat2_c, 0.0, mat3_ptr, mat2_c);
 
-        	(*env)->ReleasePrimitiveArrayCritical(env, mat1, mat1_ptr, 0);
-        	(*env)->ReleasePrimitiveArrayCritical(env, mat2, mat2_ptr, 0);
-        	(*env)->ReleasePrimitiveArrayCritical(env, mat3, mat3_ptr, 0);
+        	env->ReleasePrimitiveArrayCritical(mat1, mat1_ptr, 0);
+        	env->ReleasePrimitiveArrayCritical(mat2, mat2_ptr, 0);
+        	env->ReleasePrimitiveArrayCritical(mat3, mat3_ptr, 0);
         }""".format(tp.toLowerCase, func))
 
 
@@ -112,15 +112,15 @@ trait OptiLAScalaGenExternal extends ScalaGenExternalBase {
       	  int i = 0;
         	jboolean copy;
 
-        	j%1$s *vec1_ptr = (j%1$s*)((*env)->GetPrimitiveArrayCritical(env, (jarray)vec1, &copy));
-        	j%1$s *vec2_ptr = (j%1$s*)((*env)->GetPrimitiveArrayCritical(env, (jarray)vec2, &copy));
+        	j%1$s *vec1_ptr = (j%1$s*)(env->GetPrimitiveArrayCritical((jarray)vec1, &copy));
+        	j%1$s *vec2_ptr = (j%1$s*)(env->GetPrimitiveArrayCritical((jarray)vec2, &copy));
 
         	for(i=start; i<end; i++) {
         		vec2_ptr[i] = 1.0 / (1.0+%2$s(-1.0*vec1_ptr[i]));
         	}
 
-        	(*env)->ReleasePrimitiveArrayCritical(env, vec1, vec1_ptr, 0);
-        	(*env)->ReleasePrimitiveArrayCritical(env, vec2, vec2_ptr, 0);
+        	env->ReleasePrimitiveArrayCritical(vec1, vec1_ptr, 0);
+        	env->ReleasePrimitiveArrayCritical(vec2, vec2_ptr, 0);
         }""".format(tp.toLowerCase, func))
 
     case _ => super.emitExternalLib(rhs)

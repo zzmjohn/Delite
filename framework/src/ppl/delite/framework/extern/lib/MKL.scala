@@ -6,9 +6,9 @@ import java.io._
 
 object MKL extends ExternalLibrary {
   //val target = "scala" // this should be well-typed, but we don't have an IR reference yet, so we need to generalize that...
-  val libName = "scalaMKL"
+  val libName = "MKL"
   val configFile = "MKL.xml"
-  val ext = "c"
+  val ext = "cpp"
   val libExt = "so"
   // should we consider library linking machine dependent? do we have a different external lib
   // for unix and windows?
