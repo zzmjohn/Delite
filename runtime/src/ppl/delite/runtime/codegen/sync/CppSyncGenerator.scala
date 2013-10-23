@@ -133,7 +133,7 @@ trait CppToScalaSync extends SyncGenerator with CppExecutableGenerator with JNIF
       out.append("%s %s%s = recvCPPfromJVM_%s(env%s,%s);\n".format(devType,ref,getSymHost(dep,sym),mangledName(devType),location,getSymCPU(sym)))
   }
 
-  private def writeAwaiter(dep: DeliteOP) {
+  private def writeAwaiter(dep: DeliteOP, sym: String = "") {
     out.append("env")
     out.append(location)
     out.append("->CallStaticVoid")
@@ -146,7 +146,8 @@ trait CppToScalaSync extends SyncGenerator with CppExecutableGenerator with JNIF
     out.append(",\"get")
     out.append(location)
     out.append('_')
-    out.append(getOpSym(dep))
+    if(sym == "") out.append(getOpSym(dep))
+    else out.append(getSym(dep,sym))
     out.append("\",\"()V")
     out.append("\"));\n")
   }
@@ -185,7 +186,7 @@ trait CppToScalaSync extends SyncGenerator with CppExecutableGenerator with JNIF
     out.append(");\n")
   }
 
-  private def writeNotifier(op: DeliteOP) {
+  private def writeNotifier(op: DeliteOP, sym: String = "") {
     out.append("env")
     out.append(location)
     out.append("->CallStaticVoidMethod(cls")
@@ -195,7 +196,8 @@ trait CppToScalaSync extends SyncGenerator with CppExecutableGenerator with JNIF
     out.append("->GetStaticMethodID(cls")
     out.append(location)
     out.append(",\"set_")
-    out.append(getOpSym(op))
+    if(sym == "") out.append(getOpSym(op))
+    else out.append(getSym(op,sym))
     out.append("\",\"(")
     out.append(getJNIArgType("Unit"))
     out.append(")V\"),")
