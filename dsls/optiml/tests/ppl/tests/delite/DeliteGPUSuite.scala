@@ -136,6 +136,48 @@ trait DeliteGPUObjectReduction extends DeliteTestModule with OptiMLApplication {
   }
 }
 
+object DeliteGPUReferencePrimitive1Runner extends DeliteTestRunner with OptiMLApplicationRunner with DeliteGPUReferencePrimitive1
+trait DeliteGPUReferencePrimitive1 extends DeliteTestModule with OptiMLApplication {
+  def main() = {
+    
+    val v = Vector[Int](10,true).map(_ => 1).mutable
+
+    val result = if(v(0) < 2) {
+      for(i <- 0::v.length) { v(i) = i }
+      v.sum  // returned by GPU (returner), and is referential primitive
+    }
+    else {
+      3
+    }
+
+    collect(result == 45)
+    
+    mkReport
+  }
+}
+
+object DeliteGPUReferencePrimitive2Runner extends DeliteTestRunner with OptiMLApplicationRunner with DeliteGPUReferencePrimitive2
+trait DeliteGPUReferencePrimitive2 extends DeliteTestModule with OptiMLApplication {
+  def main() = {
+    
+    val v = Vector[Int](10,true).map(_ => 1).mutable
+    val s = v.sum // s is referential primitive, passed into conditional block as input
+    collect(s == 10)
+
+    val result = if(v(0) < 2) {
+      for(i <- 0::v.length) { v(i) = s }
+      v(0)
+    }
+    else {
+      3
+    }
+
+    collect(result == 10)
+    
+    mkReport
+  }
+}
+
 class DeliteGPUSuite extends DeliteSuite {
   //def testDeliteGPUBLASMM() { compileAndTest(DeliteGPUBLASMMRunner); }
   //def testDeliteGPUBLASMV() { compileAndTest(DeliteGPUBLASMVRunner); }
@@ -145,4 +187,6 @@ class DeliteGPUSuite extends DeliteSuite {
   def testDeliteGPUMutation() { compileAndTest(DeliteGPUMutationRunner, CHECK_MULTILOOP); }
   def testDeliteGPUNestedMutation() { compileAndTest(DeliteGPUNestedMutationRunner, CHECK_MULTILOOP); }
   def testDeliteGPUObjectReduction() { compileAndTest(DeliteGPUObjectReductionRunner, CHECK_MULTILOOP); }
+  def testDeliteGPUReferencePrimitive1() { compileAndTest(DeliteGPUReferencePrimitive1Runner, CHECK_MULTILOOP); }
+  def testDeliteGPUReferencePrimitive2() { compileAndTest(DeliteGPUReferencePrimitive2Runner, CHECK_MULTILOOP); }
 }

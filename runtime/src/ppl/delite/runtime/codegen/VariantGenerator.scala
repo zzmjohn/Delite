@@ -74,5 +74,5 @@ class CppVariantGenerator(val variant: OP_Variant, val location: Int, val kernel
 
 private [codegen] object VariantCommon { //TODO: traits?
   def getSym(baseId: String, op: DeliteOP, name: String) = "x" + baseId + "_" + name
-  def getSync(baseId: String, op: DeliteOP, name: String) = "Result_" + baseId + "_" + name
+  def getSync(baseId: String, op: DeliteOP, name: String) = "Result_" + op.id + "_" + baseId + "_" + name
 }
