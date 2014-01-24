@@ -31,7 +31,7 @@ trait CCompile extends CodeCache {
 
   def headers = headerBuffer.map(_._2)
 
-  protected def deliteLibs = Config.deliteBuildHome + sep + "libraries" + sep + target
+  protected def deliteLibs = Array(Config.deliteBuildHome + sep + "libraries" + sep + target, Config.deliteHome + sep + "runtime" + sep + target)
 
   def addKernel(name: String) {
     kernelBuffer += (name + "." + ext)
@@ -64,7 +64,7 @@ trait CCompile extends CodeCache {
     
     if (modules.exists(_.needsCompile)) {
       val includes = modules.flatMap(m => List(config.headerPrefix + sourceCacheHome + m.name, config.headerPrefix + Compilers(Targets.getHostTarget(target)).sourceCacheHome + m.name)).toArray
-      val libs = Directory(deliteLibs).files.withFilter(f => f.extension == OS.libExt || f.extension == OS.objExt).map(_.path).toArray
+      val libs = deliteLibs.flatMap(l => Directory(l).files.withFilter(f => f.extension == OS.libExt || f.extension == OS.objExt).map(_.path))
       val paths = includes ++ config.headerDir ++ Array(config.headerPrefix + Config.deliteHome + sep + "runtime" + sep + target) ++ config.libs ++ libs
       val sources = (sourceBuffer.map(s => sourceCacheHome + "runtime" + sep + s._2) ++ kernelBuffer.map(k => sourceCacheHome + "kernels" + sep + k) ++ auxSourceList).toArray
       val dest = binCacheHome + target + "Host." + OS.libExt
@@ -78,18 +78,17 @@ trait CCompile extends CodeCache {
   def compile(destination: String, sources: Array[String], paths: Array[String]) {
     Path(destination).parent.createDirectory()
     val output = Array(outputSwitch, destination)
-    val args = Array(config.compiler) ++ paths ++ compileFlags ++ output ++ sources
+    val args = Array(config.compiler) ++ compileFlags ++ output ++ sources ++ paths
     println(args.mkString(" "))
     val process = Runtime.getRuntime.exec(args)
     process.waitFor
     checkError(process, args)
   }
   
-  def compileInit() {
-    val root = Config.deliteHome + sep + "runtime" + sep + target + sep + target + "Init."
-    val source = root + ext
-    val dest = root + OS.libExt
-    compile(dest, Array(source), config.headerDir)
+  def compileInit(root: String) {
+    val source = root + "." + ext
+    val dest = root + "." + OS.libExt
+    compile(dest, Array(source), config.headerDir ++ config.libs)
   }
 
   protected def checkError(process: Process, args: Array[String]) {

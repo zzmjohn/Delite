@@ -3,6 +3,7 @@ package ppl.delite.framework.codegen.delite.overrides
 import ppl.delite.framework.ops.DeliteOpsExp
 import ppl.delite.framework.DeliteApplication
 import ppl.delite.framework.transform._
+import collection.mutable.{Map => MMap}
 
 // you can pick and choose your overrides, these are provided for convenience
 trait DeliteAllOverridesExp extends DeliteIfThenElseExp /*with DeliteOpMap*/ with DeliteWhileExp {
@@ -33,12 +34,27 @@ trait DeliteScalaGenAllOverrides extends DeliteScalaGenVariables with DeliteScal
 
 trait DeliteCudaGenAllOverrides extends DeliteCudaGenVariables with DeliteCudaGenIfThenElse /*with DeliteCudaGenRange*/ with DeliteCudaGenWhile {
   val IR: DeliteApplication with DeliteAllOverridesExp
+  
+  override def initializeGenerator(buildDir:String, args: Array[String], _analysisResults: MMap[String,Any]): Unit = {
+    super.initializeGenerator(buildDir, args, _analysisResults)
+    headerStream.println("#include \"DeliteCuda.h\"\n")
+  }
 }
 
 trait DeliteOpenCLGenAllOverrides extends DeliteOpenCLGenVariables with DeliteOpenCLGenIfThenElse /*with DeliteCudaGenRange*/ with DeliteOpenCLGenWhile {
   val IR: DeliteApplication with DeliteAllOverridesExp
+
+  override def initializeGenerator(buildDir:String, args: Array[String], _analysisResults: MMap[String,Any]): Unit = {
+    super.initializeGenerator(buildDir, args, _analysisResults)
+    headerStream.println("#include \"DeliteOpenCL.h\"\n")
+  }
 }
 
 trait DeliteCGenAllOverrides extends DeliteCGenVariables with DeliteCGenIfThenElse /*with DeliteCGenRange*/ with DeliteCGenWhile  {
   val IR: DeliteApplication with DeliteAllOverridesExp
+
+  override def initializeGenerator(buildDir:String, args: Array[String], _analysisResults: MMap[String,Any]): Unit = {
+    super.initializeGenerator(buildDir, args, _analysisResults)
+    headerStream.println("#include \"DeliteCpp.h\"\n")
+  }
 }
