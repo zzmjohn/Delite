@@ -14,7 +14,7 @@ import java.io.{FileWriter, BufferedWriter, File}
 import ppl.delite.framework.codegen.{Utils, Target}
 import ppl.delite.framework.datastructures._
 import ppl.delite.framework.codegen.delite.overrides._
-import ppl.delite.framework.transform.MultiloopSoATransformExp
+import ppl.delite.framework.transform.MultiloopSoATransformWithReduceExp
 import ppl.delite.framework.{DeliteInteractive, DeliteInteractiveRunner, DeliteRestageOps, DeliteRestageOpsExp, DeliteRestageRunner}
 import ppl.delite.framework.codegen.restage.{DeliteCodeGenRestage,TargetRestage}
 
@@ -22,12 +22,13 @@ import ppl.delite.framework.codegen.restage.{DeliteCodeGenRestage,TargetRestage}
 /**
  * These are the lifted scala constructs that only operate on the Rep world. These are usually safe to mix in
  */
-trait OptiQLScalaOpsPkg extends Base with MiscOps with BooleanOps with OrderingOps with PrimitiveOps with ObjectOps with StringOps with TupleOps with StructOps with NumericOps with ArrayOps with DeliteArrayOps with IfThenElse with Equal
+trait OptiQLScalaOpsPkg extends Base with MiscOps with BooleanOps with OrderingOps with PrimitiveOps with ObjectOps with StringOps with TupleOps with StructOps with NumericOps with ArrayOps with DeliteArrayOps with IfThenElse with Equal with CastingOps
 
 /**
  * This trait adds the Ops that are specific to OptiQL
  */
-trait OptiQL extends OptiQLScalaOpsPkg with TableOps with QueryableOps with DateOps with OptiQLMiscOps with InputReaderOps with Types {
+trait OptiQL extends OptiQLScalaOpsPkg with TableOps with QueryableOps with DateOps with OptiQLMiscOps with InputReaderOps with Types
+  with DeliteArrayOps with DeliteArrayBufferOps with DeliteMapOps {
   this: OptiQLApplication =>
 }
 
@@ -66,8 +67,8 @@ trait OptiQLCompiler extends OptiQL with IOOps with SeqOps with Variables with W
  * This trait comprises the IR nodes for OptiQL and the code required to instantiate code generators
  */
 trait OptiQLExp extends OptiQLCompiler with OptiQLScalaOpsPkgExp with TableOpsExp with DateOpsExp with DateImplOpsStandard with QueryableOpsExpOpt with OptiQLMiscOpsExp
-  with InputReaderOpsExp with InputReaderImplOpsStandard with DeliteCollectionOpsExp with DeliteOpsExp with DeliteArrayFatExp with DeliteArrayBufferOpsExp with DeliteFileReaderOpsExp with DSArrayOpsExp 
-  with DeliteRestageOpsExp with DeliteAllOverridesExp with MultiloopSoATransformExp {
+  with InputReaderOpsExp with InputReaderImplOpsStandard with DeliteCollectionOpsExp with DeliteOpsExp with DeliteArrayFatExp with DeliteArrayBufferOpsExp with DeliteMapOpsExp with DeliteFileReaderOpsExp with DSArrayOpsExp 
+  with DeliteRestageOpsExp with DeliteAllOverridesExp with MultiloopSoATransformWithReduceExp {
 
   this: DeliteApplication with OptiQLApplication =>
 
@@ -151,31 +152,12 @@ trait OptiQLCodeGenRestage extends OptiQLScalaCodeGenPkg with DeliteCodeGenResta
 }
 
 trait OptiQLCodeGenScala extends OptiQLCodeGenBase with OptiQLScalaCodeGenPkg with ScalaGenOptiQLMiscOps with ScalaGenQueryableOps
-  with ScalaGenDeliteCollectionOps with ScalaGenDeliteOps with ScalaGenDeliteStruct with ScalaGenDeliteArrayOps with ScalaGenDeliteArrayBufferOps with ScalaGenDeliteFileReaderOps with ScalaGenDSArrayOps with DeliteScalaGenAllOverrides {
+  with ScalaGenDeliteCollectionOps with ScalaGenDeliteOps with ScalaGenDeliteStruct with ScalaGenDeliteArrayOps with ScalaGenDeliteArrayBufferOps with ScalaGenDeliteMapOps with ScalaGenDeliteFileReaderOps with ScalaGenDSArrayOps with DeliteScalaGenAllOverrides {
   val IR: DeliteApplication with OptiQLExp
 
   override def remap[A](m: Manifest[A]): String = m match {
     case m if m.erasure.getSimpleName == "Date" => "Int"
-    case m if m.toString == "scala.Tuple2[Char, Char]" => "Int"
-    case m if m.toString.startsWith("scala.collection.immutable.Map") // HACK-ish, maybe use a DSL type instead
-      && remap(m.typeArguments(0)) == "Int" => "generated.scala.container.HashMapImpl[" + remap(m.typeArguments(0)) + "]"
     case _ => dsmap(super.remap(m))
-  }
-
-  //because we remapped object types to primitive types above
-  override def isPrimitiveType[A](m: Manifest[A]) = remap(m) match {
-    case "Boolean" | "Byte" | "Char" | "Short" | "Int" | "Long" | "Float" | "Double" => true
-    case _ => false
-  }
-
-  override def emitNode(sym: IR.Sym[Any], rhs: IR.Def[Any]) = rhs match {
-    case IR.Struct(tag, elems) if sym.tp.toString == "scala.Tuple2[Char, Char]" =>
-      emitValDef(sym, "("+ quote(elems(0)._2) + ".toInt << 16) + " + quote(elems(1)._2))
-    case f@IR.FieldApply(s, index) if s.tp.toString == "scala.Tuple2[Char, Char]" && index == "_1" =>
-      emitValDef(sym, "((" + quote(s) + " & 0xffff0000) >>> 16).toChar")
-    case f@IR.FieldApply(s, index) if s.tp.toString == "scala.Tuple2[Char, Char]" && index == "_2" =>
-      emitValDef(sym, "(" + quote(s) + " & 0xffff).toChar")
-    case _ => super.emitNode(sym, rhs)
   }
 
   override def dsmap(line: String) : String = {
@@ -192,9 +174,6 @@ trait OptiQLCodeGenCuda extends OptiQLCodeGenBase with OptiQLCudaCodeGenPkg
   override def remap[A](m: Manifest[A]): String = {
     m match {
       case m if m.erasure.getSimpleName == "Date" => "int"
-      case m if m.toString == "scala.Tuple2" => "int" //HACK
-      case m if m.toString == "scala.Tuple2[Char, Char]" => "int"
-      case m if m.toString == "scala.Tuple2[Boolean, Boolean]" => "int"
       case _ => super.remap(m)
     }
   }
@@ -207,9 +186,6 @@ trait OptiQLCodeGenOpenCL extends OptiQLCodeGenBase with OptiQLOpenCLCodeGenPkg
   override def remap[A](m: Manifest[A]): String = {
     m match {
       case m if m.erasure.getSimpleName == "Date" => "int"
-      case m if m.toString == "scala.Tuple2" => "int" //HACK
-      case m if m.toString == "scala.Tuple2[Char, Char]" => "int"
-      case m if m.toString == "scala.Tuple2[Boolean, Boolean]" => "int"
       case _ => super.remap(m)
     }
   }

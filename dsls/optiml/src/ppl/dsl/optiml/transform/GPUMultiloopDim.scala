@@ -120,14 +120,14 @@ trait MultiloopTransformExp extends DeliteTransform
     // s.asInstanceOf[Sym[CA]].atPhase(t) {
         collectToWhile(      
           t(loop.size),
-          {sz => transformBlockWithBound(t, e.allocN, List(e.sV -> sz))},
+          {sz => transformBlockWithBound(t, e.buf.alloc, List(e.buf.sV -> sz))},
           {n => transformBlockWithBound(t, e.func, List(loop.v -> n))},                          
-          {(col,n,x) => transformBlockWithBound(t, e.update, List(e.allocVal -> col, loop.v -> n, e.eV -> x))},                
+          {(col,n,x) => transformBlockWithBound(t, e.buf.update, List(e.buf.allocVal -> col, loop.v -> n, e.buf.eV -> x))},                
           e.cond.map{c => { n: Rep[Int] => transformBlockWithBound(t, c, List(loop.v -> n)) }},
-          {(col,n,x) => transformBlockWithBound(t, e.buf.appendable, List(e.allocVal -> col, loop.v -> n, e.eV -> x))},
-          {(col,n,x) => transformBlockWithBound(t, e.buf.append, List(e.allocVal -> col, loop.v -> n, e.eV -> x))},                
-          {(col,sz) => transformBlockWithBound(t, e.buf.setSize, List(e.allocVal -> col, e.sV -> sz))},                
-          {col => transformBlockWithBound(t, e.finalizer, List(e.allocVal -> col))})
+          {(col,n,x) => transformBlockWithBound(t, e.buf.appendable, List(e.buf.allocVal -> col, loop.v -> n, e.buf.eV -> x))},
+          {(col,n,x) => transformBlockWithBound(t, e.buf.append, List(e.buf.allocVal -> col, loop.v -> n, e.buf.eV -> x))},                
+          {(col,sz) => transformBlockWithBound(t, e.buf.setSize, List(e.buf.allocVal -> col, e.buf.sV -> sz))},                
+          {col => transformBlockWithBound(t, e.buf.finalizer, List(e.buf.allocVal -> col))})
     // }
   }  
   
@@ -167,17 +167,17 @@ trait MultiloopTransformExp extends DeliteTransform
       while (i < size) {
         if (cond.nonEmpty) {
           if (cond.map(c=>c(i)).reduce((a,b) => a && b)) {
-            if (mutable) acc = (rFunc(acc.unsafeMutable,f(i))).unsafeImmutable 
-            else acc = rFunc(acc, f(i))
+            if (mutable) acc = (rFunc(readVar(acc).unsafeMutable,f(i))).unsafeImmutable 
+            else acc = rFunc(readVar(acc), f(i))
            }
         }
         else {
-          if (mutable) acc = (rFunc(acc.unsafeMutable,f(i))).unsafeImmutable
-          else acc = rFunc(acc, f(i))
+          if (mutable) acc = (rFunc(readVar(acc).unsafeMutable,f(i))).unsafeImmutable
+          else acc = rFunc(readVar(acc), f(i))
         }
         i += 1
       }
-      acc.unsafeImmutable      
+      readVar(acc).unsafeImmutable      
     }       
     
     // s.asInstanceOf[Sym[A]].atPhase(t) {
