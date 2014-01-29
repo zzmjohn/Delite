@@ -1,8 +1,30 @@
+/*
 #ifndef _CPP_DELITEARRAY_H_
 #define _CPP_DELITEARRAY_H_
 
 #include <stdlib.h>
 #include <string.h>
+
+class cppDeliteArrayfloat {
+public:
+  float *data;
+  int length;
+
+  DeliteArrayInt(int _length) {
+    data = new float[_length]; //(int *)malloc(sizeof(int)*_length);
+    length = _length;
+  }
+
+  ~DeliteArrayInt() {
+    printf("clearing delitearrayint of size %d\n", length);
+    //delete[] data;
+  }
+
+  void print(void) {
+    printf("length is %d\n", length);
+  }
+};
+
 
 template <class T>
 class cppDeliteArray {
@@ -96,3 +118,4 @@ public:
 };
 
 #endif
+*/

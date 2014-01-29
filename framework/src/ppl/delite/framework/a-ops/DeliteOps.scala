@@ -2151,6 +2151,7 @@ trait GenericGenDeliteOps extends BaseGenLoopsFat with BaseGenStaticData with Ba
       (symList zip op.body) foreach {
         case (sym, elem: DeliteCollectElem[_,_,_]) =>
           emitVarDef(quote(elem.allocVal), remap(elem.allocVal.tp), fieldAccess("__act",quote(sym) + "_data"))
+          releaseRef(fieldAccess("__act",quote(sym)+"_data"))
           getActFinal = quote(elem.allocVal)
           if (elem.par == ParBuffer || elem.par == ParSimpleBuffer) {
             if (elem.cond.nonEmpty) {
@@ -3313,11 +3314,9 @@ trait CGenDeliteOps extends CGenLoopsFat with GenericGenDeliteOps {
   
   import IR._
 
-  private def deref(tpe: String): String = {
-    tpe match {
-      case "bool" | "char" | "CHAR" | "short" | "int" | "long" | "float" | "double" | "void" => tpe + " "
-      case _ => tpe + " *"
-    }
+  override def addRef(tpe: String): String = tpe match {
+    case _ if tpe.startsWith("activation_") => " * "
+    case _ => super.addRef(tpe)
   }
 
   def quotearg(x: Sym[Any]) = quotetp(x) + " " + quote(x)
@@ -3328,13 +3327,13 @@ trait CGenDeliteOps extends CGenLoopsFat with GenericGenDeliteOps {
   }
 
   def emitMethod(name:String, outputType: String, inputs:List[(String,String)])(body: => Unit) {
-    stream.println(deref(outputType) + name + "(" + inputs.map(i => deref(i._2) + i._1).mkString(",") + ") {")
+    stream.println(outputType + addRef(outputType) + name + "(" + inputs.map(i => remap(i._2) + addRef(i._2) + i._1).mkString(",") + ") {")
     body
     stream.println("}\n")
   }
 
   def emitNewInstance(varName: String, typeName:String) {
-    stream.println(typeName + "* " + varName + " = new " + typeName + "();")
+    stream.println(typeName + addRef(typeName) + varName + " = new " + typeName + "();")
   }
 
   def fieldAccess(className: String, varName: String): String = {
@@ -3345,7 +3344,8 @@ trait CGenDeliteOps extends CGenLoopsFat with GenericGenDeliteOps {
   def releaseRef(varName: String) {
     //TODO: Change this to decrement the reference count?
     //stream.println("free(" + varName + ");")
-    stream.println(varName + " = NULL;")
+    //stream.println(varName + " = NULL;")
+    //stream.println(varName + ".reset();")
   }
 
   def emitReturn(rhs: String) = {
@@ -3356,7 +3356,7 @@ trait CGenDeliteOps extends CGenLoopsFat with GenericGenDeliteOps {
     tpe match {
       case "void" => //
       case _ =>
-        stream.println(deref(tpe) + name + ";")
+        stream.println(tpe + addRef(tpe) + name + ";")
     }
   }
 
@@ -3383,7 +3383,7 @@ trait CGenDeliteOps extends CGenLoopsFat with GenericGenDeliteOps {
     tpe match {
       case "void" => //
       case _ =>
-        stream.println(deref(tpe) + name + " = " + init + ";")
+        stream.println(tpe + addRef(tpe) + name + " = " + init + ";")
     }
   }
 
@@ -3415,8 +3415,8 @@ trait CGenDeliteOps extends CGenLoopsFat with GenericGenDeliteOps {
   def nullRef: String = "NULL"
 
   private def emitFieldsAndConstructor() {
-    val fields = kernelInputVals.map(i => deref(remap(i.tp)) + " " + quote(i)) ++ kernelInputVars.map(i => deref(deviceTarget + "Ref<" + remap(i.tp) + ">") + quote(i))
-    val constructorInputs = kernelInputVals.map(i => deref(remap(i.tp)) + " _" + quote(i)) ++ kernelInputVars.map(i => deref(deviceTarget + "Ref<" + remap(i.tp) + ">") + " _" + quote(i))
+    val fields = kernelInputVals.map(i => remap(i.tp) + addRef(i.tp) + " " + quote(i)) ++ kernelInputVars.map(i => deviceTarget + "Ref<" + remap(i.tp) + ">" + addRef(deviceTarget + "Ref<" + remap(i.tp) + ">") + quote(i))
+    val constructorInputs = kernelInputVals.map(i => remap(i.tp) + addRef(i.tp) + " _" + quote(i)) ++ kernelInputVars.map(i => deviceTarget + "Ref<" + remap(i.tp) + ">" + addRef(deviceTarget + "Ref<" + remap(i.tp) + ">") + " _" + quote(i))
 
     //print fields
     stream.println(fields.map(_ + ";\n").mkString(""))
