@@ -11,10 +11,10 @@ object CppCompile extends CCompile {
   override def ext = "cpp"
 
   protected def configFile = "CPP.xml"
-  protected def compileFlags = Array("-w", "-O3", "-shared", "-fPIC")
+  protected def compileFlags = Array("-w", "-O3", "-shared", "-fPIC", "-std=c++0x")
   protected def outputSwitch = "-o"
   
   private val dsFiles = Directory(Path(sourceCacheHome + "datastructures")).files.toList
-  override protected def auxSourceList = dsFiles.filter(_.extension == ext).map(_.toAbsolute.toString) :+ (sourceCacheHome + "kernels" + sep + target + "helperFuncs." + ext)
+  override protected def auxSourceList = /*dsFiles.filter(_.extension == ext).map(_.toAbsolute.toString) :+*/ List(sourceCacheHome + "kernels" + sep + target + "helperFuncs." + ext)
 
 }
