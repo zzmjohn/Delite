@@ -245,8 +245,8 @@ trait DeliteCodeGenRestage extends RestageFatCodegen
     case HashMapApply(m,k) => emitValDef(sym, quote(m) + "(" + quote(k) + ")")
     case HashMapUpdate(m,k,v)  => emitValDef(sym, quote(m) + "(" + quote(k) + ") = " + quote(v))
     case HashMapContains(m,i) => emitValDef(sym, quote(m) + ".contains(" + quote(i) + ")")  
-    case ObjBrApply(f) => emitValDef(sym, "BufferedReader(" + quote(f) + ")")
-    case ObjFrApply(s) => emitValDef(sym, "FileReader(" + quote(s) + ")")    
+    case ObjBrApply(f) => emitValDef(sym, "raghuBufferedReader(" + quote(f) + ")")
+    case ObjFrApply(s) => emitValDef(sym, "raghuFileReader(" + quote(s) + ")")    
     case ThrowException(m) => emitValDef(sym, "fatal(" + quote(m) + ")")
     case NewVar(init) => stream.println("var " + quote(sym) + " = " + quote(init))
     case ObjIntegerParseInt(s) => emitValDef(sym, "Integer.parseInt(" + quote(s) + ")")
@@ -269,7 +269,7 @@ trait DeliteCodeGenRestage extends RestageFatCodegen
     // !! this is unfortunate: we need the var to be typed differently, but most of this is copy/paste
     case RangeForeach(start, end, i, body) => {
       stream.println("var " + quote(i) + " = " + quote(start))
-      stream.println("val " + quote(sym) + " = " + "while (" + quote(i) + " < " + quote(end) + ") {")
+      stream.println("val " + quote(sym) + " = " + "while (" + quote(i) + " < " + quote(end) + ") { // raghu in DeliteCodeGenRestage.scala ")
       emitBlock(body)
       stream.println(quote(getBlockResult(body)))
       stream.println(quote(i) + " = " + quote(i) + " + 1")

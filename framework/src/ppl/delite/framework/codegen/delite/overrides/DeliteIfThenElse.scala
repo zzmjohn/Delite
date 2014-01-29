@@ -112,7 +112,7 @@ trait DeliteScalaGenIfThenElse extends ScalaGenEffect with ScalaGenBooleanOps wi
     case DeliteIfThenElse(c,a,b,h) =>
       //val save = deliteKernel
       //deliteKernel = false
-      stream.println("val " + quote(sym) + " = {")
+        stream.println("val " + quote(sym) + " = {")
       (a.res,b.res) match {
         case (Const(()), Const(())) => stream.println("()")
         case (_, Const(())) => generateThenOnly(sym, c, a, !deliteKernel && !simpleCodegen)
@@ -222,6 +222,9 @@ trait DeliteCGenIfThenElse extends CGenEffect with CGenBooleanOps with DeliteBas
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = {
       rhs match {
         case DeliteIfThenElse(c,a,b,h) =>
+//          println("[raghu DeliteCGenIfThenElse] sym is " + sym.toString)
+//          println("[raghu DeliteCGenIfThenElse] sym.tp is " + sym.tp.toString)
+//          println("[raghu DeliteCGenIfThenElse] rhs is " + rhs.toString)
           remap(sym.tp) match {
             case "void" =>
               stream.println("if (" + quote(c) + ") {")

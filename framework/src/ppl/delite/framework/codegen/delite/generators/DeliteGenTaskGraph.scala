@@ -217,6 +217,9 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt with LoopSoAOp
             case op: AbstractLoop[_] =>
               hasOutputSlotTypes = true
               "DeliteOpMultiLoop_" + kernelName
+            case input: DeliteOpInput[_] =>
+              hasOutputSlotTypes = true
+              "activation_"+kernelName
             case _ => gen.remap(sym.head.tp)
           }
           case ("cuda", op: AbstractFatLoop) =>
@@ -256,10 +259,14 @@ trait DeliteGenTaskGraph extends DeliteCodegen with LoopFusionOpt with LoopSoAOp
         gen.withStream(kstream)(gen.emitFileHeader())
         if (hasOutputSlotTypes) {
           // activation record class declaration
+          println("[raghu DeliteGenTaskGraph] gen = " + gen.toString + "hasOutputSlotTypes")
           rhs match {
             case d:Def[Any] =>  gen.withStream(kstream)(gen.emitNodeKernelExtra(sym, d))
             case f:FatDef => gen.withStream(kstream)(gen.emitFatNodeKernelExtra(sym, f))
           }
+        }
+        else {
+          println("[raghu DeliteGenTaskGraph] gen = " + gen.toString + "sym.length = " + sym.length)
         }
 
         gen.withStream(kstream)(gen.emitKernelHeader(sym, inVals, inVars, resultType, resultIsVar, external))

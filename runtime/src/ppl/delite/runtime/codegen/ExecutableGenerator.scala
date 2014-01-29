@@ -40,7 +40,8 @@ trait ExecutableGenerator {
     writeMethodFooter()
     writeFooter()
     writeSyncObject()
-
+    // raghu
+    println("[ExecutableGenerator::makeExecutable] ops = " + ops.toString)
     addSource(out.toString)
   }
 

@@ -87,28 +87,29 @@ trait ScalaGenDeliteFileReaderOps extends ScalaGenFat {
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+
     case op: DeliteOpFileReaderReadLines[_] => //TODO: how much of these file reader impl wrappers do we want in the runtime?
-      emitBlock(op.path)
+            emitBlock(op.path)
       emitValDef(sym, "{")
-        stream.println("val file = new java.io.File(" + quote(getBlockResult(op.path)) + ")")
-        stream.println("val (start, end) = ppl.delite.runtime.DeliteMesosExecutor.getBlockSize(file)")
-        stream.println("val input = new java.io.BufferedReader(new java.io.FileReader(file))")
-        stream.println("var pos = start")
+        stream.println("val raghuFile = /*raghu in delite - DeliteFileReader.scala*/ new java.io.File(" + quote(getBlockResult(op.path)) + ")")
+        stream.println("val (start, end) = ppl.delite.runtime.DeliteMesosExecutor.getBlockSize(raghuFile)")
+        stream.println("val raghuInput = /*raghu in delite - DeliteFileReader.scala*/ new java.io.BufferedReader(new java.io.FileReader(raghuFile))")
+       stream.println("var pos = start")
         stream.println("if (pos != 0) {")
-          stream.println("input.skip(pos-1)")
-          stream.println("pos += input.readLine().length") //+1-1
+          stream.println("raghuInput.skip(pos-1)")
+          stream.println("pos += raghuInput.readLine().length") //+1-1
         stream.println("}")
 
         emitBlock(op.alloc)
         emitValDef(op.allocVal, quote(getBlockResult(op.alloc)))
 
-        stream.println("var " + quote(op.line) + " = input.readLine()")
+        stream.println("var " + quote(op.line) + " = raghuInput.readLine()")
         stream.println("while(pos < end && " + quote(op.line) + " != null) {")
           emitBlock(op.append)
           stream.println("pos += " + quote(op.line) + ".length + 1") //TODO: could be 1 or 2 characters extra
-          stream.println(quote(op.line) + " = input.readLine()")
+          stream.println(quote(op.line) + " = raghuInput.readLine()")
         stream.println("}")
-        stream.println("input.close()")
+        stream.println("raghuInput.close()")
         emitBlock(op.finalizer)
         stream.println("val act = new activation_" + quote(sym))
         stream.println("act." + quote(sym) + " = " + quote(getBlockResult(op.finalizer)))
@@ -119,6 +120,7 @@ trait ScalaGenDeliteFileReaderOps extends ScalaGenFat {
 
   override def emitNodeKernelExtra(syms: List[Sym[Any]], rhs: Def[Any]): Unit = rhs match {
     case op: DeliteOpFileReaderReadLines[_] => //TODO: use activation record / closure style like MultiLoop
+//      throw new Exception("emitNodeKernelExtra called")
       val sym = syms(0)
       val actType = "activation_" + quote(sym)
       stream.println("final class " + actType + " {")
@@ -180,6 +182,96 @@ trait ScalaGenDeliteFileReaderOps extends ScalaGenFat {
     }
     input.close()
     buffer
-  } */
+  } }*/
 
+}
+
+/*raghu - experimental*/
+trait CGenDeliteFileReaderOps extends CGenFat {
+  override val IR: DeliteFileReaderOpsExp
+  import IR._
+
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    case op: DeliteOpFileReaderReadLines[_] => //TODO: how much of these file reader impl wrappers do we want in the runtime?
+      //      emitBlock(op.path)
+      // emitValDef(sym, "{")
+
+        stream.println("std::ifstream raghuFile(" + quote(getBlockResult(op.path)) + ");")
+        stream.println("if (!raghuFile.is_open()) {")
+        stream.println("std::cerr << \"Unable to open \" <<  " + quote(getBlockResult(op.path)) + "<< std::endl;")
+        stream.println("exit(-1);")
+        stream.println("}")
+        // The DeliteMesosExecutor part doesn't really do anything apparently, so leaving
+        // that logic out in the cpp code generator. If you don't know what I'm talking 
+        // about, look at the Scala code generator for the same op.
+       stream.println("int pos = 0;")
+        emitBlock(op.alloc)
+        emitValDef(op.allocVal, quote(getBlockResult(op.alloc)))
+
+        // Explicitly using std::string so that it doesn't get clobbered
+        // by whatever the 'string' keyword is typedef'ed to
+        stream.println("std::string tempStringToReadALineUntilStringsAreImplementedCorrectly;")
+        stream.println("charAsString* " + quote(op.line) + "=0;")
+        stream.println("getline(raghuFile, tempStringToReadALineUntilStringsAreImplementedCorrectly);")
+        stream.println(quote(op.line) + " = (charAsString*)tempStringToReadALineUntilStringsAreImplementedCorrectly.c_str();")
+        stream.println("while(tempStringToReadALineUntilStringsAreImplementedCorrectly.length() > 0) {")
+        emitBlock(op.append)
+        stream.println("pos += tempStringToReadALineUntilStringsAreImplementedCorrectly.length() + 1;") //TODO: could be 1 or 2 characters extra
+        stream.println("getline(raghuFile, tempStringToReadALineUntilStringsAreImplementedCorrectly);")
+        stream.println(quote(op.line) + " = (charAsString*)tempStringToReadALineUntilStringsAreImplementedCorrectly.c_str();")
+
+
+        stream.println("}")
+        stream.println("raghuFile.close();")
+        emitBlock(op.finalizer)
+        stream.println("activation_"+quote(sym)+" *"+quote(sym)+" =  new activation_" + quote(sym) + ";")
+        stream.println(quote(sym)+"->" + quote(sym) + " = " + quote(getBlockResult(op.finalizer)) + ";")
+//        stream.println("act")
+
+//        emitBlock(op.path)
+//        emitValDef(sym, quote(getBlockResult(op.finalizer)))
+
+    case _ => super.emitNode(sym, rhs)
+  }
+
+  override def emitNodeKernelExtra(syms: List[Sym[Any]], rhs: Def[Any]): Unit = rhs match {
+    case op: DeliteOpFileReaderReadLines[_] => //TODO: use activation record / closure style like MultiLoop
+//      throw new Exception("emitNodeKernelExtra called")
+      val sym = syms(0)
+      val actType = "activation_" + quote(sym)
+        typesStream.println("class " + actType + " {")
+        typesStream.println("public:")
+        typesStream.println(remap(sym.tp) + " " + "*"+quote(sym) + ";")
+        typesStream.println(actType + "()")
+        typesStream.println("{")
+        typesStream.println(quote(sym) + " =  0;")
+        typesStream.println("}")
+
+        
+        if (Config.generateSerializable) {
+          throw new Exception("Not implemented yet")
+        }
+        typesStream.println("};")
+
+        if (Config.generateSerializable) {
+          throw new Exception("Not implemented yet")
+      }
+    case _ => 
+//    throw new Exception("emitNodeKernelExtra called")
+      super.emitNodeKernelExtra(syms, rhs)
+  }
+/*
+  override def emitKernelFooter(syms: List[Sym[Any]], vals: List[Sym[Any]], vars: List[Sym[Any]], resultType: String, resultIsVar: Boolean,
+    external: Boolean): Unit = {
+    //TODO: Remove the dependency to Multiloop to Delite
+    if (resultType.startsWith("activation_")) {
+      stream.println("return act;")
+      stream.println("}")
+      dsTypesList ++= (syms++vals++vars).map(_.tp)
+    }
+    else {
+      super.emitKernelFooter(syms, vals, vars, resultType, resultIsVar, external)
+    }
+  }
+  */
 }

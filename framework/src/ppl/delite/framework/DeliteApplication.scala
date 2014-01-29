@@ -118,16 +118,22 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile with DeliteTransf
     deliteGenerator.transformers = transformers
     
     //System.out.println("Staging application")
-    
+    // raghu - For each backend selected, copy the required datastructure files into the "datastructure" folder. The required files for each
+    // backend are found at framework/codegen/<backend>/*
     deliteGenerator.emitDataStructures(Config.buildDir + File.separator)
 
+    // raghu - add "modules.dm", kernels folder, helper functions (cpphelperFuncs.*)
     for (g <- generators) {
       //TODO: Remove c generator specialization
       val baseDir = Config.buildDir + File.separator + g.toString + File.separator
+      println("[raghu debug] baseDir = " + baseDir)
       writeModules(baseDir)
       g.initializeGenerator(baseDir + "kernels" + File.separator, args, analysisResults)
+//      g.emitDataStructures(baseDir + "datastructures" + File.separator)
     }
 
+//    throw new Exception("stop here2")
+//    raghu - donno what this does
     if (Config.debug) {
       if (Config.degFilename.endsWith(".deg")) {
         val streamScala = new PrintWriter(new FileWriter(Config.degFilename.replace(".deg",".scala")))
@@ -138,16 +144,24 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile with DeliteTransf
         reset
       }
     }
+ 
+//    throw new Exception("stop here3")
+//    raghu - all kernels emitted here
     deliteGenerator.initializeGenerator(Config.buildDir, args, analysisResults)
     val sd = deliteGenerator.emitSource(liftedMain, "Application", stream)    
+    println("[debug raghu] sd = " + sd)
     deliteGenerator.finalizeGenerator()
 
+//    throw new Exception("stop here4")
+//    raghu - finalize all constructors. This emits "DeliteStruct" and "DenseMatrix" files
     for (g <- generators) {
       val baseDir = Config.buildDir + File.separator + g.toString + File.separator
+      // raghu - experiment to emit this before any kernel is emitted
       g.emitDataStructures(baseDir + "datastructures" + File.separator)
       g.finalizeGenerator()
     }
 
+//  raghu - nothing happens
     if(Config.printGlobals) {
       println("Global definitions")
       for(globalDef <- globalDefs) {
@@ -155,7 +169,9 @@ trait DeliteApplication extends DeliteOpsExp with ScalaCompile with DeliteTransf
       }
     }
     
+//    throw new Exception("stop here6")
     generators foreach { _.emitTransferFunctions()}
+//    throw new Exception("stop here7")
     /*
     generators foreach { g =>
       try { g.emitTransferFunctions() } 

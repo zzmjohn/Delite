@@ -3,6 +3,9 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
+#include <algorithm>
+#include <iostream>
 
 template <class T>
 class cppDeliteArray {
@@ -90,6 +93,40 @@ public:
       cppDeliteArray<T> *result = new cppDeliteArray<T>(n);
       memcpy(result->data, data, sizeof(T) * n);
       return result;
+    }
+
+    std::vector<T>* vectorize()
+    {
+        std::vector<T> *v = new std::vector<T>(data, data + length);
+        return v;
+    }
+
+
+    // C++11 required! Use -std=c++0x as a compile-time option, else
+    // compilation will fail!
+    cppDeliteArray<int>* index_sort()
+    {
+        std::vector<T> *values = this->vectorize();
+        std::vector<int> indices(values->size());
+        std::iota(begin(indices), end(indices), static_cast<int>(0));
+
+        std::sort(begin(indices), end(indices),[&](int a, int b) { return values->at(a) < values->at(b); });
+        
+        cppDeliteArray<int> *result = new cppDeliteArray<int>(indices.size());
+        for (int i=0; i<values->size(); i++) {
+            result->data[i] = indices[i];
+        }
+
+        delete values;
+        return result;
+    }
+
+    void print()
+    {
+        for(int i=0; i<length; i++) {
+            std::cout << data[i] << " ";
+        }
+        std::cout << std::endl;
     }
 
     void release(void);

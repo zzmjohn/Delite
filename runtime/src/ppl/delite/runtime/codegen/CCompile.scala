@@ -78,7 +78,8 @@ trait CCompile extends CodeCache {
   def compile(destination: String, sources: Array[String], paths: Array[String]) {
     Path(destination).parent.createDirectory()
     val output = Array(outputSwitch, destination)
-    val args = Array(config.compiler) ++ paths ++ compileFlags ++ output ++ sources
+    // raghu - hack to add 'rt' timer library
+    val args = Array(config.compiler) ++ paths ++ compileFlags ++ output ++ sources ++ Array("-lrt")
     println(args.mkString(" "))
     val process = Runtime.getRuntime.exec(args)
     process.waitFor
@@ -86,7 +87,7 @@ trait CCompile extends CodeCache {
   }
   
   def compileInit() {
-    val root = Config.deliteHome + sep + "runtime" + sep + target + sep + target + "Init."
+    val root = Config.deliteHome + sep + "runtime" + sep + target + sep + target + "Init." // e.g.: $DELITE_HOME/runtime/cuda/cudaInit.[cu|so]
     val source = root + ext
     val dest = root + OS.libExt
     compile(dest, Array(source), config.headerDir)

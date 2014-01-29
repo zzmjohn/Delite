@@ -21,6 +21,7 @@ trait CppExecutableGenerator extends ExecutableGenerator {
     out.append("#include <stdio.h>\n")
     out.append("#include <stdlib.h>\n")
     out.append("#include <jni.h>\n")
+    out.append("#include \"DeliteCppStringHelpers.h\"\n")
     out.append("#include \"cppSyncObjects.h\"\n")
     out.append("#include \"" + Targets.Cpp + "helperFuncs.h\"\n")
     out.append("#include \""+CppMultiLoopHeaderGenerator.headerFile+".h\"\n")
@@ -165,6 +166,10 @@ object CppExecutableGenerator {
   def makeExecutables(schedule: PartialSchedule, kernelPath: String) {
     for (sch <- schedule if sch.size > 0) {
       val location = sch.peek.scheduledResource
+// raghu
+//      println("sch is " + sch.toString)
+//      println("Location is " + location)
+//      println("Kernel path is " + kernelPath)
       new CppMainExecutableGenerator(location, kernelPath).makeExecutable(sch) // native execution plan
       new ScalaNativeExecutableGenerator(location, kernelPath).makeExecutable() // JNI launcher scala source
     }

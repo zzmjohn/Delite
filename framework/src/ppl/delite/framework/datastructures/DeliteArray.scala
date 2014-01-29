@@ -572,15 +572,25 @@ trait ScalaGenDeliteArrayOps extends BaseGenDeliteArrayOps with ScalaGenDeliteSt
     case _ => super.emitNode(sym, rhs)
   }
 
-  override def remap[A](m: Manifest[A]): String = m.erasure.getSimpleName match {
-    case "DeliteArray" => m.typeArguments(0) match {
-      case StructType(_,_) if Config.soaEnabled => super.remap(m)
-      case s if s <:< manifest[Record] && Config.soaEnabled => super.remap(m) // occurs due to restaging
-      case arg if isPrimitiveType(arg) && Config.generateSerializable => "ppl.delite.runtime.data.DeliteArray" + remap(arg)
-      case arg if Config.generateSerializable => "ppl.delite.runtime.data.DeliteArrayObject[" + remap(arg) + "]"
-      case arg => "Array[" + remap(arg) + "]"
+  override def remap[A](m: Manifest[A]): String = {
+//     println("(ScalaGenDeliteArrayOps) m.erasure.getSimpleName = " + m.erasure.getSimpleName)
+     val retVal =  m.erasure.getSimpleName match {
+      case "DeliteArray" => m.typeArguments(0) match {
+        case StructType(_,_) if Config.soaEnabled => super.remap(m)
+        case s if s <:< manifest[Record] && Config.soaEnabled => super.remap(m) // occurs due to restaging
+        case arg if isPrimitiveType(arg) && Config.generateSerializable => "ppl.delite.runtime.data.DeliteArray" + remap(arg)
+        case arg if Config.generateSerializable => "ppl.delite.runtime.data.DeliteArrayObject[" + remap(arg) + "]"
+        case arg => "Array[" + remap(arg) + "]"
+      }
+
+
+      case _ =>  {
+        // raghu
+        super.remap(m)
+      }
     }
-    case _ => super.remap(m)
+//    println("(ScalaGenDeliteArrayOps) - m.erasure.getSimpleName = " + m.erasure.getSimpleName)
+    retVal
   }
 
 }
@@ -634,6 +644,7 @@ trait CudaGenDeliteArrayOps extends BaseGenDeliteArrayOps with CudaGenFat with C
       stream.println("for(int i=0; i<"+quote(len)+"; i++) {")
       stream.println(quote(dest) + ".update(" + quote(destPos) + "+i," + quote(src) + ".apply(" + quote(srcPos) + "+i));")
       stream.println("}")
+
     case _ => super.emitNode(sym, rhs)
   }
 
@@ -739,16 +750,54 @@ trait CGenDeliteArrayOps extends BaseGenDeliteArrayOps with CGenDeliteStruct wit
     case DeliteArrayRange(st,en) =>
       emitValDef(sym, "new cppDeliteArray< int >(" + quote(st) + "," + quote(en) + ")")
     //case DeliteArrayToSeq(a) => emitValDef(sym, quote(a) + ".toSeq")
+    //raghu - copied from ScalaGen
+    case DeliteArrayGetActSize() =>
+      emitValDef(sym, getActSize)
+    case DeliteArraySetActBuffer(da) =>
+      emitValDef(sym, getActBuffer + " = " + quote(da))
+    case DeliteArraySetActFinal(da) =>
+      emitValDef(sym, getActFinal + " = " + quote(da))
+
     case _ => super.emitNode(sym, rhs)
   }
 
-  override def remap[A](m: Manifest[A]): String = m.erasure.getSimpleName match {
-    case "DeliteArray" => m.typeArguments(0) match {
-      case StructType(_,_) if Config.soaEnabled => super.remap(m)
-      case s if s <:< manifest[Record] && Config.soaEnabled => super.remap(m) // occurs due to restaging
-      case arg => "cppDeliteArray< " + remap(arg) + addRef(arg) + " >"
+  override def remap[A](m: Manifest[A]): String = {
+    val retVal = m.erasure.getSimpleName match {
+      // raghu
+      case "DeliteArray" => m.typeArguments(0) match {
+        case StructType(_,_) if Config.soaEnabled => {
+          super.remap(m)
+        }
+        case s if s <:< manifest[Record] && Config.soaEnabled => {
+          super.remap(m) // occurs due to restaging
+        }
+        case arg => {
+          "cppDeliteArray< " + remap(arg) + addRef(arg) + " >"
+        }
+      }
+      case "String[]" => {
+          // Currently, strings are implemented in a rather confusing way in the C++ codegen:
+          // 1. The 'charAsString' keyword is typedef'ed to 'char' in the generated C++.
+          // 2. Strings are represented with the "charAsString*" datatype.
+          // 3. Scala's native arrays for strings are parsed as the 'String[]' type (note the capital 'S'),
+          //    and native string arrays are not handled.
+          // 4. The following code logic fishes out cases where the type is "String[]", and creates a cpp
+          //    delite array for the same.
+          // 5. [HACK][TODO] For now, we are going to be creating a cppDeliteArray of type "charAsString *", keeping
+          //    all of the above points in mind. If any of the above changes, the remapping logic has to change
+          //    accordingly
+          val newType = "charAsString"
+          "cppDeliteArray< " + remap(newType) + addRef(newType) + " >"
+      }
+      case _ => {
+          if (m.erasure.getSimpleName == "Object") {
+            println("[raghu DeliteArray] m.erasure.getSimpleName = " + m.erasure.getSimpleName) 
+            println("[raghu DeliteArray] m.toString = " + m.toString) 
+          }
+          super.remap(m)
+      }
     }
-    case _ => super.remap(m)
+    retVal
   }
 
   override def emitDataStructures(path: String) {
@@ -774,6 +823,8 @@ trait CGenDeliteArrayOps extends BaseGenDeliteArrayOps with CGenDeliteStruct wit
   override def getDataStructureHeaders(): String = {
     val out = new StringBuilder
     out.append("#include \"" + deviceTarget + "DeliteArray.h\"\n")
+    out.append("#include \"" + deviceTarget + "StringHelpers.h\"\n")
+    out.append("#include \"" + deviceTarget + "Timer.h\"\n")
     super.getDataStructureHeaders() + out.toString
   }
 }

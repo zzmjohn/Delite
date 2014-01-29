@@ -123,6 +123,7 @@ def run(deg, params, opts):
     #print java_cmd
     if opts.directory != "":
         os.chdir(opts.directory)
+    print "FINAL COMMAND:\n%s\n" %(java_cmd)
     ecode = os.system(java_cmd)
     if ecode != 0:
         err("Delite execution failed")

@@ -136,6 +136,8 @@ object Delite {
           val globalStart = System.currentTimeMillis
           val globalStartNanos = System.nanoTime()
           PerformanceTimer.start("all", false)
+          // raghu
+          println("[Delite] executable = " + executable)
           executor.run(executable)
           EOP_Global.await //await the end of the application program
           PerformanceTimer.stop("all", false)

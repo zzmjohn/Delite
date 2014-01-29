@@ -159,7 +159,9 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
   def emitSource[A:Manifest](args: List[Sym[_]], body: Block[A], className: String, stream: PrintWriter): List[(Sym[Any],Any)] = {
     val y = runTransformations(body)
     val staticData = getFreeDataBlock(y)
-
+    //raghu
+    println("in emitSource")
+    println("y = " + y.toString())
     printlog("-- emitSource")
     availableDefs.foreach(printlog(_))
     
@@ -218,6 +220,8 @@ trait DeliteCodegen extends GenericFatCodegen with BaseGenStaticData with ppl.de
         // n3 we want controlDeps to contain e1 and e2
         //controlDeps = levelScope.takeWhile(_.lhs != syms) filter { effects contains _ } flatMap { _.lhs }
         //controlDeps = Nil // within emitFatNode below iff it is a reflect/reify node <-- wrong code in runtime
+        // raghu
+        println("[raghu debug] stm = " + stm.toString())
         val syms = stm.lhs
         val rhs = stm.rhs
 

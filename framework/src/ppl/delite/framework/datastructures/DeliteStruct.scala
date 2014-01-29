@@ -368,10 +368,19 @@ trait CLikeGenDeliteStruct extends BaseGenStruct with CLikeCodegen {
   protected val generatedStructs = HashSet[String]()
   protected val generationFailedStructs = HashSet[String]()
 
-  override def remap[A](m: Manifest[A]) = m match {
-    case StructType(_,_) => deviceTarget.toString + structName(m)
-    case s if s <:< manifest[Record] && s != manifest[Nothing] => deviceTarget.toString + structName(m)
-    case _ => super.remap(m)
+  override def remap[A](m: Manifest[A]) = {
+    val retVal = m match {
+      case StructType(_,_) => {
+        deviceTarget.toString + structName(m)
+      }
+      case s if s <:< manifest[Record] && s != manifest[Nothing] => {
+        deviceTarget.toString + structName(m)
+      }
+      case _ => {
+        super.remap(m)
+      }
+    }
+    retVal
   }
 
   protected def isVarType[T](m: Manifest[T]) = m.erasure.getSimpleName == "Variable" && unapplyStructType(m.typeArguments(0)) == None
@@ -388,7 +397,6 @@ trait CLikeGenDeliteStruct extends BaseGenStruct with CLikeCodegen {
     val structStream = new PrintWriter(path + deviceTarget.toString + "DeliteStructs.h")
     structStream.println("#ifndef __DELITESTRUCTS_H__")
     structStream.println("#define __DELITESTRUCTS_H__")
-    structStream.println("#include \"" + deviceTarget + "types.h\"")    
     structStream.println("#include \"" + hostTarget + "DeliteArray.h\"")
     structStream.println("#include \"" + deviceTarget + "DeliteArray.h\"")
     //println("Cuda Gen is generating " + encounteredStructs.map(_._1).mkString(","))
@@ -403,8 +411,12 @@ trait CLikeGenDeliteStruct extends BaseGenStruct with CLikeCodegen {
         case e: Exception => throw(e)
       }
     }
+    structStream.println("#include \"" + deviceTarget + "types.h\"")    
     structStream.println("#endif")
     structStream.close()
+    //raghu
+//    println("[raghu] Printing to typesStream")
+//    typesStream.println("#include \"" + deviceTarget.toString + "DeliteStructs.h\"")
     super.emitDataStructures(path)
   }
 
@@ -624,7 +636,7 @@ trait CGenDeliteStruct extends CLikeGenDeliteStruct with CCodegen {
       stream.println("\t}")
       // free
       stream.println("\tvoid release(void) {")
-      stream.print(elems.filter(e => !isPrimitiveType(baseType(e._2)) && remap(baseType(e._2))!="string").map(e => e._1 + "->release();\n").mkString(""))
+      stream.print(elems.filter(e => !isPrimitiveType(baseType(e._2)) && remap(baseType(e._2))!="charAsString").map(e => e._1 + "->release();\n").mkString(""))
       //stream.println("\tfree(this);")
       stream.println("\t}")
       stream.println("};")
