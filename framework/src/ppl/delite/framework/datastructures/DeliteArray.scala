@@ -772,13 +772,13 @@ trait CGenDeliteArrayOps extends BaseGenDeliteArrayOps with CGenDeliteStruct wit
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case a@DeliteArrayNew(n,m) =>    
       stream.println(remap(sym.tp) + " " + quote(sym) + "(new " + unwrapSharedPtr(remap(sym.tp)) + "(" + quote(n) + "), " + unwrapSharedPtr(remap(sym.tp)) + "D());")
-      emitValDef(sym, "(" + remap(sym.tp) + " *) malloc(sizeof(" + remap(sym.tp) + "));")
+      //emitValDef(sym, "(" + remap(sym.tp) + " *) malloc(sizeof(" + remap(sym.tp) + "));")
       //stream.println(quote(sym) + "->data = (" + remap(m) + addRef(m) + " *)malloc(" + quote(n) + "*sizeof(" + remap(m) + addRef(m) + "));")
       //TODO: remove below memory initialization. 
       // This memset is currently needed for C target because JVM initializes arrays with 0
       // and some DSL operations assume that. That should not be the case and moved into IR if init is needed.
-      stream.println("memset(" + quote(sym) + "->data,0," + quote(n) + "*sizeof(" + remap(m) + addRef(m) + "));")
-      stream.println(quote(sym) + "->length = " + quote(n) + ";")
+      //stream.println("memset(" + quote(sym) + "->data,0," + quote(n) + "*sizeof(" + remap(m) + addRef(m) + "));")
+      //stream.println(quote(sym) + "->length = " + quote(n) + ";")
     case DeliteArrayLength(da) =>
       emitValDef(sym, quote(da) + "->length")
     case DeliteArrayApply(da, idx) =>
@@ -786,9 +786,12 @@ trait CGenDeliteArrayOps extends BaseGenDeliteArrayOps with CGenDeliteStruct wit
     case DeliteArrayUpdate(da, idx, x) =>
       stream.println(quote(da) + "->update(" + quote(idx) + ", " + quote(x) + ");")
     case StructUpdate(struct, fields, idx, x) =>
-      stream.println(quote(struct) + fields.mkString("->","->","->") + idx.take(idx.length-1).map(i=>"apply("+quote(i)+")").mkString("->") + "->update(" + quote(idx(idx.length-1)) + "," + quote(x) + ");")
+      stream.println(quote(struct) + fields.mkString("->","->","->") + idx.take(idx.length-1).map(i=>"apply("+quote(i)+")").mkString("","->","->") + "update(" + quote(idx(idx.length-1)) + "," + quote(x) + ");")
     case DeliteArrayCopy(src,srcPos,dest,destPos,len) =>
-      stream.println(quote(src) + "->copy(" + quote(srcPos) + "," + quote(dest) + "," + quote(destPos) + "," + quote(len) + ");")
+      //TODO: use memcpy?
+      stream.println("for(int i=0; i<" + quote(len) + "; i++) {")
+      stream.println(quote(dest) + "->update(" + quote(destPos) + "+i," + quote(src) + "->apply(" + quote(srcPos) + "+i));")
+      stream.println("}")
     case sc@StructCopy(src,srcPos,struct,fields,destPos,len) =>
       val dest = quote(struct) + fields.mkString("->","->","->") + destPos.take(destPos.length-1).map(i=>"apply("+quote(i)+")").mkString("->")
       val elemM = src.tp.typeArguments(0)

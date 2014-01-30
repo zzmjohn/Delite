@@ -129,7 +129,7 @@ trait CppNestedGenerator extends NestedGenerator with CppExecutableGenerator {
       if (!first) str.append(", ")
       first = false
       str.append(typesMap(target)(sym))
-      if (!isPrimitiveType(op.outputType(sym))) str.append(" *")
+      str.append(addRef(op.outputType(sym)))
       str.append(' ')
       str.append(getSymHost(op, sym))
     }

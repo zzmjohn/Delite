@@ -38,6 +38,7 @@ object Config {
   val useFsc: Boolean = getProperty("delite.usefsc", "false") != "false"
   val tempCudaMemRate: Double = getProperty("delite.tempcudamem", "0.3").toDouble         /* proportions of the cuda device memory used for temporary allocations */
   val taskQueueSize: Int = getProperty("delite.task.queue.size", "1024").toInt
+  val cppUseSharedPtr: Boolean = getProperty("delite.cpp.use.sharedptr", "true") != "false"
 
   /* GPU optimization */
   val gpuOptTrans: Boolean = getProperty("delite.gpu.opt.trans", "false") != "false"

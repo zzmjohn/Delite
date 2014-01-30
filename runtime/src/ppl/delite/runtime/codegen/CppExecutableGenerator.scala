@@ -117,6 +117,8 @@ trait CppExecutableGenerator extends ExecutableGenerator {
 
   protected def isPrimitiveType(scalaType: String) = Targets.isPrimitiveType(scalaType)
 
+  private def addRef(): String = if (Config.cppUseSharedPtr) " " else " *"  
+  protected def addRef(scalaType: String): String = if (isPrimitiveType(scalaType)) " " else addRef()
 }
 
 class CppMainExecutableGenerator(val location: Int, val kernelPath: String)
