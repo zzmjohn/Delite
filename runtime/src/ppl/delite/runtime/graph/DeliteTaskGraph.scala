@@ -234,7 +234,7 @@ object DeliteTaskGraph {
       for (output <- outputs if getFieldMap(outputTypes, output) contains target.toString) {
         outputMap += output.toString -> getFieldString(getFieldMap(outputTypes, output), target.toString)
       }
-      if (getFieldList(op, "supportedTargets") contains target.toString) {
+      if (getFieldList(op, "supportedTargets") contains target.toString) { 
         if (op contains "return-types") { //multiple outputs must return via a container type
           outputMap += "functionReturn" -> getFieldString(getFieldMap(op, "return-types"), target.toString)
         }
@@ -242,6 +242,11 @@ object DeliteTaskGraph {
           outputMap += "functionReturn" -> outputMap.head._2 //single output can return directly
         }
       }
+      else if (target == Targets.Scala && outputMap.size > 0 && !op.contains("return-types")) {
+        // in case we know a Scala output type, we should always add it, since it is used for reference
+        outputMap += "functionReturn" -> outputMap.head._2
+      }
+
       if (outputMap.size > 0) resultMap += target -> outputMap
     }
     resultMap

@@ -66,7 +66,7 @@ class ScalaMultiLoopGenerator(val op: OP_MultiLoop, val master: OP_MultiLoop, va
   }
 
   protected def processRange(outputSym: String, start: String, end: String) = {
-    out.append("val acc = "+closure+".processRange("+outputSym+","+start+","+end+")\n")
+    out.append("val acc = "+closure+".processRange("+outputSym+","+start+","+end+","+chunkIdx+")\n")
     "acc"
   }
 

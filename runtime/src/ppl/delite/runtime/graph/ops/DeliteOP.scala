@@ -28,11 +28,11 @@ abstract class DeliteOP {
   def getInputTypesMap = inputTypesMap
 
   def outputType(target: Targets.Value, symbol: String): String = outputTypesMap(target)(symbol)
-  def outputType(target: Targets.Value): String = outputTypesMap(target)("functionReturn")
-  def outputType(symbol: String) = outputTypesMap(Targets.Scala)(symbol)
-  def outputType = outputTypesMap(Targets.Scala)("functionReturn")
+  def outputType(target: Targets.Value): String = outputTypesMap(target).get("functionReturn").getOrElse("unknown")
+  def outputType(symbol: String) = outputTypesMap.get(Targets.Scala).flatMap(_.get(symbol)).getOrElse("unknown")
+  def outputType = outputTypesMap.get(Targets.Scala).flatMap(_.get("functionReturn")).getOrElse("unknown")
   def inputType(target: Targets.Value, symbol: String): String = inputTypesMap(target)(symbol)
-  def inputType(symbol: String) = inputTypesMap(Targets.Scala)(symbol)
+  def inputType(symbol: String) = inputTypesMap.get(Targets.Scala).flatMap(_.get(symbol)).getOrElse("unknown")
 
   def supportsTarget(target: Targets.Value) : Boolean = supportedTargets contains target
 

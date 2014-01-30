@@ -6,6 +6,7 @@
 *.DS_Store
 *.~
 *.o
+*.so
 /local.properties
 delite.properties
 target/
