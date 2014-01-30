@@ -138,10 +138,29 @@ struct __T__D {
   void operator()(__T__ *p) {
     if(p->id == 0) {
       printf("__T__: deleting locally\n");
-      //delete p->data;
+      __DESTRUCT_ELEMS__
     }
     else {
-      assert(false);
+      pthread_mutex_lock(&RefCntLock);
+      std::map<int,int>::iterator it = RefCnt->find(p->id);
+      if(it==RefCnt->end()) {
+        printf("__T__: warning! key not found %d\n",p->id);
+        pthread_mutex_unlock(&RefCntLock);
+      }
+      else {
+        int cnt = it->second;
+        if(cnt == 1) {
+          printf("__T__: freeing data id: %d!\n",p->id);
+          RefCnt->erase(p->id);
+          pthread_mutex_unlock(&RefCntLock);
+          __DESTRUCT_ELEMS__
+        }
+        else {
+          printf("__T__ id:%d decrementing global ref count: %d -> %d\n", p->id, cnt, cnt-1);
+          it->second = cnt - 1;
+          pthread_mutex_unlock(&RefCntLock);
+        }
+      }
     }
   }
 };
@@ -166,7 +185,8 @@ struct __T__D {
         val stream = new PrintWriter(path + mString + ".h")
         stream.println("#ifndef __" + mString + "__")
         stream.println("#define __" + mString + "__")
-        stream.println(deliteVariableString.replaceAll("__T__",mString).replaceAll("__TARG__",remap(m)+addRef(m))) 
+        val destructFields = if(cppUseSharedPtr && !isPrimitiveType(baseType(m))) "\t(p->data).reset();\n" else ""
+        stream.println(deliteVariableString.replaceAll("__T__",mString).replaceAll("__TARG__",remap(m)+addRef(baseType(m))).replaceAll("__DESTRUCT_ELEMS__",destructFields)) 
         stream.println("#endif")
         stream.close()
         header.println("#include \"" + mString + ".h\"")
