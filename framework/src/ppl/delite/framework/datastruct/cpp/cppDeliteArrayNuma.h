@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "DeliteCpp.h"
 
@@ -47,6 +48,7 @@ public:
     void allocInternal(int tid) {
       // TODO: this ghostCell stuff is half-baked right now
       wrapper[config->threadToSocket(tid)] = (T*)malloc(internalLength()*sizeof(T));
+      memset(wrapper[config->threadToSocket(tid)], 0, internalLength()*sizeof(T));
     }
 
     T applyAt(int tid, int i) {
@@ -60,24 +62,32 @@ public:
     void combineAverage() {
       // calls to this should only be generated on type T <: Numeric, as checked inside the Delite compiler
       T* avg = (T*)malloc(numGhostCells*sizeof(T));
-      for (int s = 0; s < config->numSockets; s++) {
-        // currently only ghosting "to the right"
-        int start = internalLength() - numGhostCells;
-        for (int i = start; i < numGhostCells+start; i++) {
-          avg[i-start] += wrapper[s][i];
+      memset(avg, 0, numGhostCells*sizeof(T));
+      int start = internalLength() - numGhostCells;
+      for (int t = 0; t < config->numThreads; t++) {
+        if (t % config->threadsPerSockets() == 0) {
+          int s = config->threadToSocket(t);
+          // currently only ghosting "to the right"
+          for (int i = start; i < numGhostCells+start; i++) {
+            avg[i-start] += wrapper[s][i];
+          }
         }
       }
 
       for (int i = 0; i < numGhostCells; i++) {
-        avg[i] = avg[i] / config->numSockets;
+        avg[i] = avg[i] / (ceil((float)config->numThreads / (float)config->threadsPerSocket()));
       }
 
-      for (int s = 0; s < config->numSockets; s++) {
-        int start = internalLength() - numGhostCells;
-        for (int i = start; i < numGhostCells+start; i++) {
-          wrapper[s][i] = avg[i-start];
+      for (int t = 0; t < config->numThreads; t++) {
+        if (t % config->threadsPerSockets() == 0) {
+          int s = config->threadToSocket(t);
+          for (int i = start; i < numGhostCells+start; i++) {
+            wrapper[s][i] = avg[i-start];
+          }
         }
       }
+
+      free(avg);
     }
 
     // --
@@ -85,45 +95,3 @@ public:
 };
 
 #endif
-
-
-/*
-
-abstract class NumaDeliteArrayDouble(val length: Int) extends DeliteArrayDouble {
-  val wrapper: Array[Array[Double]] = new Array[Array[Double]](Config.numSockets)
-
-  // the following fields are only relevant for cluster + NUMA, which we don't support yet
-  def readAt(i: Int): T = ???
-  var id: String = ???
-  var offsets: Array[Int] = ???
-  var offset: Int = ???
-  def data: Array[Double] = ???
-
-  def apply(i: Int): Int = applyAt(0,i)
-  def update(i: Int, x: Double) = updateAt(0,i,x)
-
-  def take(n: Int): NumaDeliteArrayDouble = {
-    val res = new NumaDeliteArrayDouble(n)
-    copy(0, res, 0, n)
-    res
-  }
-  def copy(srcPos: Int, dest: NumaDeliteArrayDouble, destPos: Int, len: Int) {
-    for (i <- 0 until wrapper.length) {
-      System.arraycopy(m.wrapper(i), srcPos, dest.wrapper(i), destPos, len)
-    }
-  }
-
-  def tidToSocket(tid: Int) = tid % Config.numSockets
-
-  def allocInternal(tid: Int, numGhostCells: Int) {
-    // TODO: this ghostCell stuff is half-baked right now
-    wrapper(tidToSocket(tid)) = new Array[Double](Math.max(length, length/Config.numSockets+numGhostCells))
-  }
-
-  def applyAt(tid: Int, i: Int): Int = wrapper(tidToSocket(tid)).apply(i)
-  def updateAt(tid: Int, i: Int, x: Double) { wrapper(tidToSocket(tid)).update(i,x) }
-
-  def combine(f: (Array[Double],Array[Double]) => Array[Double]) = ???
-}
-
-*/

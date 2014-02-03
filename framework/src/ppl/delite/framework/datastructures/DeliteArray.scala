@@ -74,7 +74,7 @@ trait DeliteArrayCompilerOps extends DeliteArrayOps {
   def darray_unsafe_copy[T:Manifest](src: Rep[DeliteArray[T]], srcPos: Rep[Int], dest: Rep[DeliteArray[T]], destPos: Rep[Int], len: Rep[Int])(implicit ctx: SourceContext): Rep[Unit]
 }
 
-trait DeliteArrayOpsExp extends DeliteArrayCompilerOps with DeliteArrayStructTags with DeliteCollectionOpsExp with DeliteStructsExp with RuntimeServiceOpsExp with EffectExp with PrimitiveOpsExp {
+trait DeliteArrayOpsExp extends DeliteArrayCompilerOps with DeliteArrayStructTags with DeliteCollectionOpsExp with DeliteStructsExp with RuntimeServiceOpsExp with EffectExp with PrimitiveOpsExp with EqualExpBridge {
   this: DeliteOpsExp with DeliteMapOpsExp =>
 
   //////////////////
@@ -121,11 +121,12 @@ trait DeliteArrayOpsExp extends DeliteArrayCompilerOps with DeliteArrayStructTag
     val mA = manifest[A]
     val size = copyTransformedOrElse(_.size)(DELITE_NUM_THREADS)
 
-    def func = i =>
-      if (i % DELITE_NUM_SOCKETS == unit(0)) {
+    def func = i => {
+      if (equals_fwd(i % DELITE_THREADS_PER_SOCKET, unit(0))) {
         darray_numa_alloc_internal(wrapper, i)
       }
       unit(())
+    }
   }
 
   // performs the internal alloc called by darray_numa_alloc_internal
@@ -822,7 +823,7 @@ trait OpenCLGenDeliteArrayOps extends BaseGenDeliteArrayOps with OpenCLGenFat wi
   }
 }
 
-trait CGenDeliteArrayOps extends BaseGenDeliteArrayOps with CGenDeliteStruct with CGenDeliteOps with CGenRuntimeServiceOps {
+trait CGenDeliteArrayOps extends BaseGenDeliteArrayOps with CGenDeliteStruct with CGenDeliteOps with CGenEqual with CGenRuntimeServiceOps {
   val IR: DeliteArrayFatExp with DeliteOpsExp
   import IR._
 
@@ -831,14 +832,14 @@ trait CGenDeliteArrayOps extends BaseGenDeliteArrayOps with CGenDeliteStruct wit
     case a@DeliteArrayNumaAlloc(len, numGhostCells) =>
       emitValDef(sym, "new cppDeliteArrayNuma<"+remap(a.mA) + addRef(a.mA)+">("+quote(len)+","+quote(numGhostCells)+");")
     case a@DeliteArrayNumaAllocInternal(x, threadIndex) =>
-      emitValDef(sym, quote(x) + "->allocInternal("+quote(threadIndex)+")")
+      stream.println(quote(x) + "->allocInternal("+quote(threadIndex)+");")
     case DeliteArrayApply(da@Def(Reflect(DeliteArrayNumaAlloc(len,g), u, es)), idx) =>
       // this will only work if we are in the context of a multiloop! how can we check for this? should we have a multiloop flag similar to "deliteKernel"?
-      emitValDef(sym, quote(da) + "->applyAt(__act->tid, " + quote(idx) + ")")
+      emitValDef(sym, quote(da) + "->applyAt(__act->tid, " + quote(idx) + ");")
     case DeliteArrayUpdate(da@Def(Reflect(DeliteArrayNumaAlloc(len,g), u, es)), idx, x) =>
       // this will only work if we are in the context of a multiloop!
-      emitValDef(sym, quote(da) + "->updateAt(__act->tid, " + quote(idx) + ", " + quote(x) + ")")
-    case DeliteArrayNumaCombineAverage(x) => emitValDef(sym, quote(x) + "->combineAverage()")
+      stream.println(quote(da) + "->updateAt(__act->tid, " + quote(idx) + ", " + quote(x) + ");")
+    case DeliteArrayNumaCombineAverage(x) => stream.println(quote(x) + "->combineAverage();")
     // --
 
     case a@DeliteArrayNew(n,m) =>

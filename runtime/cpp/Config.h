@@ -4,22 +4,28 @@
 class Config {
 public:
     int numThreads;
+    int numCores;
     int numSockets;
 
     Config(int _numThreads) {
-      numThreads = _numThreads;
-      numSockets = 1;
+        numThreads = _numThreads;
+        numCores = 1;
+        numSockets = 1;
     }
 
-    Config(int _numThreads, int _numSockets) {
-      numThreads = _numThreads;
-      numSockets = _numSockets;
+    Config(int _numThreads, int _numCores, int _numSockets) {
+        numThreads = _numThreads;
+        numCores = _numCores;
+        numSockets = _numSockets;
     }
 
-    //current strategy is to distribute threads across sockets as evenly as possible
+    // current strategy is to spill threads to a new socket only when full
+    int threadsPerSocket() {
+        return numCores / numSockets;
+    }
+
     int threadToSocket(int threadId) {
-        float threadsPerSocket = (float)numThreads / numSockets;
-        int socketId = threadId / threadsPerSocket;
+        int socketId = threadId / threadsPerSocket();
         return socketId;
     }
 };

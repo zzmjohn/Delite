@@ -10,9 +10,13 @@ Config* config = 0;
 
 void initializeConfig(int numThreads) {
     config = new Config(numThreads);
-    if (numa_available() >= 0) config->numSockets = numa_num_configured_nodes();
-    //printf("numThreads: %d\n", config->numThreads);
-    //printf("numSockets: %d\n", config->numSockets);
+    if (numa_available() >= 0) {
+      config->numCores = numa_num_configured_cpus();
+      config->numSockets = numa_num_configured_nodes();
+    }
+    // printf("numThreads: %d\n", config->numThreads);
+    // printf("numCores: %d\n", config->numCores);
+    // printf("numSockets: %d\n", config->numSockets);
 }
 
 extern "C" JNIEXPORT void JNICALL Java_ppl_delite_runtime_executor_AccExecutionThread_initializeThread(JNIEnv* env, jobject obj, jint threadId, jint numThreads);
