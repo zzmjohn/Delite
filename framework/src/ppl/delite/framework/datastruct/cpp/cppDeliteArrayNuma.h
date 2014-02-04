@@ -65,7 +65,7 @@ public:
       memset(avg, 0, numGhostCells*sizeof(T));
       int start = internalLength() - numGhostCells;
       for (int t = 0; t < config->numThreads; t++) {
-        if (t % config->threadsPerSockets() == 0) {
+        if (t % config->threadsPerSocket() == 0) {
           int s = config->threadToSocket(t);
           // currently only ghosting "to the right"
           for (int i = start; i < numGhostCells+start; i++) {
@@ -79,7 +79,7 @@ public:
       }
 
       for (int t = 0; t < config->numThreads; t++) {
-        if (t % config->threadsPerSockets() == 0) {
+        if (t % config->threadsPerSocket() == 0) {
           int s = config->threadToSocket(t);
           for (int i = start; i < numGhostCells+start; i++) {
             wrapper[s][i] = avg[i-start];
